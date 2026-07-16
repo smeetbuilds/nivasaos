@@ -29,6 +29,7 @@ const navSections = [
     label: "Operations",
     items: [
       ["/tenant-portal", "portal", "Tenant portal"],
+      ["/handover", "handover", "Handover"],
       ["/maintenance", "maintenance", "Maintenance"],
       ["/reports", "report", "Reports"]
     ]
