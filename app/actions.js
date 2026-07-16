@@ -4,6 +4,7 @@ import * as auth from "@/lib/actions/auth";
 import * as properties from "@/lib/actions/properties";
 import * as leases from "@/lib/actions/leases";
 import * as finance from "@/lib/actions/finance";
+import * as billing from "@/lib/actions/billing";
 import * as maintenance from "@/lib/actions/maintenance";
 import * as team from "@/lib/actions/team";
 import * as settings from "@/lib/actions/settings";
@@ -66,6 +67,18 @@ export async function recordPaymentAction(formData) {
 
 export async function logReminderAction(formData) {
   return finance.logReminderAction(formData);
+}
+
+export async function updateBillingPolicyAction(formData) {
+  return billing.updateBillingPolicyAction(formData);
+}
+
+export async function createLateFeeRunAction(formData) {
+  return billing.createLateFeeRunAction(formData);
+}
+
+export async function voidInvoiceAction(formData) {
+  return billing.voidInvoiceAction(formData);
 }
 
 export async function createMaintenanceAction(formData) {

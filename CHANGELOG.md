@@ -2,6 +2,23 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 0.4.0 - 2026-07-16
+
+### Added
+
+- Per-property grace periods with disabled, flat, or percentage late-fee rules.
+- Optional late-fee caps and a dry-run eligibility preview before invoices are generated.
+- Idempotent late-fee runs with one active fee invoice per source rent invoice.
+- Charge-type and source-invoice visibility in the receivables workspace.
+- Safe voiding for unpaid invoices while preserving financial and audit history.
+
+### Improved
+
+- Existing and newly generated recurring invoices are classified as rent automatically.
+- Late-fee generation recalculates eligibility inside the database transaction.
+- Source rent amounts, due dates, and payment history remain unchanged when fees are applied.
+- Paid and part-paid invoices cannot be voided, and rent invoices with active fee children are protected.
+
 ## 0.3.0 - 2026-07-16
 
 ### Added

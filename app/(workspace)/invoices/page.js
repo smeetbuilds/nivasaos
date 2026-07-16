@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createInvoiceAction, createRentRunAction } from "@/app/actions";
+import { createInvoiceAction, createRentRunAction, voidInvoiceAction } from "@/app/actions";
 import { requireUser, propertyScopeSql } from "@/lib/auth";
 import { all, get } from "@/lib/db";
 import { accessibleProperties } from "@/lib/data";
@@ -18,6 +18,7 @@ import Icon from "@/components/Icon";
 export const metadata = { title: "Invoices" };
 
 const allowedStatuses = new Set(["all", "open", "overdue", "issued", "part_paid", "paid", "draft", "void"]);
+const allowedCharges = new Set(["all", "rent", "late_fee", "manual"]);
 
 export default async function InvoicesPage({ searchParams }) {
   const user = await requireUser();
@@ -26,6 +27,7 @@ export default async function InvoicesPage({ searchParams }) {
   const properties = accessibleProperties(user);
   const propertyId = Number(query?.property || 0) || null;
   const status = allowedStatuses.has(String(query?.status || "all")) ? String(query?.status || "all") : "all";
+  const charge = allowedCharges.has(String(query?.charge || "all")) ? String(query?.charge || "all") : "all";
   const search = String(query?.search || "").trim().slice(0, 100);
   const filters = [scope.clause];
   const params = { ...scope.params };
@@ -40,18 +42,24 @@ export default async function InvoicesPage({ searchParams }) {
     filters.push("i.status=$filterStatus");
     params.filterStatus = status;
   }
+  if (charge !== "all") {
+    filters.push("i.charge_type=$filterCharge");
+    params.filterCharge = charge;
+  }
   if (search) {
-    filters.push("(i.number LIKE $search OR i.description LIKE $search OR t.full_name LIKE $search OR l.reference LIKE $search OR u.name LIKE $search)");
+    filters.push("(i.number LIKE $search OR i.description LIKE $search OR source.number LIKE $search OR t.full_name LIKE $search OR l.reference LIKE $search OR u.name LIKE $search)");
     params.search = `%${search}%`;
   }
 
   const rows = all(
-    `SELECT i.*,p.name property_name,p.currency,t.full_name tenant_name,t.phone,l.reference lease_reference,u.name unit_name
+    `SELECT i.*,p.name property_name,p.currency,t.full_name tenant_name,t.phone,l.reference lease_reference,u.name unit_name,
+      source.number source_invoice_number
      FROM invoices i
      JOIN properties p ON p.id=i.property_id
      LEFT JOIN tenants t ON t.id=i.tenant_id
      LEFT JOIN leases l ON l.id=i.lease_id
      LEFT JOIN units u ON u.id=l.unit_id
+     LEFT JOIN invoices source ON source.id=i.source_invoice_id
      WHERE ${filters.join(" AND ")}
      ORDER BY CASE WHEN i.status NOT IN ('paid','void') AND i.due_date<date('now') THEN 0 ELSE 1 END,i.due_date DESC,i.created_at DESC`,
     params
@@ -83,7 +91,8 @@ export default async function InvoicesPage({ searchParams }) {
     { ...scope.params, period: currentPeriod }
   ) || { active: 0, invoiced: 0 };
   const rentPending = Math.max(0, Number(rentRunStatus.active || 0) - Number(rentRunStatus.invoiced || 0));
-  const canRunRent = user.role === "owner" || user.role === "admin";
+  const canManageBilling = user.role === "owner" || user.role === "admin";
+  const voidableRows = canManageBilling ? rows.filter((row) => row.status !== "void" && Number(row.amount_paid) === 0) : [];
 
   return <>
     <Flash searchParams={query}/>
@@ -92,7 +101,8 @@ export default async function InvoicesPage({ searchParams }) {
       title="Invoices & overdue rent"
       description="Run monthly billing, issue ad-hoc charges, monitor balances, and prepare WhatsApp reminders."
       actions={<>
-        {canRunRent && <OpenModalButton target="rent-run-modal" icon="invoice" className="button secondary">Run monthly rent</OpenModalButton>}
+        {canManageBilling && <Link href="/billing" className="button secondary"><Icon name="billing" size={17}/>Billing rules</Link>}
+        {canManageBilling && <OpenModalButton target="rent-run-modal" icon="invoice" className="button secondary">Run monthly rent</OpenModalButton>}
         <OpenModalButton target="invoice-modal">Create invoice</OpenModalButton>
       </>}
     />
@@ -106,22 +116,23 @@ export default async function InvoicesPage({ searchParams }) {
 
     <section className="rent-run-strip">
       <div><span className="eyebrow">{rentPeriodLabel(currentPeriod)} rent run</span><strong>{rentPending ? `${rentPending} active lease${rentPending === 1 ? "" : "s"} still need an invoice` : "Monthly rent billing is complete"}</strong><p>{Number(rentRunStatus.invoiced || 0)} of {Number(rentRunStatus.active || 0)} active leases have a rent invoice for this period.</p></div>
-      {canRunRent && <OpenModalButton target="rent-run-modal" icon="invoice" className="button light">{rentPending ? "Generate missing invoices" : "Review rent run"}</OpenModalButton>}
+      {canManageBilling && <OpenModalButton target="rent-run-modal" icon="invoice" className="button light">{rentPending ? "Generate missing invoices" : "Review rent run"}</OpenModalButton>}
     </section>
 
-    <form method="get" className="filter-bar panel" aria-label="Filter invoices">
-      <label className="filter-search"><span>Search</span><input name="search" defaultValue={search} placeholder="Invoice, tenant, lease, or unit"/></label>
+    <form method="get" className="filter-bar invoice-filter panel" aria-label="Filter invoices">
+      <label className="filter-search"><span>Search</span><input name="search" defaultValue={search} placeholder="Invoice, source invoice, tenant, lease, or unit"/></label>
       <label><span>Property</span><select name="property" defaultValue={propertyId || ""}><option value="">All accessible properties</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></label>
       <label><span>Status</span><select name="status" defaultValue={status}><option value="all">All statuses</option><option value="open">Open</option><option value="overdue">Overdue</option><option value="issued">Issued</option><option value="part_paid">Part paid</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select></label>
-      <div className="filter-actions"><button className="button primary" type="submit">Apply filters</button>{(search || propertyId || status !== "all") && <Link className="button secondary" href="/invoices">Clear</Link>}</div>
+      <label><span>Charge</span><select name="charge" defaultValue={charge}><option value="all">All charges</option><option value="rent">Rent</option><option value="late_fee">Late fee</option><option value="manual">Manual</option></select></label>
+      <div className="filter-actions"><button className="button primary" type="submit">Apply filters</button>{(search || propertyId || status !== "all" || charge !== "all") && <Link className="button secondary" href="/invoices">Clear</Link>}</div>
     </form>
 
-    {rows.length ? <div className="panel"><div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Tenant</th><th>Property / unit</th><th>Due</th><th>Amount</th><th>Balance</th><th>Status</th><th>Reminder</th></tr></thead><tbody>{rows.map((row) => {
+    {rows.length ? <div className="panel"><div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Charge</th><th>Tenant</th><th>Property / unit</th><th>Due</th><th>Amount</th><th>Balance</th><th>Status</th><th>Reminder</th>{canManageBilling && <th>Actions</th>}</tr></thead><tbody>{rows.map((row) => {
       const overdue = !["paid", "void"].includes(row.status) && row.due_date < today();
       const balance = Number(row.amount) - Number(row.amount_paid);
       const message = template.replaceAll("{tenant}",row.tenant_name || "tenant").replaceAll("{invoice}",row.number).replaceAll("{balance}",money(balance,row.currency)).replaceAll("{due_date}",dateLabel(row.due_date));
       const prepared = driver.prepare({ recipient: row.phone, message });
-      return <tr key={row.id}><td><strong>{row.number}</strong><small>{row.description}{row.rent_period ? ` · ${rentPeriodLabel(row.rent_period)}` : ""}</small></td><td>{row.tenant_name || "Unassigned"}<small>{row.lease_reference || "No lease linked"}</small></td><td>{row.property_name}<small>{row.unit_name || "—"}</small></td><td>{dateLabel(row.due_date)}</td><td>{money(row.amount,row.currency)}<small>{money(row.amount_paid,row.currency)} paid</small></td><td><strong>{money(balance,row.currency)}</strong></td><td><Badge tone={overdue ? "overdue" : row.status}>{overdue ? "Overdue" : row.status.replace("_"," ")}</Badge></td><td>{row.phone && balance > 0 ? <WhatsAppButton invoiceId={row.id} url={prepared.url} message={message}/> : <span className="muted">—</span>}</td></tr>;
+      return <tr key={row.id} className={row.status === "void" ? "void-row" : ""}><td><strong>{row.number}</strong><small>{row.description}{row.rent_period ? ` · ${rentPeriodLabel(row.rent_period)}` : ""}</small></td><td><Badge tone={row.charge_type}>{row.charge_type.replace("_"," ")}</Badge>{row.source_invoice_number && <small>For {row.source_invoice_number}</small>}</td><td>{row.tenant_name || "Unassigned"}<small>{row.lease_reference || "No lease linked"}</small></td><td>{row.property_name}<small>{row.unit_name || "—"}</small></td><td>{dateLabel(row.due_date)}</td><td>{money(row.amount,row.currency)}<small>{money(row.amount_paid,row.currency)} paid</small></td><td><strong>{money(balance,row.currency)}</strong></td><td><Badge tone={overdue ? "overdue" : row.status}>{overdue ? "Overdue" : row.status.replace("_"," ")}</Badge></td><td>{row.phone && balance > 0 && row.status !== "void" ? <WhatsAppButton invoiceId={row.id} url={prepared.url} message={message}/> : <span className="muted">—</span>}</td>{canManageBilling && <td>{row.status !== "void" && Number(row.amount_paid) === 0 ? <OpenModalButton target={`void-invoice-${row.id}`} className="text-button danger-link">Void</OpenModalButton> : <span className="muted">—</span>}</td>}</tr>;
     })}</tbody></table></div></div> : <Empty icon="invoice" title="No invoices match" text="Clear the filters or create an invoice to begin tracking receivables."/>}
 
     <form action={createInvoiceAction}>
@@ -135,15 +146,24 @@ export default async function InvoicesPage({ searchParams }) {
       </ModalForm>
     </form>
 
-    {canRunRent && <form action={createRentRunAction}>
+    {canManageBilling && <form action={createRentRunAction}>
       <ModalForm id="rent-run-modal" title="Run monthly rent billing" description="NivasaOS creates only missing invoices. Running the same property and month again is safe." submitLabel="Generate rent invoices" pendingLabel="Generating…">
         <div className="modal-body">
-          <div className="rent-run-notice"><Icon name="invoice" size={20}/><div><strong>Idempotent by lease and month</strong><span>Existing non-void rent invoices are skipped automatically. Ad-hoc invoices are not affected.</span></div></div>
+          <div className="rent-run-notice"><Icon name="invoice" size={20}/><div><strong>Idempotent by lease and month</strong><span>Existing non-void rent invoices are skipped automatically. Ad-hoc and late-fee invoices are not affected.</span></div></div>
           <label><span>Property scope</span><select name="propertyId"><option value="">All accessible properties</option>{properties.filter((property) => property.status === "active").map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></label>
           <div className="field-grid two"><label><span>Rent period</span><input type="month" name="period" defaultValue={currentPeriod} required/></label><label><span>Invoice issue date</span><input type="date" name="issueDate" defaultValue={today()} required/></label></div>
           <div className="summary-box"><span>Current period readiness</span><strong>{Number(rentRunStatus.invoiced || 0)} / {Number(rentRunStatus.active || 0)} active leases invoiced</strong><small>Due dates use each lease&apos;s billing day. Rent amounts use the lease rent, not the unit&apos;s current rate.</small></div>
         </div>
       </ModalForm>
     </form>}
+
+    {voidableRows.map((row) => <form action={voidInvoiceAction} key={`void-${row.id}`}>
+      <ModalForm id={`void-invoice-${row.id}`} title={`Void ${row.number}?`} description="The invoice remains in the audit history but is removed from active receivables." submitLabel="Void invoice" pendingLabel="Voiding…">
+        <div className="modal-body"><input type="hidden" name="invoiceId" value={row.id}/>
+          <div className="summary-box"><span>{row.charge_type.replace("_"," ")} invoice</span><strong>{money(row.amount,row.currency)} · {row.description}</strong><small>{row.tenant_name || "Unassigned"} · {row.property_name}</small></div>
+          <div className="policy-warning danger-warning">This is allowed only because no payment is recorded. A source rent invoice cannot be voided while it has an active late-fee invoice.</div>
+        </div>
+      </ModalForm>
+    </form>)}
   </>;
 }

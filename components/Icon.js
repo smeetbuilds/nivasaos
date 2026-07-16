@@ -5,6 +5,7 @@ const paths = {
   tenant: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
   lease: "M6 2h9l5 5v15H6zM14 2v6h6M9 13h8M9 17h8",
   invoice: "M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4",
+  billing: "M4 5h16v14H4zM8 9h8M8 13h5M16 13h.01M8 17h3",
   payment: "M2 7h20v10H2zM2 10h20M6 14h4",
   maintenance: "M14.7 6.3a4 4 0 0 0-5-5L7 4 4 1 1 1.3 5.3l9.4 9.4a2 2 0 1 0 2.8-2.8z",
   report: "M4 19V9M10 19V5M16 19v-7M22 19V2M2 22h22",
