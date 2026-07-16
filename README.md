@@ -27,6 +27,7 @@ Application packages such as Next.js and React are required, but the running pro
 - Boarding house, apartment, rental, and mixed property types.
 - Units with type, floor, capacity, monthly rate, deposit, notes, and availability.
 - Live available, occupied, maintenance, and inactive states.
+- Secure property and unit editing with financial and lease-integrity guards.
 
 ### Tenants and leases
 
@@ -36,6 +37,7 @@ Application packages such as Next.js and React are required, but the running pro
 - Configurable billing day, rent, deposit, and notes.
 - Move-in automatically occupies the unit.
 - Move-out ends the lease, releases the unit, and preserves history.
+- Tenant contact, identity, emergency, address, and lifecycle details remain editable without breaking historical links.
 
 ### Invoices and collections
 
@@ -65,11 +67,13 @@ For automatic sending, register a WhatsApp Cloud API or another notification dri
 
 ### Roles and reports
 
-- **Owner:** full portfolio, team, and settings control.
+- **Owner:** full portfolio, team, settings, and audit-log control.
 - **Admin:** operational management for assigned properties.
 - **Staff:** day-to-day tenant, invoice, payment, and maintenance access for assigned properties.
 - Property-scoped dashboard metrics, rent-run readiness, and upcoming lease-expiry follow-up.
 - Occupancy, collection, and arrears reports.
+- Editable admin/staff roles and property assignments.
+- Owner-only audit log with actor, action, record, property, and safe change metadata.
 
 ## Technology
 
@@ -215,6 +219,8 @@ erDiagram
   PROPERTIES ||--o{ MAINTENANCE_TICKETS : has
   USERS ||--o{ USER_PROPERTIES : permitted
   PROPERTIES ||--o{ USER_PROPERTIES : grants
+  USERS ||--o{ AUDIT_LOG : performs
+  PROPERTIES ||--o{ AUDIT_LOG : scopes
 ```
 
 ## Security baseline
@@ -230,7 +236,10 @@ Implemented:
 - prepared SQL statements;
 - payment amount and invoice-balance validation;
 - proof MIME type, size, generated filename, and authenticated delivery checks;
-- disabled accounts have active sessions revoked.
+- disabled accounts have active sessions revoked;
+- actively leased units and tenants cannot be moved into contradictory lifecycle states;
+- property currency is locked after financial activity;
+- sensitive operational mutations are written to the owner-only audit log without passwords or proof contents.
 
 Before internet-facing deployment:
 
@@ -252,7 +261,6 @@ NivasaOS is usable for local/manual rental operations, but these are intentional
 - the default WhatsApp integration opens click-to-chat rather than sending automatically;
 - payment gateway settlement and webhook reconciliation require an extension;
 - lease document generation and e-signatures are not included;
-- team property assignments are selected when the account is created; an assignment editor is a next-step enhancement;
 - SQLite is best suited to a single application instance or carefully coordinated storage, not horizontally scaled multi-writer deployment.
 
 ## Suggested roadmap
@@ -263,7 +271,6 @@ NivasaOS is usable for local/manual rental operations, but these are intentional
 - tenant portal and receipts;
 - automatic WhatsApp/email/SMS drivers;
 - gateway plugins and webhook reconciliation;
-- audit-log viewer;
 - import/export and richer CSV reports;
 - PostgreSQL adapter for larger multi-instance deployments;
 - extension discovery and lifecycle management.

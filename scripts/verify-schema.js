@@ -33,13 +33,16 @@ try {
 
   db.query("INSERT OR IGNORE INTO invoices (property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,rent_period,status) VALUES ($propertyId,$leaseId,$tenantId,'INV-DUPLICATE','Monthly rent duplicate','2026-07-01','2026-07-05',12000,'2026-07','issued')").run({ propertyId, leaseId, tenantId });
   const rentInvoiceCount = db.query("SELECT COUNT(*) total FROM invoices WHERE lease_id=$leaseId AND rent_period='2026-07' AND status!='void'").get({ leaseId });
+  db.query("INSERT INTO audit_log (actor_user_id,property_id,action,entity_type,entity_id,summary,metadata) VALUES ($ownerId,$propertyId,'record','payment',$invoiceId,'Recorded verification payment',$metadata)").run({ ownerId: Number(owner.lastInsertRowid), propertyId, invoiceId, metadata: JSON.stringify({ amount: 5000 }) });
 
   const occupied = db.query("SELECT status FROM units WHERE id=$unitId").get({ unitId });
   const balance = db.query("SELECT amount-amount_paid balance FROM invoices WHERE id=$invoiceId").get({ invoiceId });
   assert(occupied.status === "occupied", "Move-in did not occupy the unit");
   assert(Number(balance.balance) === 7000, "Payment allocation produced an incorrect balance");
+  const auditCount = db.query("SELECT COUNT(*) total FROM audit_log WHERE property_id=$propertyId").get({ propertyId });
   assert(Number(rentInvoiceCount.total) === 1, "Rent run idempotency index allowed a duplicate invoice");
-  console.log("NivasaOS schema and core financial workflow verified.");
+  assert(Number(auditCount.total) === 1, "Audit log migration or insert failed");
+  console.log("NivasaOS schema, audit trail, and core financial workflow verified.");
 } finally {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) {

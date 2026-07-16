@@ -24,12 +24,24 @@ export async function createPropertyAction(formData) {
   return properties.createPropertyAction(formData);
 }
 
+export async function updatePropertyAction(formData) {
+  return properties.updatePropertyAction(formData);
+}
+
 export async function createUnitAction(formData) {
   return properties.createUnitAction(formData);
 }
 
+export async function updateUnitAction(formData) {
+  return properties.updateUnitAction(formData);
+}
+
 export async function createTenantAction(formData) {
   return properties.createTenantAction(formData);
+}
+
+export async function updateTenantAction(formData) {
+  return properties.updateTenantAction(formData);
 }
 
 export async function createLeaseAction(formData) {
@@ -66,6 +78,10 @@ export async function updateMaintenanceAction(formData) {
 
 export async function createTeamMemberAction(formData) {
   return team.createTeamMemberAction(formData);
+}
+
+export async function updateTeamMemberAction(formData) {
+  return team.updateTeamMemberAction(formData);
 }
 
 export async function toggleUserAction(formData) {

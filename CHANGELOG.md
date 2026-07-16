@@ -2,6 +2,23 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 0.3.0 - 2026-07-16
+
+### Added
+
+- Secure edit flows for properties, units, tenants, and team accounts.
+- Owner-only audit log with action, actor, property, entity, and safe metadata filters.
+- Editable admin/staff property assignments with inaccessible maintenance work automatically unassigned.
+- Database migration and indexes for operational audit events.
+
+### Improved
+
+- Property currency locks after financial activity to preserve reporting consistency.
+- Properties with active leases cannot be deactivated.
+- Active leases control unit occupancy and tenant lifecycle status.
+- Financial, lease, maintenance, settings, security, and notification mutations now create audit events.
+- Property assignment controls use responsive checkbox cards instead of a multi-select field.
+
 ## 0.2.0 - 2026-07-16
 
 ### Added

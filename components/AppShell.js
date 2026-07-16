@@ -12,12 +12,13 @@ const nav = [
   ["/payments","payment","Payments"],
   ["/maintenance","maintenance","Maintenance"],
   ["/reports","report","Reports"],
+  ["/audit","audit","Audit log"],
   ["/team","team","Team"],
   ["/settings","settings","Settings"]
 ];
 
 export default function AppShell({ user, company, children }) {
-  const filtered = nav.filter(([href]) => user.role === "owner" || href !== "/team");
+  const filtered = nav.filter(([href]) => user.role === "owner" || !["/team", "/audit"].includes(href));
   return <div className="app-shell">
     <aside className="sidebar">
       <Link href="/dashboard" className="brand"><span className="brand-mark"><Icon name="building" size={22}/></span><span><strong>NivasaOS</strong><small>Property operations</small></span></Link>
