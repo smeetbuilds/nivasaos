@@ -2,6 +2,27 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 0.8.0 - 2026-07-17
+
+### Added
+
+- Dedicated handover workspace for move-in, periodic, and move-out condition reports.
+- Room-by-room inspection items with condition, notes, assessed charges, and electricity, water, and gas meter readings.
+- Tenant condition-report acknowledgement with preserved resident notes and explicit receipt-only wording.
+- Lease document center with tenant-visible and internal visibility, inspection links, authenticated delivery, and archival.
+- Key and access-item ledger covering issued, returned, lost, and replaced items.
+- Optional owner/admin move-out damage deduction linked directly to the completed inspection and deposit ledger.
+- Tenant portal access to shared agreements, notices, inventories, inspection reports, meter readings, keys, and handover history.
+- Self-hosted handover operations guide and repository verification contract.
+
+### Improved
+
+- Completed inspections are immutable, while tenants may still acknowledge receipt and add notes afterward.
+- Lease move-out is blocked when an existing move-out inspection remains unfinished or tracked key items remain outstanding.
+- Deposit deductions cannot exceed the amount currently held and one deduction cannot be linked to multiple inspections.
+- Key returns and loss records cannot exceed the tracked outstanding quantity for that key type.
+- Lease files use random server-side names, signature validation, private no-store delivery, and tenant/employee scope checks.
+
 ## 0.7.0 - 2026-07-16
 
 ### Added
