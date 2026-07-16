@@ -2,99 +2,95 @@
 
 **Open-source, self-hosted property operations for boarding houses, apartments, and rentals.**
 
-NivasaOS gives an owner or rental team one place to manage multiple properties, units, availability, tenants, leases, invoices, payment proofs, arrears, WhatsApp reminders, maintenance work, role-based access, and property-scoped reports.
+NivasaOS gives owners and rental teams one place to manage properties, units, availability, tenants, leases, invoicing, rent collection, payment proofs, refundable deposits, maintenance, reminders, reports, staff access, and a secure resident portal.
 
 > Built by [Aahav Labs](https://aahavlabs.in) · hi@aahavlabs.in
 
 ## Why NivasaOS
 
-Many small and mid-sized rental operations outgrow spreadsheets before they are ready for expensive, vendor-locked property software. NivasaOS is designed as a practical local-first MVP:
+Small and mid-sized rental operations often outgrow spreadsheets but do not want a vendor-locked SaaS. NivasaOS keeps the core local:
 
-- no hosted database account;
-- no mandatory payment gateway;
-- no mandatory messaging vendor;
-- no telemetry or SaaS lock-in;
-- one SQLite database and a local uploads directory;
+- SQLite database;
+- local authenticated uploads;
+- no mandatory hosted database, payment gateway, or messaging vendor;
+- no telemetry requirement;
+- Docker and Bun deployment;
 - extension registries for payment methods, notification drivers, settings, and dashboard sections.
 
-Application packages such as Next.js and React are required, but the running product has **no mandatory third-party hosted service dependency**.
+Application packages are required, but the running product has no mandatory third-party hosted-service dependency.
 
-## Included today
+## Current capabilities
 
-### Portfolio and occupancy
+### Portfolio, units, tenants, and leases
 
-- Multiple properties with independent currency and status.
-- Boarding house, apartment, rental, and mixed property types.
-- Units with type, floor, capacity, monthly rate, deposit, notes, and availability.
-- Live available, occupied, maintenance, and inactive states.
-- Secure property and unit editing with financial and lease-integrity guards.
-
-### Tenants and leases
-
-- Tenant contact, identity, emergency, address, and lifecycle records.
-- Fixed-term or open-ended leases.
-- One or multiple tenants per lease for shared accommodation.
-- Configurable billing day, rent, deposit, and notes.
-- Move-in automatically occupies the unit.
-- Move-out ends the lease, releases the unit, and preserves history.
-- Tenant contact, identity, emergency, address, and lifecycle details remain editable without breaking historical links.
+- Multiple independently scoped properties and currencies.
+- Boarding houses, apartments, rentals, and mixed portfolios.
+- Unit rates, deposits, capacity, floor, notes, and availability.
+- Tenant identity, contact, emergency, address, and lifecycle records.
+- Fixed-term and open-ended leases with one or multiple residents.
+- Move-in occupancy and move-out history preservation.
+- Integrity guards for active leases, occupied units, tenant lifecycle, and property currency.
 
 ### Invoices and collections
 
-- Idempotent monthly rent runs for all accessible properties or one selected property.
-- Rent or ad-hoc invoices.
+- Idempotent monthly rent runs.
+- Rent, late-fee, and manual invoices.
 - Issued, part-paid, paid, draft, void, and computed overdue states.
-- Search and filters by property, status, charge type, invoice, tenant, lease, or unit.
-- Per-property grace periods and disabled, flat, or percentage late-fee policies with optional caps.
-- Dry-run late-fee preview and idempotent generation with one active fee per source rent invoice.
-- Safe voiding for unpaid invoice mistakes without deleting financial history.
-- Payment ledger with method, reference, date, notes, and recorder.
-- Invoice-linked payments update balances atomically.
-- Local JPG, PNG, WebP, or PDF proof uploads up to 5 MB.
-- Proof files are served only after authentication and property-access checks.
+- Per-property grace periods and flat or percentage late-fee rules with optional caps.
+- Offline and gateway payment records with authenticated proof uploads.
+- Invoice-balance validation and atomic financial mutations.
+- Safe voiding for unpaid mistakes without deleting history.
+- WhatsApp click-to-chat reminders and notification logging.
 
-### WhatsApp reminders
+### Secure resident portal
 
-- Pre-filled WhatsApp click-to-chat reminders from overdue or open invoices.
-- Editable reminder template with tenant, invoice, balance, and due-date variables.
-- Reminder preparation is logged.
-- The default driver does not require a WhatsApp Business API account.
+Residents sign in at `/portal/login` using a separate tenant account and session model.
 
-For automatic sending, register a WhatsApp Cloud API or another notification driver through the extension layer.
+- One-time seven-day activation and password-reset links.
+- Tenant dashboard with home, outstanding balance, deposit held, proof queue, and maintenance status.
+- Lease terms, shared residents, billing day, rent, and historical occupancy.
+- Invoice history and pending proof reservations.
+- Tenant payment-proof submission without prematurely changing invoice balances.
+- Controlled staff approval or rejection and printable official receipts.
+- Separate refundable-deposit ledger with received, refund, credit, and debit movements.
+- Printable deposit receipt/refund records.
+- Tenant maintenance requests and resident-visible conversation timelines.
+- Self-service updates for phone, emergency contact, and correspondence address.
+- Mobile-native resident navigation and responsive portal layouts.
+
+See [`docs/TENANT_PORTAL.md`](docs/TENANT_PORTAL.md) for onboarding, privacy, reconciliation, and deposit guidance.
 
 ### Maintenance
 
 - Reported → In progress → Resolved workflow.
 - Property, unit, tenant, priority, and staff assignment.
-- Responsive operational board.
+- Resident-visible updates separated from internal staff notes.
+- Responsive operations board and resident ticket history.
 
-### Roles and reports
+### Access, reports, and audit
 
-- **Owner:** full portfolio, team, settings, and audit-log control.
-- **Admin:** operational management for assigned properties.
-- **Staff:** day-to-day tenant, invoice, payment, and maintenance access for assigned properties.
-- Property-scoped dashboard metrics, rent-run readiness, and upcoming lease-expiry follow-up.
-- Occupancy, collection, and arrears reports.
-- Editable admin/staff roles and property assignments.
-- Owner-only audit log with actor, action, record, property, and safe change metadata.
+- **Owner:** full portfolio, team, settings, audit, and tenant-portal control.
+- **Admin:** assigned-property operations and resident account management.
+- **Staff:** day-to-day tenant, billing, payment review, deposit, and maintenance work for assigned properties.
+- Property-scoped dashboards, occupancy, collections, and arrears reports.
+- Owner audit log covering staff and tenant-portal actors.
 
 ## Technology
 
 - Next.js 16 App Router
 - React 19
 - Bun runtime and package manager
-- Bun's built-in `bun:sqlite`
-- Server Actions for mutations
+- Bun built-in `bun:sqlite`
+- Server Actions
 - Local filesystem uploads
-- Plain responsive CSS with no UI-kit dependency
-- Native-style mobile shell with a navigation drawer, bottom navigation, bottom-sheet forms, swipeable metrics, and card-based responsive tables
+- Plain responsive CSS without a UI-kit dependency
 - Docker and Docker Compose
-- Repository-owned local quality gate and Git hooks; no GitHub Actions requirement
-- Built-in health check plus verified backup and restore CLI
+- Repository-owned local verification gate and Git hooks
+- Built-in health, backup, and restore tooling
 
-## Quick start with Bun
+## Quick start
 
-Requirements: Bun 1.3+ and a modern Linux, macOS, or Windows/WSL environment.
+Requirements: Bun 1.3+ on Linux, macOS, or Windows/WSL.
 
 ```bash
 git clone https://github.com/smeetbuilds/nivasaos.git
@@ -105,34 +101,16 @@ bun run hooks:install
 bun run dev
 ```
 
-Open `http://localhost:3000`. The first-run installer will:
+Open `http://localhost:3000`. The first-run installer creates the owner account and portfolio defaults. Staff sign in at `/login`; residents sign in at `/portal/login` after receiving an invitation.
 
-1. initialise the SQLite schema;
-2. create the first owner account;
-3. save portfolio defaults;
-4. optionally add two sample units;
-5. sign the owner in.
-
-Before a production release, run the repository-owned gate:
+Before production release:
 
 ```bash
 bun run gate
 bun run start
 ```
 
-The gate parses the source tree, verifies fresh and upgraded database schemas, tests financial and backup safeguards, creates a production build, starts it against isolated temporary storage, and probes `/api/health`. It runs locally or on infrastructure you control and does not call GitHub Actions.
-
-Bun must execute the Next.js CLI because NivasaOS uses `bun:sqlite`:
-
-```json
-{
-  "scripts": {
-    "dev": "bun --bun next dev",
-    "build": "bun --bun next build",
-    "start": "bun --bun next start"
-  }
-}
-```
+The local gate parses source, verifies fresh and upgraded schemas, exercises financial, portal, backup, and restore safeguards, builds production, starts an isolated instance, and probes `/api/health`. It does not depend on GitHub Actions.
 
 ## Docker
 
@@ -140,31 +118,29 @@ Bun must execute the Next.js CLI because NivasaOS uses `bun:sqlite`:
 docker compose up -d --build
 ```
 
-Then open `http://localhost:3000`.
-
-The Compose file persists the SQLite database, payment proofs, and generated backups in the `nivasa_data` volume. Docker checks `/api/health` and marks the container unhealthy when SQLite cannot be reached or upload storage is not writable. Put a reverse proxy such as Caddy, Nginx, or Traefik in front of the container for HTTPS.
+The Compose deployment persists SQLite, uploads, and backups in the `nivasa_data` volume and uses the built-in health endpoint. Put a trusted HTTPS reverse proxy in front of the app.
 
 ## Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `NIVASA_DB_PATH` | `./storage/nivasaos.sqlite` | SQLite database location |
-| `NIVASA_UPLOAD_DIR` | `./storage/uploads` | Payment proof directory |
-| `NIVASA_BACKUP_DIR` | `./storage/backups` | Generated backup archive directory |
-| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Canonical application URL |
+| `NIVASA_DB_PATH` | `./storage/nivasaos.sqlite` | SQLite database |
+| `NIVASA_UPLOAD_DIR` | `./storage/uploads` | Payment and deposit proof files |
+| `NIVASA_BACKUP_DIR` | `./storage/backups` | Backup archive destination |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Canonical URL used for resident invite links |
+
+Set `NEXT_PUBLIC_APP_URL` to the HTTPS production origin before creating tenant invitation links.
 
 ## Backup and restore
-
-Create a consistent compressed archive containing a serialized SQLite snapshot, all payment-proof uploads, and a checksum manifest:
 
 ```bash
 bun run backup
 bun run backup -- --output /secure/location/nivasaos.tar.gz
 ```
 
-The default destination is `storage/backups/`. Copy archives to a separate encrypted host or object store; an archive stored only in the same volume as the live application is not disaster recovery.
+Backups include a serialized SQLite snapshot, authenticated uploads, and a checksum manifest. Copy them off-host.
 
-Stop NivasaOS before restoring:
+Stop the application before restore:
 
 ```bash
 docker compose stop nivasaos
@@ -172,25 +148,26 @@ bun run restore /secure/location/nivasaos.tar.gz --force
 docker compose start nivasaos
 ```
 
-Restore validates the archive checksum and SQLite integrity, creates a safety backup of the current database and uploads, stages the replacement, and atomically swaps it into place.
+Restore validates checksums and SQLite integrity, creates a safety backup, stages the replacement, and swaps it atomically.
 
-## Self-hosted verification and operations
-
-NivasaOS deliberately does not depend on GitHub Actions. Install the tracked Git hooks once per clone:
+## Self-hosted verification
 
 ```bash
 bun run hooks:install
+bun run verify
+bun run gate
 ```
 
-The pre-commit hook runs the verification suite and the pre-push hook runs the complete production gate. `bun run gate` can also be called by a workstation, deployment script, systemd unit, Jenkins, Woodpecker, Forgejo, or another private runner.
+- pre-commit runs repository verification;
+- pre-push runs the full release gate;
+- private Jenkins, Woodpecker, Forgejo, systemd, or deployment scripts may call the same commands;
+- no application, release, backup, or deployment task requires GitHub Actions.
 
-Operational documentation, including scheduling backups with cron or systemd, is in [`docs/SELF_HOSTED_OPERATIONS.md`](docs/SELF_HOSTED_OPERATIONS.md).
+See [`docs/SELF_HOSTED_OPERATIONS.md`](docs/SELF_HOSTED_OPERATIONS.md).
 
 ## Extension architecture
 
-The core registry is in `lib/extension-registry.js`. The loader is `lib/extensions.js`, and the intended custom-code entrypoint is `plugins/index.js`.
-
-### Add a payment method
+The core registry lives in `lib/extension-registry.js`, the loader in `lib/extensions.js`, and custom code entrypoint in `plugins/index.js`.
 
 ```js
 import { registerPaymentMethod } from "@/lib/extension-registry";
@@ -201,31 +178,16 @@ registerPaymentMethod({
 });
 ```
 
-### Add a notification driver
-
-```js
-import { registerNotificationDriver } from "@/lib/extension-registry";
-
-registerNotificationDriver({
-  id: "whatsapp_cloud",
-  label: "WhatsApp Cloud API",
-  async prepare({ recipient, message, context }) {
-    // Validate settings, send through your adapter, and return a stable result.
-    return { status: "sent", providerMessageId: "..." };
-  }
-});
-```
-
-The registry exposes four extension surfaces:
+Extension surfaces:
 
 - `registerPaymentMethod()`
 - `registerNotificationDriver()`
 - `registerDashboardSection()`
 - `registerSettingsSection()`
 
-Keep provider credentials out of source control. A production provider extension should encrypt secrets at rest, handle retries idempotently, validate webhooks, and maintain an auditable event log.
+Provider integrations should encrypt credentials, validate webhooks, retry idempotently, and preserve an auditable event history.
 
-## Data model
+## Data model overview
 
 ```mermaid
 erDiagram
@@ -235,80 +197,63 @@ erDiagram
   UNITS ||--o{ LEASES : assigned_to
   LEASES ||--o{ LEASE_TENANTS : includes
   TENANTS ||--o{ LEASE_TENANTS : joins
+  TENANTS ||--o| TENANT_ACCOUNTS : authenticates
+  TENANT_ACCOUNTS ||--o{ TENANT_SESSIONS : owns
+  TENANT_ACCOUNTS ||--o{ TENANT_INVITES : receives
   LEASES ||--o{ INVOICES : generates
-  TENANTS ||--o{ INVOICES : receives
   INVOICES ||--o{ PAYMENTS : settled_by
-  INVOICES ||--o| INVOICES : late_fee_for
-  PROPERTIES ||--o| BILLING_POLICIES : configures
+  INVOICES ||--o{ PAYMENT_SUBMISSIONS : reviewed_from
+  LEASES ||--o{ DEPOSIT_TRANSACTIONS : tracks
   PROPERTIES ||--o{ MAINTENANCE_TICKETS : has
-  USERS ||--o{ USER_PROPERTIES : permitted
-  PROPERTIES ||--o{ USER_PROPERTIES : grants
+  MAINTENANCE_TICKETS ||--o{ MAINTENANCE_COMMENTS : discusses
   USERS ||--o{ AUDIT_LOG : performs
-  PROPERTIES ||--o{ AUDIT_LOG : scopes
+  TENANTS ||--o{ AUDIT_LOG : performs
 ```
 
 ## Security baseline
 
 Implemented:
 
-- scrypt password hashing with a unique salt;
-- random session tokens stored as SHA-256 hashes;
-- HTTP-only, SameSite=Lax session cookie;
-- role checks on privileged mutations;
-- property-access checks on property-owned records;
-- SQLite foreign keys and constrained statuses;
-- prepared SQL statements;
-- payment amount and invoice-balance validation inside the same database transaction as ledger updates;
-- duplicate-protected rent and late-fee generation;
-- unpaid-only invoice voiding with source-fee integrity guards;
-- proof MIME type, size, generated filename, and authenticated delivery checks;
-- disabled accounts have active sessions revoked;
-- actively leased units and tenants cannot be moved into contradictory lifecycle states;
-- property currency is locked after financial activity;
-- sensitive operational mutations are written to the owner-only audit log without passwords or proof contents.
+- scrypt passwords with unique salts;
+- random staff and resident session tokens stored only as SHA-256 hashes;
+- separate HTTP-only, SameSite=Lax staff and tenant cookies;
+- atomic one-time tenant invitation consumption;
+- tenant-login throttling and temporary lockout;
+- role, property, tenant, lease, invoice, payment, deposit, and ticket access checks;
+- prepared SQL, foreign keys, constrained statuses, and duplicate-protection indexes;
+- payment proof MIME, size, signature, filename, and authenticated-delivery validation;
+- pending proof reservations and approval-time invoice revalidation;
+- deposit reductions prevented from making held balances negative;
+- account disabling and sensitive email changes revoke sessions;
+- owner audit records for financial, security, portal, and tenant activity.
 
-Before internet-facing deployment:
+Before internet exposure, terminate HTTPS, rate-limit `/login` and `/portal/login`, restrict storage permissions, patch dependencies, use strong passwords, test encrypted off-host backups, and review local tenancy, privacy, receipt, tax, deposit, late-fee, and messaging requirements.
 
-- terminate HTTPS at a trusted reverse proxy;
-- restrict access to the database and upload volume;
-- patch Bun and application dependencies regularly;
-- use strong unique passwords;
-- configure rate limiting at the proxy for `/login`;
-- establish tested encrypted backups;
-- review privacy, retention, tax, tenancy, late-fee, and messaging requirements for your jurisdiction.
+See [`SECURITY.md`](SECURITY.md).
 
-See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+## Current boundaries
 
-## Current MVP boundaries
+- Rent and late-fee runs are manually initiated rather than scheduled.
+- Default WhatsApp reminders open click-to-chat rather than sending automatically.
+- Payment gateways and webhook reconciliation require extensions.
+- Lease PDF generation and e-signatures are not included.
+- SQLite is intended for one application instance or carefully coordinated storage, not horizontally scaled multi-writer use.
 
-NivasaOS is usable for local/manual rental operations, but these are intentionally not claimed as complete yet:
+## Roadmap
 
-- monthly rent and late-fee runs are initiated manually rather than executed by a scheduler;
-- the default WhatsApp integration opens click-to-chat rather than sending automatically;
-- payment gateway settlement and webhook reconciliation require an extension;
-- lease document generation and e-signatures are not included;
-- SQLite is best suited to a single application instance or carefully coordinated storage, not horizontally scaled multi-writer deployment.
-
-## Suggested roadmap
-
-- optional scheduled rent-run automation with dry-run previews;
-- lease PDF templates and document attachments;
-- tenant portal and receipts;
-- automatic WhatsApp/email/SMS drivers;
-- gateway plugins and webhook reconciliation;
-- import/export and richer CSV reports;
-- PostgreSQL adapter for larger multi-instance deployments;
-- extension discovery and lifecycle management.
-
-## Contributing
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md). Keep every query property-scoped, every financial mutation auditable, and every provider integration idempotent.
+- Optional scheduled rent and fee runs with previews.
+- Lease documents, attachments, and e-signatures.
+- Automated email/SMS/WhatsApp notification drivers.
+- Gateway plugins and webhook reconciliation.
+- CSV imports/exports and richer reports.
+- PostgreSQL adapter for multi-instance deployments.
+- Extension discovery and lifecycle management.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [`LICENSE`](LICENSE).
 
 ---
 
-**NivasaOS is built by [Aahav Labs](https://aahavlabs.in).**
+**NivasaOS is built by [Aahav Labs](https://aahavlabs.in).**  
 Product and engineering enquiries: **hi@aahavlabs.in**

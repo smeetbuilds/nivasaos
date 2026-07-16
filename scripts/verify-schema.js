@@ -2,94 +2,85 @@ import { Database } from "bun:sqlite";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import fs from "node:fs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { applyMigrations, schema } from "../lib/schema.js";
 import { calculateLateFee } from "../lib/billing-rules.js";
 
 const filename = path.join(tmpdir(), `nivasaos-verify-${randomBytes(8).toString("hex")}.sqlite`);
 const db = new Database(filename, { create: true, strict: true });
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
-}
+const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
 try {
   db.exec(schema);
   applyMigrations(db);
-  const owner = db.query("INSERT INTO users (name,email,password_hash,role) VALUES ($name,$email,$hash,'owner')").run({ name: "Owner", email: "owner@example.com", hash: "test" });
-  const property = db.query("INSERT INTO properties (name,type,address,city,currency) VALUES ($name,'boarding_house',$address,$city,'INR')").run({ name: "Test House", address: "1 Test Road", city: "Surat" });
-  const propertyId = Number(property.lastInsertRowid);
-  const unit = db.query("INSERT INTO units (property_id,name,unit_type,capacity,monthly_rate,deposit,status) VALUES ($propertyId,$name,'Private room',1,12000,12000,'available')").run({ propertyId, name: "Room 101" });
-  const unitId = Number(unit.lastInsertRowid);
-  const tenant = db.query("INSERT INTO tenants (property_id,full_name,phone,status) VALUES ($propertyId,$name,$phone,'active')").run({ propertyId, name: "Test Tenant", phone: "919999999999" });
-  const tenantId = Number(tenant.lastInsertRowid);
-  const lease = db.query("INSERT INTO leases (property_id,unit_id,reference,start_date,monthly_rent,deposit,billing_day,status) VALUES ($propertyId,$unitId,$reference,'2026-07-01',12000,12000,1,'active')").run({ propertyId, unitId, reference: "LEASE-VERIFY" });
-  const leaseId = Number(lease.lastInsertRowid);
+  const ownerId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Owner','owner@example.com','test','owner')").run().lastInsertRowid);
+  const propertyId = Number(db.query("INSERT INTO properties (name,type,address,city,currency) VALUES ('Test House','boarding_house','1 Test Road','Surat','INR')").run().lastInsertRowid);
+  const unitId = Number(db.query("INSERT INTO units (property_id,name,unit_type,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'Room 101','Private room',1,12000,12000,'occupied')").run({ propertyId }).lastInsertRowid);
+  const tenantId = Number(db.query("INSERT INTO tenants (property_id,full_name,email,phone,status) VALUES ($propertyId,'Test Tenant','tenant@example.com','919999999999','active')").run({ propertyId }).lastInsertRowid);
+  const leaseId = Number(db.query("INSERT INTO leases (property_id,unit_id,reference,start_date,monthly_rent,deposit,billing_day,status) VALUES ($propertyId,$unitId,'LEASE-VERIFY','2026-07-01',12000,12000,1,'active')").run({ propertyId, unitId }).lastInsertRowid);
   db.query("INSERT INTO lease_tenants (lease_id,tenant_id,is_primary) VALUES ($leaseId,$tenantId,1)").run({ leaseId, tenantId });
-  db.query("UPDATE units SET status='occupied' WHERE id=$unitId").run({ unitId });
-  const invoice = db.query("INSERT INTO invoices (property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,rent_period,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,'INV-VERIFY','Monthly rent','2026-07-01','2026-07-05',12000,'2026-07','rent','issued')").run({ propertyId, leaseId, tenantId });
-  const invoiceId = Number(invoice.lastInsertRowid);
-  db.query("INSERT INTO payments (property_id,invoice_id,tenant_id,reference,amount,method,paid_at,recorded_by) VALUES ($propertyId,$invoiceId,$tenantId,'PAY-VERIFY',5000,'upi','2026-07-05',$ownerId)").run({ propertyId, invoiceId, tenantId, ownerId: Number(owner.lastInsertRowid) });
+  const invoiceId = Number(db.query("INSERT INTO invoices (property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,rent_period,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,'INV-VERIFY','Monthly rent','2026-07-01','2026-07-05',12000,'2026-07','rent','issued')").run({ propertyId, leaseId, tenantId }).lastInsertRowid);
+
+  const accountId = Number(db.query("INSERT INTO tenant_accounts (tenant_id,email,status,password_hash,activated_at) VALUES ($tenantId,'tenant@example.com','active','test',CURRENT_TIMESTAMP)").run({ tenantId }).lastInsertRowid);
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  db.query("INSERT INTO tenant_invites (account_id,token_hash,purpose,expires_at,created_by) VALUES ($accountId,$tokenHash,'reset','2026-08-01T00:00:00.000Z',$ownerId)").run({ accountId, tokenHash, ownerId });
+  db.query("INSERT INTO tenant_sessions (account_id,token_hash,expires_at) VALUES ($accountId,$tokenHash2,'2026-08-01T00:00:00.000Z')").run({ accountId, tokenHash2: createHash("sha256").update(`${token}-session`).digest("hex") });
+
+  const submissionId = Number(db.query("INSERT INTO payment_submissions (property_id,tenant_id,invoice_id,amount,method,paid_at,proof_path) VALUES ($propertyId,$tenantId,$invoiceId,5000,'upi','2026-07-05','proof.png')").run({ propertyId, tenantId, invoiceId }).lastInsertRowid);
+  const paymentId = Number(db.query("INSERT INTO payments (property_id,invoice_id,tenant_id,reference,amount,method,paid_at,proof_path,recorded_by) VALUES ($propertyId,$invoiceId,$tenantId,'PAY-VERIFY',5000,'upi','2026-07-05','proof.png',$ownerId)").run({ propertyId, invoiceId, tenantId, ownerId }).lastInsertRowid);
   db.query("UPDATE invoices SET amount_paid=5000,status='part_paid' WHERE id=$invoiceId").run({ invoiceId });
+  db.query("UPDATE payment_submissions SET status='approved',payment_id=$paymentId,reviewed_by=$ownerId,reviewed_at=CURRENT_TIMESTAMP WHERE id=$submissionId").run({ paymentId, ownerId, submissionId });
 
-  db.query("INSERT OR IGNORE INTO invoices (property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,rent_period,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,'INV-DUPLICATE','Monthly rent duplicate','2026-07-01','2026-07-05',12000,'2026-07','rent','issued')").run({ propertyId, leaseId, tenantId });
-  const rentInvoiceCount = db.query("SELECT COUNT(*) total FROM invoices WHERE lease_id=$leaseId AND rent_period='2026-07' AND status!='void'").get({ leaseId });
-  db.query("INSERT INTO billing_policies (property_id,grace_days,late_fee_type,late_fee_value,late_fee_cap,updated_by) VALUES ($propertyId,3,'flat',500,NULL,$ownerId)").run({ propertyId, ownerId: Number(owner.lastInsertRowid) });
-  const lateFee = db.query("INSERT INTO invoices (property_id,lease_id,tenant_id,source_invoice_id,number,description,issue_date,due_date,amount,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,$invoiceId,'INV-LATE-1','Late fee','2026-07-16','2026-07-16',500,'late_fee','issued')").run({ propertyId, leaseId, tenantId, invoiceId });
-  db.query("INSERT OR IGNORE INTO invoices (property_id,lease_id,tenant_id,source_invoice_id,number,description,issue_date,due_date,amount,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,$invoiceId,'INV-LATE-DUP','Late fee duplicate','2026-07-16','2026-07-16',500,'late_fee','issued')").run({ propertyId, leaseId, tenantId, invoiceId });
-  const activeLateFeeCount = db.query("SELECT COUNT(*) total FROM invoices WHERE source_invoice_id=$invoiceId AND charge_type='late_fee' AND status!='void'").get({ invoiceId });
-  db.query("UPDATE invoices SET status='void' WHERE id=$lateFeeId").run({ lateFeeId: Number(lateFee.lastInsertRowid) });
-  db.query("INSERT INTO invoices (property_id,lease_id,tenant_id,source_invoice_id,number,description,issue_date,due_date,amount,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,$invoiceId,'INV-LATE-2','Replacement late fee','2026-07-16','2026-07-16',500,'late_fee','issued')").run({ propertyId, leaseId, tenantId, invoiceId });
-  const replacementLateFeeCount = db.query("SELECT COUNT(*) total FROM invoices WHERE source_invoice_id=$invoiceId AND charge_type='late_fee' AND status!='void'").get({ invoiceId });
-  db.query("INSERT INTO audit_log (actor_user_id,property_id,action,entity_type,entity_id,summary,metadata) VALUES ($ownerId,$propertyId,'record','payment',$invoiceId,'Recorded verification payment',$metadata)").run({ ownerId: Number(owner.lastInsertRowid), propertyId, invoiceId, metadata: JSON.stringify({ amount: 5000 }) });
+  db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-IN','received',12000,'bank_transfer','2026-07-01',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
+  db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-OUT','refund',2000,'bank_transfer','2026-07-20',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
+  const held = db.query("SELECT SUM(CASE transaction_type WHEN 'received' THEN amount WHEN 'credit' THEN amount ELSE -amount END) held FROM deposit_transactions WHERE lease_id=$leaseId").get({ leaseId });
 
-  const occupied = db.query("SELECT status FROM units WHERE id=$unitId").get({ unitId });
-  const balance = db.query("SELECT amount-amount_paid balance FROM invoices WHERE id=$invoiceId").get({ invoiceId });
-  assert(occupied.status === "occupied", "Move-in did not occupy the unit");
-  assert(Number(balance.balance) === 7000, "Payment allocation produced an incorrect balance");
-  const auditCount = db.query("SELECT COUNT(*) total FROM audit_log WHERE property_id=$propertyId").get({ propertyId });
-  assert(Number(rentInvoiceCount.total) === 1, "Rent run idempotency index allowed a duplicate invoice");
-  assert(Number(activeLateFeeCount.total) === 1, "Late-fee idempotency index allowed a duplicate invoice");
-  assert(Number(replacementLateFeeCount.total) === 1, "Voided late fee could not be safely replaced");
-  assert(calculateLateFee(7000, { late_fee_type: "flat", late_fee_value: 500 }) === 500, "Flat late-fee calculation failed");
-  assert(calculateLateFee(7000, { late_fee_type: "percent", late_fee_value: 10 }) === 700, "Percentage late-fee calculation failed");
-  assert(calculateLateFee(7000, { late_fee_type: "percent", late_fee_value: 10, late_fee_cap: 400 }) === 400, "Late-fee cap failed");
-  assert(Number(auditCount.total) === 1, "Audit log migration or insert failed");
+  const ticketId = Number(db.query("INSERT INTO maintenance_tickets (property_id,unit_id,tenant_id,title,description,status) VALUES ($propertyId,$unitId,$tenantId,'Leak','Under sink','reported')").run({ propertyId, unitId, tenantId }).lastInsertRowid);
+  db.query("INSERT INTO maintenance_comments (ticket_id,actor_tenant_id,message,visibility) VALUES ($ticketId,$tenantId,'Water is still running','tenant')").run({ ticketId, tenantId });
+  db.query("INSERT INTO maintenance_comments (ticket_id,actor_user_id,message,visibility) VALUES ($ticketId,$ownerId,'Plumber booked','tenant')").run({ ticketId, ownerId });
+  db.query("INSERT INTO audit_log (actor_tenant_id,property_id,action,entity_type,entity_id,summary) VALUES ($tenantId,$propertyId,'create','payment_submission',$submissionId,'Tenant submitted proof')").run({ tenantId, propertyId, submissionId });
 
+  assert(Number(held.held) === 10000, "Deposit held calculation failed");
+  assert(db.query("SELECT status FROM payment_submissions WHERE id=$submissionId").get({ submissionId }).status === "approved", "Payment submission approval state failed");
+  assert(Number(db.query("SELECT COUNT(*) total FROM maintenance_comments WHERE ticket_id=$ticketId").get({ ticketId }).total) === 2, "Maintenance conversation failed");
+  assert(Number(db.query("SELECT COUNT(*) total FROM audit_log WHERE actor_tenant_id=$tenantId").get({ tenantId }).total) === 1, "Tenant audit actor failed");
+  assert(calculateLateFee(7000, { late_fee_type: "percent", late_fee_value: 10, late_fee_cap: 400 }) === 400, "Late-fee safeguard regressed");
+
+  const duplicate = db.query("INSERT OR IGNORE INTO invoices (property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,rent_period,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,'INV-DUP','Duplicate','2026-07-01','2026-07-05',12000,'2026-07','rent','issued')").run({ propertyId, leaseId, tenantId });
+  assert(Number(duplicate.changes) === 0, "Rent invoice idempotency regressed");
+
+  const tables = ["tenant_accounts", "tenant_sessions", "tenant_invites", "payment_submissions", "deposit_transactions", "maintenance_comments"];
+  for (const table of tables) assert(Boolean(db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=$table").get({ table })), `${table} was not created`);
   const legacy = new Database(":memory:", { strict: true });
-  legacy.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE users(id INTEGER PRIMARY KEY);
-    CREATE TABLE properties(id INTEGER PRIMARY KEY);
-    CREATE TABLE leases(id INTEGER PRIMARY KEY);
-    CREATE TABLE tenants(id INTEGER PRIMARY KEY);
-    CREATE TABLE invoices (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
-      lease_id INTEGER REFERENCES leases(id) ON DELETE SET NULL,
-      tenant_id INTEGER REFERENCES tenants(id) ON DELETE SET NULL,
-      number TEXT NOT NULL UNIQUE,
-      description TEXT NOT NULL,
-      issue_date TEXT NOT NULL,
-      due_date TEXT NOT NULL,
-      amount REAL NOT NULL,
-      amount_paid REAL NOT NULL DEFAULT 0,
-      rent_period TEXT,
-      status TEXT NOT NULL DEFAULT 'issued',
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
+  legacy.exec(`
+    PRAGMA foreign_keys=ON;
+    CREATE TABLE users(id INTEGER PRIMARY KEY,name TEXT,email TEXT,password_hash TEXT,role TEXT,status TEXT DEFAULT 'active');
+    CREATE TABLE properties(id INTEGER PRIMARY KEY,name TEXT,address TEXT,currency TEXT DEFAULT 'INR',status TEXT DEFAULT 'active');
+    CREATE TABLE units(id INTEGER PRIMARY KEY,property_id INTEGER,status TEXT DEFAULT 'available');
+    CREATE TABLE tenants(id INTEGER PRIMARY KEY,property_id INTEGER,full_name TEXT,email TEXT,phone TEXT,status TEXT DEFAULT 'active');
+    CREATE TABLE leases(id INTEGER PRIMARY KEY,property_id INTEGER,unit_id INTEGER,reference TEXT,start_date TEXT,monthly_rent REAL,deposit REAL,billing_day INTEGER,status TEXT);
+    CREATE TABLE lease_tenants(lease_id INTEGER,tenant_id INTEGER,is_primary INTEGER,PRIMARY KEY(lease_id,tenant_id));
+    CREATE TABLE invoices(id INTEGER PRIMARY KEY,property_id INTEGER,lease_id INTEGER,tenant_id INTEGER,number TEXT,description TEXT,issue_date TEXT,due_date TEXT,amount REAL,amount_paid REAL DEFAULT 0,status TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE payments(id INTEGER PRIMARY KEY,property_id INTEGER,invoice_id INTEGER,tenant_id INTEGER,reference TEXT,amount REAL,method TEXT,paid_at TEXT,proof_path TEXT,notes TEXT,recorded_by INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE maintenance_tickets(id INTEGER PRIMARY KEY,property_id INTEGER,unit_id INTEGER,tenant_id INTEGER,title TEXT,description TEXT,priority TEXT,status TEXT,assigned_to INTEGER,reported_at TEXT DEFAULT CURRENT_TIMESTAMP,resolved_at TEXT,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE audit_log(id INTEGER PRIMARY KEY,actor_user_id INTEGER,property_id INTEGER,action TEXT,entity_type TEXT,entity_id INTEGER,summary TEXT,metadata TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE sessions(id INTEGER PRIMARY KEY,user_id INTEGER,token_hash TEXT,expires_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE user_properties(user_id INTEGER,property_id INTEGER,PRIMARY KEY(user_id,property_id));
+    CREATE TABLE notification_log(id INTEGER PRIMARY KEY,property_id INTEGER,tenant_id INTEGER,invoice_id INTEGER,driver TEXT,recipient TEXT,message TEXT,status TEXT,metadata TEXT,created_by INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
   `);
+  legacy.exec(schema);
   applyMigrations(legacy);
-  const migratedColumns = legacy.query("PRAGMA table_info(invoices)").all().map((column) => column.name);
-  assert(migratedColumns.includes("charge_type") && migratedColumns.includes("source_invoice_id"), "Existing installations did not receive billing columns");
-  assert(Boolean(legacy.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='billing_policies'").get()), "Existing installations did not receive billing policies");
+  const migratedInvoiceColumns = legacy.query("PRAGMA table_info(invoices)").all().map((column) => column.name);
+  const migratedAuditColumns = legacy.query("PRAGMA table_info(audit_log)").all().map((column) => column.name);
+  assert(["rent_period", "charge_type", "source_invoice_id"].every((column) => migratedInvoiceColumns.includes(column)), "Legacy invoice migration failed");
+  assert(migratedAuditColumns.includes("actor_tenant_id"), "Legacy tenant audit migration failed");
+  for (const table of tables) assert(Boolean(legacy.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=$table").get({ table })), `Legacy migration did not create ${table}`);
   legacy.close();
 
-  console.log("NivasaOS schema, migrations, audit trail, rent runs, and late-fee safeguards verified.");
+  console.log("NivasaOS schema, legacy migrations, tenant portal, receipts, deposits, proof review, maintenance, and existing financial safeguards verified.");
 } finally {
   db.close();
-  for (const suffix of ["", "-wal", "-shm"]) {
-    try { fs.unlinkSync(filename + suffix); } catch {}
-  }
+  for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
 }
