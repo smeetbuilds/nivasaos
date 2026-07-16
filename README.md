@@ -39,8 +39,10 @@ Application packages such as Next.js and React are required, but the running pro
 
 ### Invoices and collections
 
+- Idempotent monthly rent runs for all accessible properties or one selected property.
 - Rent or ad-hoc invoices.
 - Issued, part-paid, paid, draft, void, and computed overdue states.
+- Search and filters by property, status, invoice, tenant, lease, or unit.
 - Payment ledger with method, reference, date, notes, and recorder.
 - Invoice-linked payments update balances atomically.
 - Local JPG, PNG, WebP, or PDF proof uploads up to 5 MB.
@@ -66,7 +68,7 @@ For automatic sending, register a WhatsApp Cloud API or another notification dri
 - **Owner:** full portfolio, team, and settings control.
 - **Admin:** operational management for assigned properties.
 - **Staff:** day-to-day tenant, invoice, payment, and maintenance access for assigned properties.
-- Property-scoped dashboard metrics.
+- Property-scoped dashboard metrics, rent-run readiness, and upcoming lease-expiry follow-up.
 - Occupancy, collection, and arrears reports.
 
 ## Technology
@@ -246,7 +248,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 NivasaOS is usable for local/manual rental operations, but these are intentionally not claimed as complete yet:
 
-- invoice generation is manual rather than scheduled recurring billing;
+- monthly rent runs are initiated manually rather than executed by a scheduler;
 - the default WhatsApp integration opens click-to-chat rather than sending automatically;
 - payment gateway settlement and webhook reconciliation require an extension;
 - lease document generation and e-signatures are not included;
@@ -255,7 +257,7 @@ NivasaOS is usable for local/manual rental operations, but these are intentional
 
 ## Suggested roadmap
 
-- recurring rent run with idempotent invoice generation;
+- optional scheduled rent-run automation with dry-run previews;
 - late fees and configurable grace periods;
 - lease PDF templates and document attachments;
 - tenant portal and receipts;

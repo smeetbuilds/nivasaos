@@ -44,6 +44,10 @@ export async function createInvoiceAction(formData) {
   return finance.createInvoiceAction(formData);
 }
 
+export async function createRentRunAction(formData) {
+  return finance.createRentRunAction(formData);
+}
+
 export async function recordPaymentAction(formData) {
   return finance.recordPaymentAction(formData);
 }
