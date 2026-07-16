@@ -22,13 +22,13 @@ export default async function ModulesPage({ searchParams }) {
       <section className="module-governance-grid">
         {modules.map((module) => <label className={`module-governance-card module-${module.id}${module.enabled ? " is-enabled" : ""}`} key={module.id}>
           <span className="module-card-top"><span className="module-selector-icon"><Icon name={module.icon} size={24}/></span><span>{module.enabled ? <Badge tone="active">Enabled</Badge> : <Badge tone="inactive">Disabled</Badge>}</span></span>
-          <input type="checkbox" name="moduleIds" value={module.id} defaultChecked={module.enabled} disabled={!editable || (!module.enabled && false)}/>
+          <input type="checkbox" name="moduleIds" value={module.id} defaultChecked={module.enabled} disabled={!editable}/>
           <span className="eyebrow">{module.family}</span><h2>{module.label}</h2><p>{module.description}</p>
           <div className="module-capabilities">{module.capabilities.map((capability) => <span key={capability}>{capability.replace(/([A-Z])/g, " $1")}</span>)}</div>
           <div className="module-card-foot"><span><small>Properties using module</small><strong>{module.propertyCount}</strong></span><span><small>Portal language</small><strong>{module.terminology.portal}</strong></span></div>
         </label>)}
       </section>
-      <section className="panel module-primary-panel"><div><span className="eyebrow">Workspace default</span><h2>Primary operating model</h2><p>New property forms and empty-state guidance start with this model. It does not override existing property assignments.</p></div><label><span>Primary module</span><select name="primaryModule" defaultValue={primary} disabled={!editable}>{modules.filter((module) => module.enabled).map((module) => <option value={module.id} key={module.id}>{module.label}</option>)}</select></label>{editable ? <button className="button primary" type="submit">Save module architecture</button> : <Badge tone="staff">Owner only</Badge>}</section>
+      <section className="panel module-primary-panel"><div><span className="eyebrow">Workspace default</span><h2>Primary operating model</h2><p>Choose from the complete catalogue so a newly enabled module can become primary in the same save. The server rejects a primary module that is not checked above.</p></div><label><span>Primary module</span><select name="primaryModule" defaultValue={primary} disabled={!editable}>{modules.map((module) => <option value={module.id} key={module.id}>{module.label}{module.enabled ? "" : " · enable above"}</option>)}</select></label>{editable ? <button className="button primary" type="submit">Save module architecture</button> : <Badge tone="staff">Owner only</Badge>}</section>
     </form>
     <section className="module-architecture-note"><Icon name="audit" size={20}/><div><strong>Deactivation is intentionally strict</strong><p>A module cannot be disabled while a property uses it. Move or retire those properties first so their inventory, service, visitor, and portal records never become inaccessible.</p></div></section>
   </>;
