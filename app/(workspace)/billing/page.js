@@ -53,7 +53,7 @@ export default async function BillingPage({ searchParams }) {
     <PageHeader
       eyebrow="Collection policy"
       title="Grace periods & late fees"
-      description="Configure property-level collection rules, preview eligible rent invoices, and generate separate fee invoices without changing the original rent ledger."
+      description="Define transparent property-level rules, preview eligible rent invoices, and generate each late fee at most once."
       actions={<OpenModalButton target="late-fee-run-modal" icon="billing">Apply eligible fees</OpenModalButton>}
     />
 
@@ -61,7 +61,7 @@ export default async function BillingPage({ searchParams }) {
       <article className="metric-card"><span>Properties configured</span><strong>{configured}</strong><small>of {policies.length} accessible properties</small></article>
       <article className="metric-card risk"><span>Eligible rent invoices</span><strong>{summary.count}</strong><small>Past due beyond the configured grace period</small></article>
       <article className="metric-card"><span>Fees in preview</span><strong>{feeTotal}</strong><small>{feeDetail}</small></article>
-      <article className="metric-card"><span>Duplicate protection</span><strong>1 per invoice</strong><small>Voided fees may be regenerated later</small></article>
+      <article className="metric-card"><span>Duplicate protection</span><strong>1 per invoice</strong><small>Voided fees can be regenerated later</small></article>
     </section>
 
     <section className="policy-grid">
@@ -70,7 +70,7 @@ export default async function BillingPage({ searchParams }) {
         <div className="policy-body">
           <div><span>Grace period</span><strong>{policy.grace_days} day{Number(policy.grace_days) === 1 ? "" : "s"}</strong></div>
           <div><span>Late-fee rule</span><strong>{policyDescription(policy)}</strong></div>
-          <p>Fees become eligible after the grace period ends and are issued as separate receivables linked to the original rent invoice.</p>
+          <p>Fees apply only to unpaid rent invoices after the grace period ends. Existing active fees are skipped automatically.</p>
           <OpenModalButton target={`billing-policy-${policy.id}`} icon="edit" className="button secondary">Edit policy</OpenModalButton>
         </div>
       </article>)}
@@ -78,42 +78,18 @@ export default async function BillingPage({ searchParams }) {
 
     <section className="panel billing-preview">
       <div className="panel-head"><div><span className="eyebrow">Dry-run preview</span><h2>Rent invoices eligible today</h2></div><Badge tone={summary.count ? "overdue" : "paid"}>{summary.count ? `${summary.count} ready` : "Nothing due"}</Badge></div>
-      {summary.rows.length ? <div className="table-wrap"><table><thead><tr><th>Rent invoice</th><th>Tenant / unit</th><th>Property</th><th>Due</th><th>Grace ended</th><th>Balance</th><th>Fee to create</th></tr></thead><tbody>{summary.rows.map((row) => <tr key={row.id}>
-        <td><strong>{row.number}</strong><small>{row.lease_reference || "No lease reference"}</small></td>
-        <td>{row.tenant_name || "Unassigned"}<small>{row.unit_name || "—"}</small></td>
-        <td>{row.property_name}</td>
-        <td>{dateLabel(row.due_date)}</td>
-        <td>{dateLabel(row.grace_ends)}</td>
-        <td>{money(row.balance, row.currency)}</td>
-        <td><strong>{money(row.fee_amount, row.currency)}</strong><small>{row.late_fee_type === "percent" ? `${Number(row.late_fee_value)}% rule` : "Flat fee"}</small></td>
-      </tr>)}</tbody></table></div> : <Empty icon="billing" title="No late fees to apply" text="Enable a property policy or wait until an unpaid rent invoice passes its configured grace period."/>}
+      {summary.rows.length ? <div className="table-wrap"><table><thead><tr><th>Rent invoice</th><th>Tenant / unit</th><th>Property</th><th>Due</th><th>Grace ended</th><th>Balance</th><th>Fee to create</th></tr></thead><tbody>{summary.rows.map((row) => <tr key={row.id}><td><strong>{row.number}</strong><small>{row.lease_reference || "No lease reference"}</small></td><td>{row.tenant_name || "Unassigned"}<small>{row.unit_name || "—"}</small></td><td>{row.property_name}</td><td>{dateLabel(row.due_date)}</td><td>{dateLabel(row.grace_ends)}</td><td>{money(row.balance, row.currency)}</td><td><strong>{money(row.fee_amount, row.currency)}</strong><small>{row.late_fee_type === "percent" ? `${Number(row.late_fee_value)}% rule` : "Flat fee"}</small></td></tr>)}</tbody></table></div> : <Empty icon="billing" title="No late fees to apply" text="Enable a property policy or wait until an unpaid rent invoice passes its grace period."/>}
     </section>
 
     {policies.map((policy) => <form action={updateBillingPolicyAction} key={`policy-${policy.id}`}>
-      <ModalForm id={`billing-policy-${policy.id}`} title={`Billing policy · ${policy.name}`} description="Changes affect future fee runs only. Existing invoices are never recalculated." submitLabel="Save policy" pendingLabel="Saving…">
-        <div className="modal-body"><input type="hidden" name="propertyId" value={policy.id}/>
-          <div className="summary-box"><span>Property currency</span><strong>{policy.currency}</strong><small>Flat fees and caps use this currency.</small></div>
-          <div className="field-grid two">
-            <label><span>Grace period in days</span><input type="number" name="graceDays" min="0" max="60" defaultValue={policy.grace_days} required/><small>A fee becomes eligible the day after this period ends.</small></label>
-            <label><span>Late-fee type</span><select name="lateFeeType" defaultValue={policy.late_fee_type}><option value="none">Disabled</option><option value="flat">Flat amount</option><option value="percent">Percentage of outstanding rent</option></select></label>
-          </div>
-          <div className="field-grid two">
-            <label><span>Fee value</span><input type="number" name="lateFeeValue" min="0" step="0.01" defaultValue={policy.late_fee_value}/><small>Enter the currency amount or percentage.</small></label>
-            <label><span>Optional maximum cap</span><input type="number" name="lateFeeCap" min="0" step="0.01" defaultValue={policy.late_fee_cap || ""}/><small>Leave blank or zero for no cap.</small></label>
-          </div>
-          <div className="policy-warning">Use only fee rules permitted by the tenancy and consumer laws that apply to this property.</div>
-        </div>
+      <ModalForm id={`billing-policy-${policy.id}`} title={`Billing policy · ${policy.name}`} description="Changes affect future fee runs only; existing invoices are never recalculated." submitLabel="Save policy" pendingLabel="Saving…">
+        <div className="modal-body"><input type="hidden" name="propertyId" value={policy.id}/><div className="summary-box"><span>Property currency</span><strong>{policy.currency}</strong><small>Flat fees and caps use this currency.</small></div><div className="field-grid two"><label><span>Grace period in days</span><input type="number" name="graceDays" min="0" max="60" defaultValue={policy.grace_days} required/><small>A fee becomes eligible the day after this period ends.</small></label><label><span>Late-fee type</span><select name="lateFeeType" defaultValue={policy.late_fee_type}><option value="none">Disabled</option><option value="flat">Flat amount</option><option value="percent">Percentage of outstanding rent</option></select></label></div><div className="field-grid two"><label><span>Fee value</span><input type="number" name="lateFeeValue" min="0" step="0.01" defaultValue={policy.late_fee_value}/><small>Enter the property-currency amount or percentage.</small></label><label><span>Optional cap</span><input type="number" name="lateFeeCap" min="0" step="0.01" defaultValue={policy.late_fee_cap || ""}/><small>Leave blank for no maximum.</small></label></div><div className="policy-warning">Use only rules permitted by the tenancy and consumer laws that apply to this property.</div></div>
       </ModalForm>
     </form>)}
 
     <form action={createLateFeeRunAction}>
-      <ModalForm id="late-fee-run-modal" title="Apply eligible late fees" description="The preview is recalculated when you submit. Each source rent invoice can have only one active late-fee invoice." submitLabel="Generate late fees" pendingLabel="Generating…">
-        <div className="modal-body">
-          <div className="rent-run-notice"><span className="metric-icon">{summary.count}</span><div><strong>{summary.count} invoice{summary.count === 1 ? " is" : "s are"} currently eligible</strong><span>{feeDetail}</span></div></div>
-          <label><span>Property scope</span><select name="propertyId"><option value="">All accessible properties</option>{policies.map((property) => <option value={property.id} key={property.id}>{property.name}</option>)}</select></label>
-          <label><span>Fee issue and due date</span><input type="date" name="issueDate" defaultValue={today()} required/></label>
-          <div className="policy-warning">This creates separate receivable invoices. It does not change the original rent amount, due date, or payment history.</div>
-        </div>
+      <ModalForm id="late-fee-run-modal" title="Apply eligible late fees" description="The preview above is recalculated at submission. Each source rent invoice can have only one active late-fee invoice." submitLabel="Generate late fees" pendingLabel="Generating…">
+        <div className="modal-body"><div className="rent-run-notice"><span className="metric-icon">{summary.count}</span><div><strong>{summary.count} invoice{summary.count === 1 ? " is" : "s are"} currently eligible</strong><span>{feeDetail}</span></div></div><label><span>Property scope</span><select name="propertyId"><option value="">All accessible properties</option>{policies.map((property) => <option value={property.id} key={property.id}>{property.name}</option>)}</select></label><label><span>Fee issue and due date</span><input type="date" name="issueDate" defaultValue={today()} required/></label><div className="policy-warning">This creates separate receivable invoices. It does not alter the original rent amount or payment history.</div></div>
       </ModalForm>
     </form>
   </>;

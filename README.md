@@ -44,7 +44,10 @@ Application packages such as Next.js and React are required, but the running pro
 - Idempotent monthly rent runs for all accessible properties or one selected property.
 - Rent or ad-hoc invoices.
 - Issued, part-paid, paid, draft, void, and computed overdue states.
-- Search and filters by property, status, invoice, tenant, lease, or unit.
+- Search and filters by property, status, charge type, invoice, tenant, lease, or unit.
+- Per-property grace periods and disabled, flat, or percentage late-fee policies with optional caps.
+- Dry-run late-fee preview and idempotent generation with one active fee per source rent invoice.
+- Safe voiding for unpaid invoice mistakes without deleting financial history.
 - Payment ledger with method, reference, date, notes, and recorder.
 - Invoice-linked payments update balances atomically.
 - Local JPG, PNG, WebP, or PDF proof uploads up to 5 MB.
@@ -85,6 +88,8 @@ For automatic sending, register a WhatsApp Cloud API or another notification dri
 - Local filesystem uploads
 - Plain responsive CSS with no UI-kit dependency
 - Docker and Docker Compose
+- Repository-owned local quality gate and Git hooks; no GitHub Actions requirement
+- Built-in health check plus verified backup and restore CLI
 
 ## Quick start with Bun
 
@@ -95,6 +100,7 @@ git clone https://github.com/smeetbuilds/nivasaos.git
 cd nivasaos
 cp .env.example .env.local
 bun install
+bun run hooks:install
 bun run dev
 ```
 
@@ -106,12 +112,14 @@ Open `http://localhost:3000`. The first-run installer will:
 4. optionally add two sample units;
 5. sign the owner in.
 
-For a production build:
+Before a production release, run the repository-owned gate:
 
 ```bash
-bun run build
+bun run gate
 bun run start
 ```
+
+The gate parses the source tree, verifies fresh and upgraded database schemas, tests financial and backup safeguards, creates a production build, starts it against isolated temporary storage, and probes `/api/health`. It runs locally or on infrastructure you control and does not call GitHub Actions.
 
 Bun must execute the Next.js CLI because NivasaOS uses `bun:sqlite`:
 
@@ -133,7 +141,7 @@ docker compose up -d --build
 
 Then open `http://localhost:3000`.
 
-The Compose file persists both the SQLite database and payment proofs in the `nivasa_data` volume. Put a reverse proxy such as Caddy, Nginx, or Traefik in front of the container for HTTPS.
+The Compose file persists the SQLite database, payment proofs, and generated backups in the `nivasa_data` volume. Docker checks `/api/health` and marks the container unhealthy when SQLite cannot be reached or upload storage is not writable. Put a reverse proxy such as Caddy, Nginx, or Traefik in front of the container for HTTPS.
 
 ## Environment variables
 
@@ -141,28 +149,41 @@ The Compose file persists both the SQLite database and payment proofs in the `ni
 |---|---|---|
 | `NIVASA_DB_PATH` | `./storage/nivasaos.sqlite` | SQLite database location |
 | `NIVASA_UPLOAD_DIR` | `./storage/uploads` | Payment proof directory |
+| `NIVASA_BACKUP_DIR` | `./storage/backups` | Generated backup archive directory |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Canonical application URL |
 
 ## Backup and restore
 
-Back up these together while writes are paused or through a SQLite-safe backup process:
+Create a consistent compressed archive containing a serialized SQLite snapshot, all payment-proof uploads, and a checksum manifest:
 
-```text
-storage/nivasaos.sqlite
-storage/nivasaos.sqlite-wal   # when present
-storage/nivasaos.sqlite-shm   # when present
-storage/uploads/
+```bash
+bun run backup
+bun run backup -- --output /secure/location/nivasaos.tar.gz
 ```
 
-A basic filesystem backup example:
+The default destination is `storage/backups/`. Copy archives to a separate encrypted host or object store; an archive stored only in the same volume as the live application is not disaster recovery.
+
+Stop NivasaOS before restoring:
 
 ```bash
 docker compose stop nivasaos
-tar -czf nivasaos-backup-$(date +%F).tar.gz storage/
+bun run restore /secure/location/nivasaos.tar.gz --force
 docker compose start nivasaos
 ```
 
-When using the named Docker volume, use your container platform's volume-backup workflow instead of the host `storage/` example.
+Restore validates the archive checksum and SQLite integrity, creates a safety backup of the current database and uploads, stages the replacement, and atomically swaps it into place.
+
+## Self-hosted verification and operations
+
+NivasaOS deliberately does not depend on GitHub Actions. Install the tracked Git hooks once per clone:
+
+```bash
+bun run hooks:install
+```
+
+The pre-commit hook runs the verification suite and the pre-push hook runs the complete production gate. `bun run gate` can also be called by a workstation, deployment script, systemd unit, Jenkins, Woodpecker, Forgejo, or another private runner.
+
+Operational documentation, including scheduling backups with cron or systemd, is in [`docs/SELF_HOSTED_OPERATIONS.md`](docs/SELF_HOSTED_OPERATIONS.md).
 
 ## Extension architecture
 
@@ -216,6 +237,8 @@ erDiagram
   LEASES ||--o{ INVOICES : generates
   TENANTS ||--o{ INVOICES : receives
   INVOICES ||--o{ PAYMENTS : settled_by
+  INVOICES ||--o| INVOICES : late_fee_for
+  PROPERTIES ||--o| BILLING_POLICIES : configures
   PROPERTIES ||--o{ MAINTENANCE_TICKETS : has
   USERS ||--o{ USER_PROPERTIES : permitted
   PROPERTIES ||--o{ USER_PROPERTIES : grants
@@ -234,7 +257,9 @@ Implemented:
 - property-access checks on property-owned records;
 - SQLite foreign keys and constrained statuses;
 - prepared SQL statements;
-- payment amount and invoice-balance validation;
+- payment amount and invoice-balance validation inside the same database transaction as ledger updates;
+- duplicate-protected rent and late-fee generation;
+- unpaid-only invoice voiding with source-fee integrity guards;
 - proof MIME type, size, generated filename, and authenticated delivery checks;
 - disabled accounts have active sessions revoked;
 - actively leased units and tenants cannot be moved into contradictory lifecycle states;
@@ -249,7 +274,7 @@ Before internet-facing deployment:
 - use strong unique passwords;
 - configure rate limiting at the proxy for `/login`;
 - establish tested encrypted backups;
-- review privacy, retention, tax, tenancy, and messaging requirements for your jurisdiction.
+- review privacy, retention, tax, tenancy, late-fee, and messaging requirements for your jurisdiction.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
@@ -257,7 +282,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 NivasaOS is usable for local/manual rental operations, but these are intentionally not claimed as complete yet:
 
-- monthly rent runs are initiated manually rather than executed by a scheduler;
+- monthly rent and late-fee runs are initiated manually rather than executed by a scheduler;
 - the default WhatsApp integration opens click-to-chat rather than sending automatically;
 - payment gateway settlement and webhook reconciliation require an extension;
 - lease document generation and e-signatures are not included;
@@ -266,7 +291,6 @@ NivasaOS is usable for local/manual rental operations, but these are intentional
 ## Suggested roadmap
 
 - optional scheduled rent-run automation with dry-run previews;
-- late fees and configurable grace periods;
 - lease PDF templates and document attachments;
 - tenant portal and receipts;
 - automatic WhatsApp/email/SMS drivers;

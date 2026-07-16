@@ -1,6 +1,6 @@
 {
   "name": "nivasaos",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Open-source, self-hosted property operations for boarding houses, apartments, and rentals.",
   "license": "MIT",
@@ -8,8 +8,15 @@
     "dev": "bun --bun next dev",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
-    "check": "bun run verify && bun run build",
-    "verify": "bun run scripts/verify-schema.js"
+    "verify:source": "bun run scripts/verify-source.js",
+    "verify:schema": "bun run scripts/verify-schema.js",
+    "verify:operations": "bun run scripts/verify-operations.js",
+    "verify": "bun run verify:source && bun run verify:schema && bun run verify:operations",
+    "gate": "bun run scripts/local-gate.js",
+    "check": "bun run gate",
+    "hooks:install": "bun run scripts/install-hooks.js",
+    "backup": "bun run scripts/backup.js",
+    "restore": "bun run scripts/restore.js"
   },
   "dependencies": {
     "next": "16.2.10",

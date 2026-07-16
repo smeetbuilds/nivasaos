@@ -56,6 +56,10 @@ export default async function DashboardPage({ searchParams }) {
         <div className="panel-head"><div><span className="eyebrow">Lease follow-up</span><h2>Expiring within 45 days</h2></div><Link href="/leases" className="text-link">View leases</Link></div>
         {data.leaseExpiries.length ? <div className="expiry-list">{data.leaseExpiries.map((lease) => <div key={lease.id}><span className="expiry-date">{dateLabel(lease.end_date)}</span><span><strong>{lease.unit_name} · {lease.property_name}</strong><small>{lease.tenant_names || lease.reference}</small></span></div>)}</div> : <div className="quiet-state">No active leases expire in the next 45 days.</div>}
       </article>
+      <article className="panel action-panel">
+        <div className="panel-head"><div><span className="eyebrow">Collection policy</span><h2>Late-fee readiness</h2></div><Badge tone={data.lateFees.count ? "overdue" : "paid"}>{data.lateFees.count ? `${data.lateFees.count} eligible` : "Clear"}</Badge></div>
+        <div className="action-panel-body"><div className="action-stat"><strong>{data.lateFees.count}</strong><span>rent invoice{data.lateFees.count === 1 ? "" : "s"} beyond grace</span></div><p>{data.lateFees.count ? "Review the property rules and preview the separate fee invoices before applying them." : "No unpaid rent invoice has passed its configured grace period."}</p><Link href={user.role === "staff" ? "/invoices?status=overdue" : "/billing"} className="button secondary">{user.role === "staff" ? "View overdue invoices" : "Review billing rules"} <Icon name="arrow" size={16}/></Link></div>
+      </article>
     </section>
     {extensions.dashboardSections.map((section) => {
       const Section = section.render;

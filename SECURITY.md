@@ -15,4 +15,4 @@ Until the first stable release, security fixes target the latest commit on `main
 
 ## Deployment baseline
 
-Run NivasaOS behind HTTPS, keep Bun and dependencies patched, restrict access to the `storage` volume, back up the SQLite database and uploads, and never expose the database file through a public web directory.
+Run NivasaOS behind HTTPS, keep Bun and dependencies patched, restrict access to the `storage` volume, use `bun run backup` and test restores regularly, copy backups off-host, and never expose the database file through a public web directory.

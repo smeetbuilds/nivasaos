@@ -8,7 +8,7 @@ import Badge from "@/components/Badge";
 import Empty from "@/components/Empty";
 
 export const metadata = { title: "Audit log" };
-const actions = ["all", "create", "update", "enable", "disable", "end", "record", "generate", "status", "settings", "security", "notify"];
+const actions = ["all", "create", "update", "enable", "disable", "end", "record", "generate", "status", "settings", "security", "notify", "void"];
 
 function metadataLabel(value) {
   if (!value) return null;
@@ -17,7 +17,11 @@ function metadataLabel(value) {
     if (Array.isArray(parsed.fields)) return `Fields: ${parsed.fields.join(", ").replaceAll("_", " ")}`;
     if (parsed.count !== undefined) return `${parsed.count} record${Number(parsed.count) === 1 ? "" : "s"}`;
     if (Array.isArray(parsed.propertyIds)) return `${parsed.propertyIds.length} propert${parsed.propertyIds.length === 1 ? "y" : "ies"} assigned`;
-    return Object.entries(parsed).slice(0, 3).map(([key, item]) => `${key.replaceAll("_", " ")}: ${Array.isArray(item) ? item.join(", ") : item}`).join(" · ");
+    if (parsed.current && typeof parsed.current === "object") {
+      const current = parsed.current;
+      return `Grace: ${current.graceDays ?? 0} days · Type: ${String(current.type || "none").replaceAll("_", " ")} · Value: ${current.value ?? 0}${current.cap ? ` · Cap: ${current.cap}` : ""}`;
+    }
+    return Object.entries(parsed).slice(0, 3).map(([key, item]) => `${key.replaceAll("_", " ")}: ${Array.isArray(item) ? item.join(", ") : typeof item === "object" && item ? JSON.stringify(item) : item}`).join(" · ");
   } catch {
     return null;
   }

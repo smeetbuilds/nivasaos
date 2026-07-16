@@ -2,15 +2,26 @@ services:
   nivasaos:
     build: .
     container_name: nivasaos
+    init: true
     restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "3000:3000"
     environment:
       NIVASA_DB_PATH: /app/storage/nivasaos.sqlite
       NIVASA_UPLOAD_DIR: /app/storage/uploads
+      NIVASA_BACKUP_DIR: /app/storage/backups
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     volumes:
       - nivasa_data:/app/storage
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:3000/api/health'); if(!r.ok) process.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
 volumes:
   nivasa_data:

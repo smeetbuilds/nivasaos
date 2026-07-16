@@ -1,9 +1,12 @@
 .git
 .github
+.githooks
 .next
 node_modules
 storage/*.sqlite
 storage/*.sqlite-*
 storage/uploads/*
 !storage/uploads/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
 *.log

@@ -2,22 +2,39 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 0.5.0 - 2026-07-16
+
+### Added
+
+- Repository-owned local release gate with source parsing, schema checks, operational tests, production build, and live health smoke testing.
+- Installable pre-commit and pre-push hooks that run entirely on the developer or self-hosted machine.
+- Public, privacy-safe `/api/health` readiness endpoint and Docker health checks.
+- Compressed SQLite-and-upload backups with checksum manifests.
+- Validated atomic restores with an automatic pre-restore safety backup.
+- Self-hosted operations guide for local gates, hooks, health monitoring, backups, restores, cron, and private runners.
+
+### Improved
+
+- Removed the GitHub Actions workflow; no application, verification, release, backup, or deployment task depends on GitHub Actions.
+- Docker builds now run repository-owned verification before producing the production image.
+- Backup and restore commands share one environment-aware operational path resolver.
+- Compose deployment adds graceful shutdown, an init process, no-new-privileges, persistent backup storage, and readiness checks.
+
 ## 0.4.0 - 2026-07-16
 
 ### Added
 
 - Per-property grace periods with disabled, flat, or percentage late-fee rules.
-- Optional late-fee caps and a dry-run eligibility preview before invoices are generated.
+- Optional late-fee caps and a dry-run eligibility preview before invoices are created.
 - Idempotent late-fee runs with one active fee invoice per source rent invoice.
 - Charge-type and source-invoice visibility in the receivables workspace.
-- Safe voiding for unpaid invoices while preserving financial and audit history.
+- Safe voiding for unpaid invoices while preserving audit history.
 
 ### Improved
 
-- Existing and newly generated recurring invoices are classified as rent automatically.
-- Late-fee generation recalculates eligibility inside the database transaction.
-- Source rent amounts, due dates, and payment history remain unchanged when fees are applied.
-- Paid and part-paid invoices cannot be voided, and rent invoices with active fee children are protected.
+- Payment allocation, late-fee generation, and invoice voiding now validate financial state inside database transactions.
+- Dashboard collection follow-up now surfaces rent invoices beyond their configured grace period.
+- Existing installations migrate billing policies, charge types, source links, and duplicate-protection indexes automatically.
 
 ## 0.3.0 - 2026-07-16
 
