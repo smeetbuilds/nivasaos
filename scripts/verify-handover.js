@@ -59,6 +59,7 @@ try {
 
   const source = [
     "lib/actions/handover.js",
+    "lib/actions/leases.js",
     "app/(workspace)/handover/page.js",
     "app/portal/(account)/lease/page.js",
     "app/portal/lease-documents/[id]/route.js"
