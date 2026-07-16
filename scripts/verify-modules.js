@@ -94,7 +94,8 @@ try {
   const sourceFiles = [
     "lib/actions/auth.js", "lib/actions/modules.js", "lib/actions/properties.js", "lib/actions/leases.js",
     "lib/actions/spaces.js", "lib/actions/services.js", "lib/actions/visitors.js", "lib/actions/commercial.js",
-    "lib/module-data.js", "components/AppShell.js", "components/TenantPortalShell.js", "components/InstallWizard.js"
+    "lib/actions/handover.js", "lib/module-data.js", "components/AppShell.js", "components/TenantPortalShell.js",
+    "components/InstallWizard.js", "app/(workspace)/visitors/page.js"
   ];
   const source = sourceFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n");
   for (const contract of [
@@ -103,7 +104,10 @@ try {
     "Operating module locks after property inventory or activity exists",
     "Not enough available spaces for the selected residents",
     "Space allocation conflict",
+    "Reactivating this space would exceed unit capacity",
     "This service period was already billed",
+    "Quarterly service period must use YYYY-Q1 to YYYY-Q4",
+    "Annual service period must use YYYY",
     "Residents can pre-register expected visitors",
     "Ended leases cannot receive newly issued or replacement keys",
     "property_id IN (",
@@ -111,7 +115,7 @@ try {
   ]) assert(source.includes(contract), `Modular contract missing: ${contract}`);
   assert(!source.includes("p2.module_id=p.module_id AND rs.status"), "Module metrics must not use unscoped correlated portfolio counts");
 
-  console.log("Modular onboarding, property models, space capacity, services, visitors, commercial profiles, tenant portals, and legacy migration verified.");
+  console.log("Modular onboarding, property models, space capacity, frequency-correct services, visitors, commercial profiles, tenant portals, and legacy migration verified.");
 } finally {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
