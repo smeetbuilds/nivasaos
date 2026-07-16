@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+.env.local
+storage/*.sqlite
+storage/*.sqlite-*
+storage/uploads/*
+!storage/uploads/.gitkeep
+.DS_Store
+*.log

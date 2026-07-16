@@ -1,0 +1,16 @@
+services:
+  nivasaos:
+    build: .
+    container_name: nivasaos
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NIVASA_DB_PATH: /app/storage/nivasaos.sqlite
+      NIVASA_UPLOAD_DIR: /app/storage/uploads
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    volumes:
+      - nivasa_data:/app/storage
+
+volumes:
+  nivasa_data:
