@@ -17,7 +17,9 @@ All notable changes to NivasaOS will be documented here.
 
 ### Improved
 
-- Completed inspections are immutable, while tenants may still acknowledge receipt and add notes afterward.
+- Sharing freezes a condition report before tenant review; checklist items cannot be added afterward.
+- Tenant acknowledgements are one-time records, while completed reports can still be acknowledged without reopening them.
+- Assessed charges are accepted only for damaged or missing checklist items.
 - Lease move-out is blocked when an existing move-out inspection remains unfinished or tracked key items remain outstanding.
 - Deposit deductions cannot exceed the amount currently held and one deduction cannot be linked to multiple inspections.
 - Key returns and loss records cannot exceed the tracked outstanding quantity for that key type.
