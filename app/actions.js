@@ -10,6 +10,11 @@ import * as settings from "@/lib/actions/settings";
 import * as billing from "@/lib/actions/billing";
 import * as portal from "@/lib/actions/portal";
 import * as handover from "@/lib/actions/handover";
+import * as modules from "@/lib/actions/modules";
+import * as spaces from "@/lib/actions/spaces";
+import * as services from "@/lib/actions/services";
+import * as visitors from "@/lib/actions/visitors";
+import * as commercial from "@/lib/actions/commercial";
 
 export async function installAction(formData) { return auth.installAction(formData); }
 export async function loginAction(formData) { return auth.loginAction(formData); }
@@ -59,3 +64,19 @@ export async function completeInspectionAction(formData) { return handover.compl
 export async function uploadLeaseDocumentAction(formData) { return handover.uploadLeaseDocumentAction(formData); }
 export async function archiveLeaseDocumentAction(formData) { return handover.archiveLeaseDocumentAction(formData); }
 export async function recordKeyTransactionAction(formData) { return handover.recordKeyTransactionAction(formData); }
+
+export async function updateWorkspaceModulesAction(formData) { return modules.updateWorkspaceModulesAction(formData); }
+export async function createSpaceAction(formData) { return spaces.createSpaceAction(formData); }
+export async function updateSpaceAction(formData) { return spaces.updateSpaceAction(formData); }
+export async function allocateSpaceAction(formData) { return spaces.allocateSpaceAction(formData); }
+export async function releaseSpaceAllocationAction(formData) { return spaces.releaseSpaceAllocationAction(formData); }
+export async function createServiceAction(formData) { return services.createServiceAction(formData); }
+export async function updateServiceAction(formData) { return services.updateServiceAction(formData); }
+export async function subscribeServiceAction(formData) { return services.subscribeServiceAction(formData); }
+export async function endServiceSubscriptionAction(formData) { return services.endServiceSubscriptionAction(formData); }
+export async function billServiceSubscriptionAction(formData) { return services.billServiceSubscriptionAction(formData); }
+export async function createVisitorEntryAction(formData) { return visitors.createVisitorEntryAction(formData); }
+export async function updateVisitorStatusAction(formData) { return visitors.updateVisitorStatusAction(formData); }
+export async function preregisterTenantVisitorAction(formData) { return visitors.preregisterTenantVisitorAction(formData); }
+export async function cancelTenantVisitorAction(formData) { return visitors.cancelTenantVisitorAction(formData); }
+export async function saveCommercialProfileAction(formData) { return commercial.saveCommercialProfileAction(formData); }
