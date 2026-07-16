@@ -25,8 +25,10 @@ Until the first stable release, security fixes target the latest commit on `main
 - Tenant document routes require an active tenant session, a linked lease, tenant-visible classification, and a non-archived record.
 - Internal documents are never returned by the tenant route.
 - Staff document access remains property-scoped.
-- Completed condition reports cannot be edited; later tenant acknowledgement records receipt and notes without changing the frozen report.
-- Tenant acknowledgement is not represented as a legal signature, waiver, or admission.
+- Sharing a condition report freezes its checklist before tenant review; completed reports remain frozen.
+- Tenant acknowledgement is a one-time receipt record. It is not represented as a legal signature, waiver, or admission.
+- A completed report may be acknowledged later without reopening or changing the condition evidence.
+- Assessed charges require a damaged or missing condition.
 - Inspection-linked deposit deductions are transactionally limited to the amount held and cannot be linked to multiple reports.
 - Uploaded lease and handover files are sensitive records. Encrypt off-host backups and apply an appropriate retention policy.
 
