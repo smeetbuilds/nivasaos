@@ -2,6 +2,22 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 0.6.0 - 2026-07-16
+
+### Added
+
+- Responsive mobile application shell with a safe-area-aware top bar, quick bottom navigation, and accessible slide-in navigation drawer.
+- Native-style mobile bottom sheets for all existing create, edit, billing, and confirmation dialogs.
+- Automatic mobile table labels that transform dense desktop tables into readable record cards without duplicating page markup.
+- Active-route navigation states, grouped desktop navigation, and clearer workspace context.
+
+### Improved
+
+- Modern SaaS visual system with refined spacing, surfaces, shadows, focus states, typography, and touch targets.
+- Swipe-friendly mobile metrics, action rows, maintenance columns, and reduced-motion support.
+- Mobile forms use larger controls, sticky safe-area actions, scroll containment, and iOS zoom-safe input sizing.
+- Desktop and tablet layouts retain information density while gaining clearer hierarchy and responsive breakpoints.
+
 ## 0.5.0 - 2026-07-16
 
 ### Added

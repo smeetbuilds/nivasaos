@@ -87,6 +87,7 @@ For automatic sending, register a WhatsApp Cloud API or another notification dri
 - Server Actions for mutations
 - Local filesystem uploads
 - Plain responsive CSS with no UI-kit dependency
+- Native-style mobile shell with a navigation drawer, bottom navigation, bottom-sheet forms, swipeable metrics, and card-based responsive tables
 - Docker and Docker Compose
 - Repository-owned local quality gate and Git hooks; no GitHub Actions requirement
 - Built-in health check plus verified backup and restore CLI

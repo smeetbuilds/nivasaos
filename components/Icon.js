@@ -16,7 +16,10 @@ const paths = {
   plus: "M12 5v14M5 12h14",
   logout: "M10 17l5-5-5-5M15 12H3M21 19V5a2 2 0 0 0-2-2h-6",
   arrow: "M5 12h14M13 6l6 6-6 6",
-  building: "M4 22V2h12v20M16 8h4v14M8 6h4M8 10h4M8 14h4M8 18h4M2 22h20"
+  building: "M4 22V2h12v20M16 8h4v14M8 6h4M8 10h4M8 14h4M8 18h4M2 22h20",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  close: "M6 6l12 12M18 6 6 18",
+  more: "M5 12h.01M12 12h.01M19 12h.01"
 };
 
 export default function Icon({ name, size = 20 }) {
