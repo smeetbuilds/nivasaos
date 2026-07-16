@@ -70,7 +70,10 @@ try {
     "deposit_transaction_id",
     "ld.visibility='tenant'",
     "pi.status IN ('shared','acknowledged','completed')",
-    "CASE WHEN status='completed' THEN 'completed'"
+    "CASE WHEN status='completed' THEN 'completed'",
+    "inspection.status !== \"draft\"",
+    "Inspection was already acknowledged",
+    "Assessed charges require a damaged or missing condition"
   ]) assert(source.includes(contract), `Handover contract missing: ${contract}`);
 
   console.log("Lease documents, inspections, acknowledgements, key reconciliation, move-out safeguards, and v0.7 migration verified.");
