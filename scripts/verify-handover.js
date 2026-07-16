@@ -21,7 +21,8 @@ try {
   const tenantId = Number(db.query("INSERT INTO tenants (property_id,full_name,email,phone,status) VALUES ($propertyId,'Resident','resident@handover.test','919999999999','active')").run({ propertyId }).lastInsertRowid);
   const leaseId = Number(db.query("INSERT INTO leases (property_id,unit_id,reference,start_date,monthly_rent,deposit,billing_day,status) VALUES ($propertyId,$unitId,'LEASE-HANDOVER','2026-07-01',15000,20000,1,'active')").run({ propertyId, unitId }).lastInsertRowid);
   db.query("INSERT INTO lease_tenants (lease_id,tenant_id,is_primary) VALUES ($leaseId,$tenantId,1)").run({ leaseId, tenantId });
-  db.query("INSERT INTO deposit_transactions (property_id,lease_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,'DEP-HANDOVER','received',20000,'bank_transfer','2026-07-01',$ownerId)").run({ propertyId, leaseId, ownerId });
+  const depositId = Number(db.query("INSERT INTO deposit_transactions (property_id,lease_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,'DEP-HANDOVER','received',20000,'bank_transfer','2026-07-01',$ownerId)").run({ propertyId, leaseId, ownerId }).lastInsertRowid);
+  void depositId;
 
   const inspectionId = Number(db.query("INSERT INTO property_inspections (property_id,lease_id,reference,inspection_type,scheduled_for,status,created_by) VALUES ($propertyId,$leaseId,'INSP-HANDOVER','move_out','2026-07-31','shared',$ownerId)").run({ propertyId, leaseId, ownerId }).lastInsertRowid);
   db.query("INSERT INTO inspection_items (inspection_id,area,item_name,condition,notes,charge_amount,created_by) VALUES ($inspectionId,'Bedroom','Wall paint','damaged','Deep marks',1200,$ownerId)").run({ inspectionId, ownerId });
@@ -67,7 +68,9 @@ try {
     "Key return or loss exceeds",
     "Acknowledgement confirms receipt",
     "deposit_transaction_id",
-    "ld.visibility='tenant'"
+    "ld.visibility='tenant'",
+    "pi.status IN ('shared','acknowledged','completed')",
+    "CASE WHEN status='completed' THEN 'completed'"
   ]) assert(source.includes(contract), `Handover contract missing: ${contract}`);
 
   console.log("Lease documents, inspections, acknowledgements, key reconciliation, move-out safeguards, and v0.7 migration verified.");
