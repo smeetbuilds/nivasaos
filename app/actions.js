@@ -9,6 +9,7 @@ import * as team from "@/lib/actions/team";
 import * as settings from "@/lib/actions/settings";
 import * as billing from "@/lib/actions/billing";
 import * as portal from "@/lib/actions/portal";
+import * as handover from "@/lib/actions/handover";
 
 export async function installAction(formData) { return auth.installAction(formData); }
 export async function loginAction(formData) { return auth.loginAction(formData); }
@@ -49,3 +50,12 @@ export async function recordDepositTransactionAction(formData) { return portal.r
 export async function createTenantMaintenanceAction(formData) { return portal.createTenantMaintenanceAction(formData); }
 export async function addTenantMaintenanceCommentAction(formData) { return portal.addTenantMaintenanceCommentAction(formData); }
 export async function addStaffMaintenanceCommentAction(formData) { return portal.addStaffMaintenanceCommentAction(formData); }
+
+export async function createInspectionAction(formData) { return handover.createInspectionAction(formData); }
+export async function addInspectionItemAction(formData) { return handover.addInspectionItemAction(formData); }
+export async function shareInspectionAction(formData) { return handover.shareInspectionAction(formData); }
+export async function acknowledgeInspectionAction(formData) { return handover.acknowledgeInspectionAction(formData); }
+export async function completeInspectionAction(formData) { return handover.completeInspectionAction(formData); }
+export async function uploadLeaseDocumentAction(formData) { return handover.uploadLeaseDocumentAction(formData); }
+export async function archiveLeaseDocumentAction(formData) { return handover.archiveLeaseDocumentAction(formData); }
+export async function recordKeyTransactionAction(formData) { return handover.recordKeyTransactionAction(formData); }
