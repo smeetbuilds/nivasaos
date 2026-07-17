@@ -2,6 +2,36 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 1.0.0 - 2026-07-17
+
+### Added
+
+- Domain-specific operating configuration and resident/business profiles for residential, PG/co-living, hostel, student, staff and commercial properties.
+- Module request workflows for renewals, notices, meals, room or site transfers, leave, payroll, fit-out, compliance and other vertical operations.
+- Hostel reservation, arrival, check-in, checkout, no-show and automatic turnover workflows.
+- Housekeeping work board with property-safe assignment and controlled task transitions.
+- Global and property-specific permission matrices with permission-driven navigation and session revocation after access changes.
+- Five-step conditional onboarding that persists module-specific defaults and applies them to future properties.
+- Tenant/business request centre and responsive mobile More bottom sheet.
+- Property-wide service-billing preview and idempotent execution ledger.
+- Dedicated vertical and release verifiers plus expanded production-route smoke testing.
+- Production deployment, monitoring, backup, rollback and scale-boundary guidance.
+
+### Fixed
+
+- Unused properties can change operating models even when inherited defaults exist; customized configuration or operational history still locks the module.
+- Direct database module changes reset inherited configuration to the target module defaults.
+- SQLite now rejects partially overlapping hostel reservations, reservation/resident-allocation conflicts and invalid vertical relationships.
+- Global permission grants are unique even with a NULL property scope.
+- Workspace navigation includes permissions granted only for a specific assigned property.
+- Vertical operations CSS is loaded in the production stylesheet chain.
+- Bulk service billing records failed jobs and permits later billing of newly eligible subscriptions without duplicating prior runs.
+
+### Release
+
+- Version promoted to 1.0.0.
+- `bun run gate` remains the mandatory self-hosted release gate and does not depend on GitHub Actions.
+
 ## 0.9.1 - 2026-07-17
 
 ### Fixed

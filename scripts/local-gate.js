@@ -30,6 +30,16 @@ async function waitForHealth(url, child) {
   throw new Error(`Production health smoke test failed: ${lastError}`);
 }
 
+async function smoke(baseUrl, pathname, expectedStatuses, expectedLocation = null) {
+  const response = await fetch(`${baseUrl}${pathname}`, { redirect: "manual", signal: AbortSignal.timeout(4000) });
+  if (!expectedStatuses.includes(response.status)) throw new Error(`${pathname} returned ${response.status}; expected ${expectedStatuses.join(" or ")}`);
+  if (expectedLocation) {
+    const location = response.headers.get("location") || "";
+    if (!expectedLocation.some((value) => location.includes(value))) throw new Error(`${pathname} redirected to ${location || "nowhere"}`);
+  }
+  return response;
+}
+
 const temporary = path.join(tmpdir(), `nivasaos-gate-${randomBytes(6).toString("hex")}`);
 const port = 32000 + Math.floor(Math.random() * 2000);
 let server = null;
@@ -49,8 +59,13 @@ try {
   server = Bun.spawn(setsid ? [setsid, ...serverCommand] : serverCommand, {
     cwd: process.cwd(), env, stdin: "ignore", stdout: "inherit", stderr: "inherit"
   });
-  const health = await waitForHealth(`http://127.0.0.1:${port}/api/health`, server);
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const health = await waitForHealth(`${baseUrl}/api/health`, server);
+  await smoke(baseUrl, "/install", [200]);
+  await smoke(baseUrl, "/dashboard", [303, 307, 308], ["/install", "/login"]);
+  await smoke(baseUrl, "/portal/login", [200]);
   console.log(`Production health check passed in ${health.latencyMs}ms.`);
+  console.log("Production install, protected-workspace, and tenant-login route smoke tests passed.");
   console.log("Local release gate passed without GitHub Actions or another hosted CI service.");
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

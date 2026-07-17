@@ -2,6 +2,7 @@
 
 import * as auth from "@/lib/actions/auth";
 import * as properties from "@/lib/actions/properties";
+import * as propertyRelease from "@/lib/actions/property-module-update";
 import * as leases from "@/lib/actions/leases";
 import * as finance from "@/lib/actions/finance";
 import * as maintenance from "@/lib/actions/maintenance";
@@ -21,7 +22,7 @@ export async function installAction(formData) { return auth.installAction(formDa
 export async function loginAction(formData) { return auth.loginAction(formData); }
 export async function logoutAction(formData) { return auth.logoutAction(formData); }
 export async function createPropertyAction(formData) { return properties.createPropertyAction(formData); }
-export async function updatePropertyAction(formData) { return properties.updatePropertyAction(formData); }
+export async function updatePropertyAction(formData) { return propertyRelease.updatePropertyReleaseAction(formData); }
 export async function createUnitAction(formData) { return properties.createUnitAction(formData); }
 export async function updateUnitAction(formData) { return properties.updateUnitAction(formData); }
 export async function createTenantAction(formData) { return properties.createTenantAction(formData); }
