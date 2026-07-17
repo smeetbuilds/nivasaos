@@ -2,6 +2,18 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 0.9.1 - 2026-07-17
+
+### Fixed
+
+- Staff and admin navigation now derives module capabilities only from properties assigned to the signed-in user, rather than exposing workspace-wide module screens.
+- Property operating models are locked after any inventory, configuration, financial, service, visitor, inspection, document, key, notification, deposit, or maintenance activity exists.
+- SQLite now enforces property-module immutability so scripts, plugins, and future code paths cannot bypass the application guard.
+- Shared-accommodation agreements can select exact available beds or spaces, with one selected space required for each resident when selection is explicit.
+- Automatic shared-space allocation uses unrestricted spaces only; restricted or custom-policy inventory must be chosen explicitly.
+- Blank agreement rent and deposit values now derive from the actual allocated spaces, while explicit negotiated overrides remain supported.
+- The module verifier now executes service-only module-lock, unused-property reconfiguration, allocated-space pricing, and negotiated-pricing tests.
+
 ## 0.9.0 - 2026-07-17
 
 ### Added
