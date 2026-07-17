@@ -1,0 +1,133 @@
+/* v0.10 vertical operating systems, permissions, scaling, and responsive QA */
+:root {
+  --vertical-ink: #172036;
+  --vertical-muted: #6e788d;
+  --vertical-border: #e2e7f0;
+  --vertical-surface: #f7f8fb;
+  --vertical-shadow: 0 16px 44px rgba(25, 37, 67, .07);
+}
+
+.module-config-stack { display: grid; gap: 16px; }
+.install-module-config { --module-accent: #5968f3; --module-soft: #eef0ff; padding: 22px; border: 1px solid var(--vertical-border); border-radius: 20px; background: linear-gradient(145deg,#fff,var(--module-soft)); box-shadow: 0 12px 34px rgba(27,39,70,.05); }
+.install-module-config-head { display: flex; align-items: center; gap: 13px; margin-bottom: 19px; }
+.install-module-config-head > span:last-child { min-width: 0; }
+.install-module-config-head small,.install-module-config-head strong,.install-module-config-head p { display: block; }
+.install-module-config-head small { color: var(--module-accent); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.install-module-config-head strong { margin-top: 3px; color: var(--vertical-ink); font-size: 17px; }
+.install-module-config-head p { margin-top: 4px; overflow: hidden; color: var(--vertical-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
+.vertical-property-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-bottom: 20px; }
+.vertical-property-card { --module-accent: #5968f3; --module-soft: #eef0ff; position: relative; min-width: 0; padding: 22px; overflow: hidden; border: 1px solid var(--vertical-border); border-radius: 20px; background: radial-gradient(circle at 110% -10%,var(--module-soft),transparent 17rem),#fff; box-shadow: var(--vertical-shadow); }
+.vertical-property-card::after { content: ""; position: absolute; right: -40px; bottom: -55px; width: 150px; height: 150px; border-radius: 50%; background: color-mix(in srgb,var(--module-accent) 8%,transparent); pointer-events: none; }
+.vertical-card-head,.vertical-card-actions { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.vertical-property-card h2 { position: relative; z-index: 1; margin: 18px 0 5px; color: var(--vertical-ink); font-size: 21px; letter-spacing: -.03em; }
+.vertical-property-card > p { position: relative; z-index: 1; color: var(--vertical-muted); font-size: 11px; }
+.vertical-card-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 19px 0; }
+.vertical-card-metrics span { padding: 11px; border: 1px solid color-mix(in srgb,var(--module-accent) 10%,#e8ebf1); border-radius: 12px; background: rgba(255,255,255,.74); }
+.vertical-card-metrics strong,.vertical-card-metrics small { display: block; }
+.vertical-card-metrics strong { color: var(--vertical-ink); font-size: 20px; }
+.vertical-card-metrics small { margin-top: 3px; color: var(--vertical-muted); font-size: 8px; line-height: 1.35; }
+.vertical-card-actions { justify-content: flex-start; }
+
+.permission-matrix { display: grid; gap: 15px; }
+.permission-matrix fieldset { padding: 15px; border: 1px solid var(--vertical-border); border-radius: 15px; background: #fafbfe; }
+.permission-matrix legend { padding: 0 7px; color: var(--vertical-ink); font-size: 10px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.permission-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.permission-card { position: relative; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid #e3e7ef; border-radius: 11px; background: #fff; cursor: pointer; }
+.permission-card:has(input:checked) { border-color: #aeb7ff; background: #f1f3ff; box-shadow: inset 3px 0 #5968f3; }
+.permission-card input { width: 17px; height: 17px; flex: 0 0 17px; accent-color: #5364f5; }
+.permission-card span { min-width: 0; }
+.permission-card strong,.permission-card small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.permission-card strong { color: var(--vertical-ink); font-size: 11px; }
+.permission-card small { margin-top: 2px; color: var(--vertical-muted); font-size: 8px; }
+.permission-scope-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 15px; border-top: 1px solid var(--vertical-border); }
+.permission-scope-links > span { width: 100%; color: var(--vertical-muted); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+
+.reservation-board { display: grid; grid-template-columns: repeat(5,minmax(230px,1fr)); gap: 13px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x proximity; }
+.reservation-column { min-width: 230px; padding: 10px; border: 1px solid var(--vertical-border); border-radius: 17px; background: #f3f5f9; scroll-snap-align: start; }
+.reservation-column-head,.housekeeping-column-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px 13px; }
+.reservation-column-head span,.housekeeping-column-head h2 { color: var(--vertical-ink); font-size: 10px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.reservation-column-head strong,.housekeeping-column-head span { min-width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; background: #fff; color: var(--vertical-muted); font-size: 10px; }
+.reservation-list,.housekeeping-list { display: grid; gap: 10px; }
+.reservation-card,.housekeeping-card { min-width: 0; padding: 15px; border: 1px solid #e2e6ee; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(28,40,70,.045); }
+.reservation-card-top,.housekeeping-card-top { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+.reservation-card h2 { margin: 13px 0 4px; color: var(--vertical-ink); font-size: 16px; }
+.reservation-card > p,.housekeeping-card > p { color: var(--vertical-muted); font-size: 10px; line-height: 1.5; }
+.reservation-dates { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 7px; margin: 14px 0; padding: 10px; border-radius: 10px; background: #f7f8fb; }
+.reservation-dates span:last-child { text-align: right; }
+.reservation-dates small,.reservation-dates strong { display: block; }
+.reservation-dates small { color: var(--vertical-muted); font-size: 8px; text-transform: uppercase; }
+.reservation-dates strong { margin-top: 3px; color: var(--vertical-ink); font-size: 10px; }
+.reservation-meta,.housekeeping-meta { display: flex; flex-wrap: wrap; gap: 5px; }
+.reservation-meta span,.housekeeping-meta span { padding: 5px 7px; border-radius: 999px; background: #f0f2f6; color: #667186; font-size: 8px; }
+.reservation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 13px; padding-top: 12px; border-top: 1px solid #edf0f5; }
+.button.small { min-height: 32px; padding: 7px 10px; font-size: 9px; }
+
+.housekeeping-board { display: grid; grid-template-columns: repeat(4,minmax(245px,1fr)); gap: 13px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x proximity; }
+.housekeeping-column { min-width: 245px; padding: 10px; border: 1px solid var(--vertical-border); border-radius: 17px; background: #f4f6f9; scroll-snap-align: start; }
+.housekeeping-card h3 { margin: 13px 0 5px; color: var(--vertical-ink); font-size: 15px; text-transform: capitalize; }
+.housekeeping-note { margin-top: 10px !important; padding: 9px; border-radius: 9px; background: #f7f8fb; }
+.housekeeping-card > .text-button { margin-top: 11px; }
+
+.portal-request-list { display: grid; }
+.portal-request-list article { display: grid; grid-template-columns: 40px minmax(0,1fr) minmax(120px,.3fr); gap: 13px; padding: 16px 20px; border-top: 1px solid #edf0f5; }
+.portal-request-list article:first-child { border-top: 0; }
+.portal-request-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: #eef1ff; color: #5364f5; }
+.portal-request-list strong,.portal-request-list small { display: block; }
+.portal-request-list strong { color: var(--portal-ink); }
+.portal-request-list small { margin-top: 3px; color: var(--portal-muted); font-size: 9px; }
+.portal-request-list p { margin-top: 8px; color: #566277; line-height: 1.55; }
+.portal-request-list em { display: block; margin-top: 9px; padding: 9px 11px; border-radius: 9px; background: #f3f6fb; color: #55637a; font-size: 10px; font-style: normal; }
+.portal-request-state { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; text-align: right; }
+.portal-domain-profile { margin-bottom: 18px; overflow: hidden; }
+.portal-domain-grid { padding: 20px; }
+
+.portal-more-scrim,.portal-more-sheet { display: none; }
+
+@media (max-width: 1180px) {
+  .vertical-property-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .module-selector-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 820px) {
+  .vertical-property-grid { grid-template-columns: 1fr; }
+  .permission-grid { grid-template-columns: 1fr; }
+  .reservation-board,.housekeeping-board { margin-right: -16px; padding-right: 16px; }
+  .portal-more-scrim { position: fixed; z-index: 70; inset: 0; display: block; border: 0; background: rgba(10,17,31,.45); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+  .portal-more-scrim.is-open { opacity: 1; pointer-events: auto; }
+  .portal-more-sheet { position: fixed; z-index: 75; right: 0; bottom: 0; left: 0; display: block; max-height: min(78dvh,620px); padding: 8px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: 24px 24px 0 0; background: #fff; box-shadow: 0 -22px 70px rgba(13,22,42,.24); transform: translateY(105%); transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+  .portal-more-sheet.is-open { transform: none; }
+  .portal-more-handle { width: 42px; height: 4px; margin: 2px auto 13px; border-radius: 4px; background: #d8dde7; }
+  .portal-more-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #edf0f5; }
+  .portal-more-head small,.portal-more-head strong { display: block; }
+  .portal-more-head small { color: var(--portal-muted); font-size: 9px; text-transform: uppercase; letter-spacing: .07em; }
+  .portal-more-head strong { margin-top: 3px; color: var(--portal-ink); font-size: 18px; }
+  .portal-more-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; padding: 15px 0; }
+  .portal-more-grid a { display: flex; align-items: center; gap: 11px; min-height: 62px; padding: 12px; border: 1px solid #e5e9f1; border-radius: 14px; color: var(--portal-ink); }
+  .portal-more-grid a > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: #eef1ff; color: var(--portal-accent); }
+  .portal-more-grid a strong { font-size: 11px; }
+  .portal-more-grid a.is-active { border-color: #bdc5ff; background: #f3f4ff; }
+  .portal-more-logout { width: 100%; justify-content: center; }
+  body.portal-more-open { overflow: hidden; }
+  .portal-request-list article { grid-template-columns: 38px minmax(0,1fr); }
+  .portal-request-state { grid-column: 2; align-items: flex-start; text-align: left; }
+}
+
+@media (max-width: 620px) {
+  .module-selector-grid,.install-review-grid { grid-template-columns: 1fr; }
+  .install-review-modules { grid-column: auto; }
+  .install-progress { overflow-x: auto; grid-template-columns: repeat(5,minmax(110px,1fr)); padding-bottom: 5px; scrollbar-width: none; }
+  .install-progress::-webkit-scrollbar { display: none; }
+  .install-module-config { padding: 17px; }
+  .vertical-card-metrics { grid-template-columns: 1fr 1fr; }
+  .vertical-card-metrics span:last-child { grid-column: 1 / -1; }
+  .portal-more-grid { grid-template-columns: 1fr 1fr; }
+  .portal-request-list article { padding-inline: 15px; }
+}
+
+:is(.permission-card,.module-selector-card,.portal-more-grid a,.reservation-card button,.housekeeping-card button):focus-within,
+:is(.button,.text-button,.icon-button,a,input,select,textarea):focus-visible { outline: 3px solid color-mix(in srgb,#5364f5 38%,transparent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .install-step,.module-selector-card,.vertical-property-card,.portal-more-scrim,.portal-more-sheet { animation: none !important; transition: none !important; }
+}
