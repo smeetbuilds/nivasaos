@@ -41,7 +41,7 @@ export default async function LeasesPage({ searchParams }) {
   const availableSpaces = all(
     `SELECT rs.id,rs.code,rs.unit_id,rs.monthly_rate,rs.deposit,rs.gender_policy,p.name property_name,p.currency,p.module_id,u.name unit_name
      FROM rentable_spaces rs JOIN properties p ON p.id=rs.property_id JOIN units u ON u.id=rs.unit_id
-     WHERE ${scope.clause} AND p.status='active' AND rs.status='available'
+     WHERE ${scope.clause} AND p.status='active' AND u.status NOT IN ('maintenance','inactive') AND rs.status='available'
      ORDER BY p.name,u.name,rs.code`,
     scope.params
   );
