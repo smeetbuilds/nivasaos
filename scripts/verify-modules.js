@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { applyMigrations, schema } from "../lib/schema.js";
 import { MODULE_CATALOG, normalizeModuleIds, supportsCapability } from "../lib/modules/catalog.js";
+import { allocatedSpaceTotals, resolveAgreementPricing } from "../lib/modules/agreement-pricing.js";
 
 const filename = path.join(tmpdir(), `nivasaos-modules-${randomBytes(8).toString("hex")}.sqlite`);
 const db = new Database(filename, { create: true, strict: true });
@@ -24,10 +25,30 @@ try {
   assert(!supportsCapability("residential", "spaceInventory"), "Residential rentals must not inherit bed inventory by default");
   assert(normalizeModuleIds(["hostel", "invalid", "residential"]).join(",") === "residential,hostel", "Module normalization must be allowlisted and deterministic");
 
+  const totals = allocatedSpaceTotals([
+    { monthly_rate: 6500, deposit: 6000 },
+    { monthly_rate: 7000, deposit: 7000 }
+  ]);
+  assert(totals.monthlyRent === 13500 && totals.deposit === 13000, "Allocated-space totals failed");
+  const derivedPricing = resolveAgreementPricing({ spaces: [{ monthly_rate: 6500, deposit: 6000 }], unitRate: 9999, unitDeposit: 9999 });
+  assert(derivedPricing.monthlyRent === 6500 && derivedPricing.deposit === 6000 && derivedPricing.source === "allocated_spaces", "Space pricing must override unit defaults when no negotiated amount is supplied");
+  const negotiatedPricing = resolveAgreementPricing({ spaces: [{ monthly_rate: 6500, deposit: 6000 }], requestedRent: "6200", requestedDeposit: "5000" });
+  assert(negotiatedPricing.monthlyRent === 6200 && negotiatedPricing.deposit === 5000, "Negotiated agreement pricing must remain an explicit override");
+
   const ownerId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Owner','owner@example.com','test','owner')").run().lastInsertRowid);
   for (const [index, module] of MODULE_CATALOG.entries()) {
     db.query("INSERT OR REPLACE INTO workspace_modules (module_id,enabled,sort_order) VALUES ($moduleId,1,$sortOrder)").run({ moduleId: module.id, sortOrder: index * 10 + 10 });
   }
+
+  const lockProperty = Number(db.query("INSERT INTO properties (name,type,module_id,address,city,currency) VALUES ('Service Only','boarding_house','pg_coliving','0 Lock Road','Surat','INR')").run().lastInsertRowid);
+  db.query("INSERT INTO service_catalog (property_id,name,category,billing_frequency,amount,active,created_by) VALUES ($propertyId,'Wi-Fi','utilities','monthly',500,1,$ownerId)").run({ propertyId: lockProperty, ownerId });
+  let serviceOnlyModuleChangeRejected = false;
+  try { db.query("UPDATE properties SET module_id='residential' WHERE id=$propertyId").run({ propertyId: lockProperty }); } catch { serviceOnlyModuleChangeRejected = true; }
+  assert(serviceOnlyModuleChangeRejected, "A service catalogue must lock the property operating module");
+
+  const emptyProperty = Number(db.query("INSERT INTO properties (name,type,module_id,address,city,currency) VALUES ('Empty Property','boarding_house','pg_coliving','0 Empty Road','Surat','INR')").run().lastInsertRowid);
+  db.query("UPDATE properties SET module_id='residential' WHERE id=$propertyId").run({ propertyId: emptyProperty });
+  assert(db.query("SELECT module_id FROM properties WHERE id=$propertyId").get({ propertyId: emptyProperty }).module_id === "residential", "An unused property should remain reconfigurable");
 
   const propertyId = Number(db.query("INSERT INTO properties (name,type,module_id,address,city,currency) VALUES ('Shared House','boarding_house','pg_coliving','1 Test Road','Surat','INR')").run().lastInsertRowid);
   const unitId = Number(db.query("INSERT INTO units (property_id,name,unit_type,capacity,status) VALUES ($propertyId,'Room 101','Shared room',2,'occupied')").run({ propertyId }).lastInsertRowid);
@@ -94,15 +115,16 @@ try {
   const sourceFiles = [
     "lib/actions/auth.js", "lib/actions/modules.js", "lib/actions/properties.js", "lib/actions/leases.js",
     "lib/actions/spaces.js", "lib/actions/services.js", "lib/actions/visitors.js", "lib/actions/commercial.js",
-    "lib/actions/handover.js", "lib/module-data.js", "components/AppShell.js", "components/TenantPortalShell.js",
-    "components/InstallWizard.js", "app/(workspace)/visitors/page.js"
+    "lib/actions/handover.js", "lib/module-data.js", "lib/modules/server.js", "components/AppShell.js",
+    "components/TenantPortalShell.js", "components/InstallWizard.js", "app/(workspace)/layout.js", "app/(workspace)/visitors/page.js"
   ];
   const source = sourceFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n");
   for (const contract of [
     "Select at least one operating module",
     "Cannot disable modules used by properties",
-    "Operating module locks after property inventory or activity exists",
+    "Operating module locks after property inventory, configuration, or activity exists",
     "Not enough available spaces for the selected residents",
+    "Select exact spaces when occupancy policies apply",
     "Space allocation conflict",
     "Reactivating this space would exceed unit capacity",
     "This service period was already billed",
@@ -110,12 +132,14 @@ try {
     "Annual service period must use YYYY",
     "Residents can pre-register expected visitors",
     "Ended leases cannot receive newly issued or replacement keys",
+    "SELECT DISTINCT p.module_id",
+    "capabilitiesForModules(modules)",
     "property_id IN (",
     "commercialProfiles"
   ]) assert(source.includes(contract), `Modular contract missing: ${contract}`);
   assert(!source.includes("p2.module_id=p.module_id AND rs.status"), "Module metrics must not use unscoped correlated portfolio counts");
 
-  console.log("Modular onboarding, property models, space capacity, frequency-correct services, visitors, commercial profiles, tenant portals, and legacy migration verified.");
+  console.log("Modular onboarding, scoped capabilities, property model locks, space-derived pricing, capacity, services, visitors, commercial profiles, tenant portals, and legacy migration verified.");
 } finally {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
