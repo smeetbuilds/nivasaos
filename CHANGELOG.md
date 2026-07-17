@@ -2,6 +2,41 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 0.9.0 - 2026-07-17
+
+### Added
+
+- Module-first onboarding with Residential Rentals, PG & Co-living, Hostel & Dormitory, Student Housing, Staff Accommodation, and Commercial Rentals.
+- Owner-governed workspace modules with a primary operating model and strict deactivation safeguards.
+- Property-level module assignment, terminology, starter templates, capability-driven navigation, and module health cards.
+- Bed, bunk, desk, parking, locker, and other rentable-space inventory beneath compatible rooms or units.
+- Space-level resident allocation with capacity enforcement and one active allocation per space.
+- Service catalogue and lease/resident subscriptions for meals, laundry, Wi-Fi, utilities, housekeeping, lockers, parking, CAM, and custom services.
+- Idempotent service invoice runs for one-time and recurring service periods.
+- Resident visitor pre-registration plus staff-controlled check-in, check-out, and cancellation transitions.
+- Commercial agreement profiles covering business identity, registration/tax references, CAM, escalation, fit-out, notice period, and notes.
+- Module-aware resident/business portals with relevant services, visitors, allocated spaces, commercial terms, documents, billing, maintenance, and handover.
+- Dedicated modular architecture guide and repository verifier.
+
+### Improved
+
+- Shared-room agreements can coexist while configured spaces remain available; conventional residential and commercial inventory remains unit-exclusive.
+- Active shared agreements allocate one available space per selected resident inside the lease transaction.
+- Agreement move-out releases only the affected spaces, ends active services, cancels expected visitors, and preserves room occupancy while another agreement remains active.
+- Property modules lock after inventory or operational activity begins, preventing historical data reinterpretation.
+- Unit capacity cannot be reduced below configured or actively allocated spaces.
+- Module dashboard metrics are restricted to the signed-in user's permitted properties.
+- Navigation and mobile portal controls appear only for capabilities used by enabled modules.
+- First-run starter data uses zero pricing and never fabricates people, agreements, invoices, payments, or deposits.
+
+### Security
+
+- Workspace module changes are owner-only and modules in active property use cannot be disabled.
+- Property, unit, agreement, resident, service, visitor, space, and commercial-profile relationships are revalidated server-side.
+- Residents can pre-register or cancel expected visitors but cannot confirm physical arrival or departure.
+- Service billing is unique per subscription and period.
+- Tenant portal module data remains authenticated and tenant/agreement scoped.
+
 ## 0.8.0 - 2026-07-17
 
 ### Added

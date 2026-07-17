@@ -22,6 +22,16 @@ const paths = {
   edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z",
   team: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
   settings: "M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5zM19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2 3.46-.08-.02a1.7 1.7 0 0 0-1.93.26l-.54.31a1.7 1.7 0 0 0-1.6 1.05H9.65a1.7 1.7 0 0 0-1.6-1.05l-.54-.31a1.7 1.7 0 0 0-1.93-.26l-.08.02-2-3.46.06-.06A1.7 1.7 0 0 0 3.9 15v-.62a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2-3.46.08.02a1.7 1.7 0 0 0 1.93-.26l.54-.31A1.7 1.7 0 0 0 9.65 7h4a1.7 1.7 0 0 0 1.6 1.05l.54.31a1.7 1.7 0 0 0 1.93.26l.08-.02 2 3.46-.06.06a1.7 1.7 0 0 0-.34 1.88z",
+  modules: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6zM10 7h4M7 10v4M17 10v4M10 17h4",
+  coliving: "M3 21V8l9-5 9 5v13M7 21v-7h10v7M8 10h.01M12 10h.01M16 10h.01M9 17h6",
+  hostel: "M3 20h18M5 20V7h14v13M8 10h8M8 14h8M8 18h8M7 7V4h10v3",
+  student: "M2 9l10-6 10 6-10 6zM6 11v5c3 3 9 3 12 0v-5M22 9v7",
+  staffHousing: "M4 21V9l8-6 8 6v12M8 21v-7h8v7M9 10h6M12 6v4",
+  commercial: "M3 21h18M5 21V6h14v15M8 6V3h8v3M8 10h2M14 10h2M8 14h2M14 14h2M10 21v-4h4v4",
+  spaces: "M4 5h16v14H4zM4 11h16M9 11v8M7 8h2M12 8h2M17 8h1",
+  services: "M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
+  visitors: "M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M16 11h6",
+  check: "M5 12l4 4L19 6",
   message: "M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z",
   copy: "M8 8h11v11H8zM5 16H3V3h13v2",
   plus: "M12 5v14M5 12h14",
@@ -36,5 +46,5 @@ const paths = {
 export default function Icon({ name, size = 20 }) {
   const d = paths[name] || paths.dashboard;
   const fillOnly = name === "dashboard";
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill={fillOnly ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={fillOnly ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d}/></svg>;
 }

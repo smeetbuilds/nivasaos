@@ -1,0 +1,35 @@
+/* v0.9 responsive audit overrides */
+@media (max-width: 820px) {
+  .tenant-portal-bottom-nav.module-bottom-nav {
+    grid-template-columns: none !important;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(70px, 1fr);
+    justify-content: initial;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+  }
+  .tenant-portal-bottom-nav.module-bottom-nav a {
+    min-width: 70px;
+    scroll-snap-align: center;
+  }
+  .tenant-portal-bottom-nav.module-bottom-nav::after {
+    content: "";
+    width: 1px;
+  }
+}
+
+@media (max-width: 600px) {
+  .module-property-grid { grid-template-columns: 1fr; }
+  .module-property-card .property-model-copy { align-items: flex-start; flex-direction: column; }
+  .module-property-card .property-model-copy small { text-align: left; }
+  .module-governance-card > input { width: 22px; height: 22px; }
+  .module-primary-panel select, .primary-module-picker select { width: 100%; }
+  .module-health-card .module-health-card-head { align-items: flex-start; }
+  .portal-commercial-grid { padding: 13px; }
+  .portal-commercial-grid > article { padding: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .install-step, .module-selector-card, .module-governance-card, .module-health-card { animation: none !important; transition: none !important; }
+}

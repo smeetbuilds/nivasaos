@@ -1,0 +1,68 @@
+import { allocateSpaceAction, createSpaceAction, releaseSpaceAllocationAction, updateSpaceAction } from "@/app/actions";
+import { propertyScopeSql, requireUser } from "@/lib/auth";
+import { all } from "@/lib/db";
+import { money, dateLabel, today } from "@/lib/format";
+import { supportsCapability } from "@/lib/modules/catalog";
+import PageHeader from "@/components/PageHeader";
+import OpenModalButton from "@/components/OpenModalButton";
+import ModalForm from "@/components/ModalForm";
+import Flash from "@/components/Flash";
+import Badge from "@/components/Badge";
+import Empty from "@/components/Empty";
+import ModuleBadge from "@/components/ModuleBadge";
+
+export const metadata = { title: "Bed & space inventory" };
+
+export default async function SpacesPage({ searchParams }) {
+  const user = await requireUser();
+  const scope = propertyScopeSql(user, "p");
+  const allProperties = all(`SELECT p.* FROM properties p WHERE ${scope.clause} AND p.status='active' ORDER BY p.name`, scope.params);
+  const properties = allProperties.filter((property) => supportsCapability(property.module_id, "spaceInventory"));
+  const propertyIds = properties.map((property) => Number(property.id));
+  const units = propertyIds.length ? all(`SELECT u.*,p.name property_name,p.module_id,p.currency FROM units u JOIN properties p ON p.id=u.property_id WHERE u.property_id IN (${propertyIds.map(() => "?").join(",")}) AND u.status!='inactive' ORDER BY p.name,u.name`, propertyIds) : [];
+  const spaces = propertyIds.length ? all(
+    `SELECT rs.*,p.name property_name,p.module_id,p.currency,u.name unit_name,u.capacity,
+      sa.id allocation_id,sa.lease_id,sa.tenant_id,sa.start_date allocation_start,l.reference lease_reference,t.full_name tenant_name
+     FROM rentable_spaces rs JOIN properties p ON p.id=rs.property_id JOIN units u ON u.id=rs.unit_id
+     LEFT JOIN space_allocations sa ON sa.space_id=rs.id AND sa.status='active'
+     LEFT JOIN leases l ON l.id=sa.lease_id LEFT JOIN tenants t ON t.id=sa.tenant_id
+     WHERE rs.property_id IN (${propertyIds.map(() => "?").join(",")})
+     ORDER BY p.name,u.name,rs.code`,
+    propertyIds
+  ) : [];
+  const leases = propertyIds.length ? all(
+    `SELECT l.id,l.reference,l.property_id,l.unit_id,p.name property_name,u.name unit_name
+     FROM leases l JOIN properties p ON p.id=l.property_id JOIN units u ON u.id=l.unit_id
+     WHERE l.property_id IN (${propertyIds.map(() => "?").join(",")}) AND l.status='active' ORDER BY p.name,u.name,l.reference`,
+    propertyIds
+  ) : [];
+  const leaseTenants = leases.length ? all(
+    `SELECT lt.lease_id,t.id tenant_id,t.full_name FROM lease_tenants lt JOIN tenants t ON t.id=lt.tenant_id
+     WHERE lt.lease_id IN (${leases.map(() => "?").join(",")}) ORDER BY t.full_name`,
+    leases.map((lease) => Number(lease.id))
+  ) : [];
+  const query = await searchParams;
+  const canConfigure = user.role !== "staff";
+  const occupied = spaces.filter((space) => space.status === "occupied").length;
+  const available = spaces.filter((space) => space.status === "available").length;
+  const utilization = spaces.length ? Math.round(occupied / spaces.length * 100) : 0;
+
+  return <>
+    <Flash searchParams={query}/>
+    <PageHeader eyebrow="Shared accommodation inventory" title="Beds & rentable spaces" description="Represent each bed or assignable space independently, then connect it to the correct resident and active lease." actions={canConfigure && properties.length ? <OpenModalButton target="space-create">Add space</OpenModalButton> : null}/>
+    <section className="metric-grid module-metric-grid"><article className="metric-card"><span>Total tracked spaces</span><strong>{spaces.length}</strong><small>Across {properties.length} compatible properties</small></article><article className="metric-card"><span>Available</span><strong>{available}</strong><small>Ready for allocation</small></article><article className="metric-card"><span>Occupied</span><strong>{occupied}</strong><small>Linked to active leases</small></article><article className="metric-card"><span>Utilisation</span><strong>{utilization}%</strong><small>Space-level occupancy</small></article></section>
+
+    {spaces.length ? <section className="panel"><div className="panel-head"><div><span className="eyebrow">Live inventory</span><h2>Space register</h2></div></div><div className="table-wrap"><table><thead><tr><th>Space</th><th>Property / unit</th><th>Policy</th><th>Rate / deposit</th><th>Allocation</th><th>Status</th><th>Actions</th></tr></thead><tbody>{spaces.map((space) => <tr key={space.id}><td><strong>{space.code}</strong><small>{space.space_type}</small></td><td><ModuleBadge moduleId={space.module_id} compact/><strong>{space.property_name}</strong><small>{space.unit_name} · capacity {space.capacity}</small></td><td>{space.gender_policy}<small>{space.notes || "No additional rule"}</small></td><td>{money(space.monthly_rate, space.currency)}<small>Deposit {money(space.deposit, space.currency)}</small></td><td>{space.tenant_name ? <><strong>{space.tenant_name}</strong><small>{space.lease_reference} · since {dateLabel(space.allocation_start)}</small></> : <span className="quiet-copy">Not allocated</span>}</td><td><Badge tone={space.status}>{space.status}</Badge></td><td><div className="table-actions">{canConfigure && <OpenModalButton target={`space-edit-${space.id}`} icon="edit" className="text-button">Edit</OpenModalButton>}{space.status === "available" && leases.some((lease) => Number(lease.unit_id) === Number(space.unit_id)) && <OpenModalButton target={`space-allocate-${space.id}`} className="text-button">Allocate</OpenModalButton>}{space.allocation_id && <form action={releaseSpaceAllocationAction}><input type="hidden" name="allocationId" value={space.allocation_id}/><input type="hidden" name="endDate" value={today()}/><button className="text-button danger-text">Release</button></form>}</div></td></tr>)}</tbody></table></div></section> : <Empty icon="spaces" title="No spaces configured" text={properties.length ? "Add beds or assignable spaces beneath compatible rooms. Capacity limits are enforced server-side." : "Enable a shared-accommodation module and create a compatible property first."}/>} 
+
+    {canConfigure && properties.length > 0 && <form action={createSpaceAction}><ModalForm id="space-create" title="Add a rentable space" description="The active space count cannot exceed the configured unit capacity." submitLabel="Create space"><div className="modal-body"><label><span>Property</span><select name="propertyId" required>{properties.map((property) => <option value={property.id} key={property.id}>{property.name}</option>)}</select></label><label><span>Unit / room</span><select name="unitId" required>{units.map((unit) => <option value={unit.id} key={unit.id}>{unit.property_name} · {unit.name} · capacity {unit.capacity}</option>)}</select></label><div className="field-grid two"><label><span>Space code</span><input name="code" required placeholder="Bed A"/></label><label><span>Space type</span><select name="spaceType"><option value="bed">Bed</option><option value="bunk">Bunk</option><option value="desk">Desk</option><option value="parking">Parking</option><option value="locker">Locker</option><option value="other">Other</option></select></label></div><div className="field-grid three"><label><span>Monthly rate</span><input type="number" min="0" step="0.01" name="monthlyRate" defaultValue="0"/></label><label><span>Deposit</span><input type="number" min="0" step="0.01" name="deposit" defaultValue="0"/></label><label><span>Occupancy policy</span><select name="genderPolicy"><option value="any">Any</option><option value="male">Male</option><option value="female">Female</option><option value="family">Family</option><option value="custom">Custom</option></select></label></div><label><span>Initial status</span><select name="status"><option value="available">Available</option><option value="maintenance">Maintenance</option><option value="inactive">Inactive</option></select></label><label><span>Notes / custom rule</span><textarea name="notes" rows="3"/></label></div></ModalForm></form>}
+
+    {canConfigure && spaces.map((space) => <form action={updateSpaceAction} key={`edit-${space.id}`}><ModalForm id={`space-edit-${space.id}`} title={`Edit ${space.code}`} description="Allocated spaces remain occupied until their allocation is released." submitLabel="Save space"><div className="modal-body"><input type="hidden" name="spaceId" value={space.id}/><div className="summary-box"><span>Location</span><strong>{space.property_name} · {space.unit_name}</strong></div><div className="field-grid two"><label><span>Space code</span><input name="code" defaultValue={space.code} required/></label><label><span>Type</span><select name="spaceType" defaultValue={space.space_type}>{["bed","bunk","desk","parking","locker","other"].map((value) => <option value={value} key={value}>{value}</option>)}</select></label></div><div className="field-grid three"><label><span>Monthly rate</span><input type="number" min="0" step="0.01" name="monthlyRate" defaultValue={space.monthly_rate}/></label><label><span>Deposit</span><input type="number" min="0" step="0.01" name="deposit" defaultValue={space.deposit}/></label><label><span>Policy</span><select name="genderPolicy" defaultValue={space.gender_policy}>{["any","male","female","family","custom"].map((value) => <option value={value} key={value}>{value}</option>)}</select></label></div><label><span>Status</span><select name="status" defaultValue={space.status}>{space.allocation_id ? <option value="occupied">Occupied</option> : <><option value="available">Available</option><option value="maintenance">Maintenance</option><option value="inactive">Inactive</option></>}</select></label><label><span>Notes</span><textarea name="notes" rows="3" defaultValue={space.notes || ""}/></label></div></ModalForm></form>)}
+
+    {spaces.filter((space) => space.status === "available").map((space) => {
+      const unitLeases = leases.filter((lease) => Number(lease.unit_id) === Number(space.unit_id));
+      const validLeaseIds = new Set(unitLeases.map((lease) => Number(lease.id)));
+      const tenants = leaseTenants.filter((tenant) => validLeaseIds.has(Number(tenant.lease_id)));
+      return <form action={allocateSpaceAction} key={`allocate-${space.id}`}><ModalForm id={`space-allocate-${space.id}`} title={`Allocate ${space.code}`} description="Lease, tenant, property, and unit relationships are revalidated before allocation." submitLabel="Allocate space"><div className="modal-body"><input type="hidden" name="spaceId" value={space.id}/><div className="summary-box"><span>Space</span><strong>{space.property_name} · {space.unit_name} · {space.code}</strong></div><label><span>Active lease</span><select name="leaseId" required>{unitLeases.map((lease) => <option value={lease.id} key={lease.id}>{lease.reference}</option>)}</select></label><label><span>Linked resident</span><select name="tenantId" required>{tenants.map((tenant) => <option value={tenant.tenant_id} key={`${tenant.lease_id}-${tenant.tenant_id}`}>{tenant.full_name} · {unitLeases.find((lease) => Number(lease.id) === Number(tenant.lease_id))?.reference}</option>)}</select><small>The server rejects a resident who is not linked to the selected lease.</small></label><label><span>Allocation date</span><input type="date" name="startDate" defaultValue={today()} required/></label></div></ModalForm></form>;
+    })}
+  </>;
+}
