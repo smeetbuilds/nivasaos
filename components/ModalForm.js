@@ -3,23 +3,36 @@
 import Icon from "@/components/Icon";
 import SubmitButton from "@/components/SubmitButton";
 
-export default function ModalForm({ id, title, description, children, submitLabel = "Save", pendingLabel = "Saving…" }) {
+const pendingVerbs = Object.freeze({
+  Save: "Saving…", Create: "Creating…", Issue: "Issuing…", Record: "Recording…", Generate: "Generating…",
+  Update: "Updating…", Apply: "Applying…", Review: "Reviewing…", Confirm: "Confirming…", Void: "Voiding…"
+});
+
+function resolvedPendingLabel(submitLabel, pendingLabel) {
+  if (pendingLabel) return pendingLabel;
+  return pendingVerbs[String(submitLabel || "").split(" ")[0]] || "Working…";
+}
+
+export default function ModalForm({ id, title, description, children, submitLabel = "Save", pendingLabel, intent = "primary" }) {
   const close = () => document.getElementById(id)?.close();
+  const descriptionId = description ? `${id}-description` : undefined;
   return <dialog
     id={id}
     className="modal modal-sheet"
+    data-intent={intent}
     aria-labelledby={`${id}-title`}
+    aria-describedby={descriptionId}
     onClick={(event) => { if (event.target === event.currentTarget) close(); }}
   >
     <div className="sheet-grabber" aria-hidden="true"><span/></div>
     <div className="modal-head">
-      <div><h2 id={`${id}-title`}>{title}</h2>{description && <p>{description}</p>}</div>
+      <div><h2 id={`${id}-title`}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div>
       <button type="button" className="icon-button modal-close" onClick={close} aria-label="Close"><Icon name="close" size={20}/></button>
     </div>
     {children}
     <div className="modal-actions">
       <button type="button" className="button secondary" onClick={close}>Cancel</button>
-      <SubmitButton pendingLabel={pendingLabel}>{submitLabel}</SubmitButton>
+      <SubmitButton intent={intent === "danger" ? "danger" : "primary"} pendingLabel={resolvedPendingLabel(submitLabel, pendingLabel)}>{submitLabel}</SubmitButton>
     </div>
   </dialog>;
 }

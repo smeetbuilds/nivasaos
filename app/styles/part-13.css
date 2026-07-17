@@ -1,0 +1,32 @@
+/* Interaction and state contracts. Keep component intent semantic rather than status-name-specific. */
+.button.danger{color:#fff;background:linear-gradient(135deg,#c81e4d,#e04467);box-shadow:0 8px 20px rgba(200,30,77,.2)}
+.button.danger:hover{background:linear-gradient(135deg,#b71945,#d5375b)}
+.button:disabled,.text-button:disabled{cursor:not-allowed;opacity:.58;transform:none;box-shadow:none}
+.button:focus-visible,.text-button:focus-visible,.icon-button:focus-visible{outline:3px solid rgba(49,92,244,.28);outline-offset:3px}
+.button.danger:focus-visible,.text-button.danger:focus-visible{outline-color:rgba(200,30,77,.3)}
+.button-spinner{width:14px;height:14px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:nivasa-spin .7s linear infinite}
+@keyframes nivasa-spin{to{transform:rotate(360deg)}}
+
+.badge{min-height:22px;padding:5px 9px;font-size:11px;line-height:1.05}
+.badge-success{background:#e7f8f1;color:#106b56}
+.badge-info{background:#eaf0ff;color:#294fcf}
+.badge-warning{background:#fff3d8;color:#8b4d00}
+.badge-danger{background:#fff0f3;color:#aa183d}
+.badge-neutral{background:#eef1f5;color:#596273}
+.badge-purple{background:#eeeafe;color:#5c2fa8}
+
+.confirm-action{display:inline-flex;margin:0}
+.confirm-action>.text-button{min-height:32px}
+.confirm-consequence{padding:13px 14px;border:1px solid #ffc7d2;background:#fff0f3;color:#991b3f;font-weight:700}
+.modal[data-intent="danger"] .modal-head{border-bottom-color:#f4c9d3}
+.modal[data-intent="danger"] .modal-head h2{color:#9f173c}
+
+.table-wrap th{color:#667085;font-size:11px}
+.flash[role="alert"],.flash[role="status"]{position:relative}
+
+@media (max-width:720px){
+  .mobile-bottom-nav a,.mobile-bottom-nav button{font-size:10px}
+  .confirm-action{display:flex}
+}
+
+@media (prefers-reduced-motion:reduce){.button-spinner{animation-duration:1.4s}}

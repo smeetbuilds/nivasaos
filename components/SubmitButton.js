@@ -1,11 +1,7 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import ActionButton from "@/components/ActionButton";
 
-export default function SubmitButton({ children, pendingLabel = "Saving…", className = "button primary" }) {
-  const { pending } = useFormStatus();
-  return <button className={className} type="submit" disabled={pending} aria-disabled={pending}>
-    {pending && <span className="button-spinner" aria-hidden="true"/>}
-    {pending ? pendingLabel : children}
-  </button>;
+export default function SubmitButton({ children, pendingLabel = "Working…", className = "", intent = "primary" }) {
+  return <ActionButton pendingLabel={pendingLabel} className={className} intent={intent}>{children}</ActionButton>;
 }
