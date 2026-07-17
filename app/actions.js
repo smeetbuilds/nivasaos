@@ -15,6 +15,7 @@ import * as spaces from "@/lib/actions/spaces";
 import * as services from "@/lib/actions/services";
 import * as visitors from "@/lib/actions/visitors";
 import * as commercial from "@/lib/actions/commercial";
+import * as verticals from "@/lib/actions/verticals";
 
 export async function installAction(formData) { return auth.installAction(formData); }
 export async function loginAction(formData) { return auth.loginAction(formData); }
@@ -38,6 +39,7 @@ export async function updateMaintenanceAction(formData) { return maintenance.upd
 export async function createTeamMemberAction(formData) { return team.createTeamMemberAction(formData); }
 export async function updateTeamMemberAction(formData) { return team.updateTeamMemberAction(formData); }
 export async function toggleUserAction(formData) { return team.toggleUserAction(formData); }
+export async function updateUserPermissionsAction(formData) { return team.updateUserPermissionsAction(formData); }
 export async function updateSettingsAction(formData) { return settings.updateSettingsAction(formData); }
 export async function changePasswordAction(formData) { return settings.changePasswordAction(formData); }
 export async function updateBillingPolicyAction(formData) { return billing.updateBillingPolicyAction(formData); }
@@ -80,3 +82,15 @@ export async function updateVisitorStatusAction(formData) { return visitors.upda
 export async function preregisterTenantVisitorAction(formData) { return visitors.preregisterTenantVisitorAction(formData); }
 export async function cancelTenantVisitorAction(formData) { return visitors.cancelTenantVisitorAction(formData); }
 export async function saveCommercialProfileAction(formData) { return commercial.saveCommercialProfileAction(formData); }
+
+export async function savePropertyOperatingConfigAction(formData) { return verticals.savePropertyOperatingConfigAction(formData); }
+export async function saveResidentVerticalProfileAction(formData) { return verticals.saveResidentVerticalProfileAction(formData); }
+export async function createModuleRequestAction(formData) { return verticals.createModuleRequestAction(formData); }
+export async function createTenantModuleRequestAction(formData) { return verticals.createTenantModuleRequestAction(formData); }
+export async function cancelTenantModuleRequestAction(formData) { return verticals.cancelTenantModuleRequestAction(formData); }
+export async function reviewModuleRequestAction(formData) { return verticals.reviewModuleRequestAction(formData); }
+export async function createHostelReservationAction(formData) { return verticals.createHostelReservationAction(formData); }
+export async function updateHostelReservationStatusAction(formData) { return verticals.updateHostelReservationStatusAction(formData); }
+export async function createHousekeepingTaskAction(formData) { return verticals.createHousekeepingTaskAction(formData); }
+export async function updateHousekeepingTaskAction(formData) { return verticals.updateHousekeepingTaskAction(formData); }
+export async function bulkServiceBillingAction(formData) { return verticals.bulkServiceBillingAction(formData); }
