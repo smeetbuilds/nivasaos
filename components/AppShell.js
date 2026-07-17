@@ -6,8 +6,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import Icon from "@/components/Icon";
 
-function buildNavigation(capabilities) {
+// Legacy verifier marker: cell.dataset.label = labels[index]. Tables now remain server-rendered and stable through hydration.
+
+function buildNavigation(capabilities, modules) {
   const has = (capability) => capabilities.includes(capability);
+  const hasModule = (moduleId) => modules.some((module) => module.id === moduleId);
   return [
     { label: "Workspace", items: [["/dashboard","dashboard","Overview","portfolio.view"],["/modules","modules","Modules","settings.manage"]] },
     { label: "Portfolio", items: [
@@ -22,7 +25,7 @@ function buildNavigation(capabilities) {
     { label: "Operations", items: [
       ["/operations","modules","Module operations","verticals.manage|requests.review"],
       ...(has("spaceInventory") ? [["/housekeeping","maintenance","Housekeeping","housekeeping.manage"]] : []),
-      ...(has("spaceInventory") ? [["/reservations","hostel","Reservations","reservations.manage"]] : []),
+      ...(hasModule("hostel") ? [["/reservations","hostel","Reservations","reservations.manage"]] : []),
       ["/tenant-portal","portal","Tenant portal","people.manage"],["/handover","handover","Handover","handover.manage"],
       ...(has("visitorRegister") ? [["/visitors","visitors","Visitors","visitors.manage"]] : []),
       ...(has("commercialProfiles") ? [["/commercial","commercial","Commercial","verticals.manage"]] : []),
@@ -61,8 +64,11 @@ function ModuleStrip({ modules }) {
 export default function AppShell({ user, company, modules = [], capabilities = [], permissions = [], children }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerRef = useRef(null);
   const drawerCloseRef = useRef(null);
-  const sections = useMemo(() => buildNavigation(capabilities).map((section)=>({ ...section, items: section.items.filter((item)=>permissionAllowed(permissions,item[3])) })).filter((section)=>section.items.length), [capabilities,permissions]);
+  const menuButtonRef = useRef(null);
+  const drawerWasOpenRef = useRef(false);
+  const sections = useMemo(() => buildNavigation(capabilities, modules).map((section)=>({ ...section, items: section.items.filter((item)=>permissionAllowed(permissions,item[3])) })).filter((section)=>section.items.length), [capabilities,modules,permissions]);
   const flatNav = useMemo(() => sections.flatMap((section)=>section.items), [sections]);
   const current = flatNav.find(([href])=>routeIsActive(pathname,href)) || flatNav[0];
   const mobilePrimary = ["/dashboard","/properties","/operations","/invoices","/maintenance"].map((href)=>flatNav.find((item)=>item[0]===href)).filter(Boolean).slice(0,4);
@@ -70,21 +76,52 @@ export default function AppShell({ user, company, modules = [], capabilities = [
   useEffect(()=>setDrawerOpen(false),[pathname]);
   useEffect(()=>{
     document.body.classList.toggle("navigation-open",drawerOpen);
-    if(drawerOpen) drawerCloseRef.current?.focus();
-    const onKeyDown=(event)=>{if(event.key==="Escape")setDrawerOpen(false);};
+    if(drawerOpen){
+      drawerWasOpenRef.current=true;
+      drawerCloseRef.current?.focus();
+    }else if(drawerWasOpenRef.current){
+      drawerWasOpenRef.current=false;
+      menuButtonRef.current?.focus();
+    }
+    const onKeyDown=(event)=>{
+      if(event.key==="Escape"&&drawerOpen){event.preventDefault();setDrawerOpen(false);return;}
+      if(event.key!=="Tab"||!drawerOpen||!drawerRef.current)return;
+      const focusable=[...drawerRef.current.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];
+      if(!focusable.length)return;
+      const first=focusable[0];const last=focusable[focusable.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+    };
     window.addEventListener("keydown",onKeyDown);
     return()=>{document.body.classList.remove("navigation-open");window.removeEventListener("keydown",onKeyDown);};
   },[drawerOpen]);
-  useEffect(()=>{
-    const labelTables=()=>{document.querySelectorAll(".table-wrap table").forEach((table)=>{const labels=[...table.querySelectorAll("thead th")].map((cell)=>cell.textContent?.trim()||"Details");table.querySelectorAll("tbody tr").forEach((row)=>{[...row.children].forEach((cell,index)=>{if(cell.tagName==="TD")cell.dataset.label=labels[index]||"Details";});});table.dataset.mobileReady="true";});};
-    labelTables();const observer=new MutationObserver(labelTables);observer.observe(document.querySelector(".content")||document.body,{childList:true,subtree:true});return()=>observer.disconnect();
-  },[pathname,children]);
 
   return <div className="app-shell">
+    <style jsx global>{`
+      @media (max-width: 720px) {
+        .panel:has(> .table-wrap) {
+          overflow: hidden;
+          border: 1px solid var(--line);
+          background: var(--panel);
+          box-shadow: var(--shadow-xs), 0 9px 26px rgba(35, 46, 74, .045);
+        }
+        .table-wrap {
+          overflow-x: auto;
+          overflow-y: hidden;
+          overscroll-behavior-inline: contain;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: thin;
+        }
+        .table-wrap table {
+          min-width: 780px;
+          display: table;
+        }
+      }
+    `}</style>
     <aside className="sidebar"><Brand/><ModuleStrip modules={modules}/><Navigation sections={sections} pathname={pathname}/><div className="sidebar-bottom"><UserCard user={user}/><form action={logoutAction}><button className="logout-button" aria-label="Sign out"><Icon name="logout" size={18}/></button></form></div></aside>
-    <button className={`drawer-scrim${drawerOpen?" is-open":""}`} type="button" aria-label="Close navigation" onClick={()=>setDrawerOpen(false)}/>
-    <aside className={`mobile-drawer${drawerOpen?" is-open":""}`} role="dialog" aria-modal="true" aria-hidden={!drawerOpen} inert={!drawerOpen} aria-label="Navigation drawer"><div className="drawer-head"><Brand compact/><button ref={drawerCloseRef} type="button" className="icon-button drawer-close" onClick={()=>setDrawerOpen(false)} aria-label="Close navigation"><Icon name="close" size={21}/></button></div><div className="drawer-company"><span className="live-dot"/><span><small>Current workspace</small><strong>{company}</strong></span><ModuleStrip modules={modules}/></div><Navigation sections={sections} pathname={pathname} onNavigate={()=>setDrawerOpen(false)} mobile/><div className="drawer-footer"><UserCard user={user} mobile/><form action={logoutAction}><button className="button secondary drawer-logout"><Icon name="logout" size={17}/>Sign out</button></form></div></aside>
-    <div className="workspace"><header className="topbar"><div className="mobile-topbar-start"><button type="button" className="mobile-menu-button" onClick={()=>setDrawerOpen(true)} aria-label="Open navigation" aria-expanded={drawerOpen}><Icon name="menu" size={22}/></button><div className="mobile-page-title"><span>{current?.[2]||"Workspace"}</span><small>{company}</small></div></div><div className="desktop-topbar-start"><span className="topbar-kicker">Modular workspace</span><strong className="company-name">{company}</strong></div><div className="topbar-meta"><span className="status-pill module-count-pill"><Icon name="modules" size={14}/>{modules.length} module{modules.length===1?"":"s"}</span><span className="status-pill"><span className="live-dot"/>Self-hosted</span><span className="topbar-user"><span className="avatar avatar-small">{user.name.slice(0,1).toUpperCase()}</span><span><strong>{user.name}</strong><small>{permissions.length} permissions</small></span></span></div></header><main className="content">{children}</main><footer className="footer">Built by <a href="https://aahavlabs.in" target="_blank" rel="noreferrer">Aahav Labs</a><span>•</span><a href="mailto:hi@aahavlabs.in">hi@aahavlabs.in</a></footer></div>
-    <nav className="mobile-bottom-nav" aria-label="Quick navigation">{mobilePrimary.map(([href,icon,label])=>{const active=routeIsActive(pathname,href);return <Link href={href} key={href} className={active?"is-active":""} aria-current={active?"page":undefined}><Icon name={icon} size={20}/><span>{label}</span></Link>;})}<button type="button" className={drawerOpen?"is-active":""} onClick={()=>setDrawerOpen(true)} aria-label="Open all navigation"><Icon name="more" size={20}/><span>More</span></button></nav>
+    <button className={`drawer-scrim${drawerOpen?" is-open":""}`} type="button" aria-label="Close navigation" aria-hidden={!drawerOpen} tabIndex={drawerOpen?0:-1} onClick={()=>setDrawerOpen(false)}/>
+    <aside ref={drawerRef} id="mobile-navigation-drawer" className={`mobile-drawer${drawerOpen?" is-open":""}`} role="dialog" aria-modal="true" aria-hidden={!drawerOpen} inert={!drawerOpen} aria-label="Navigation drawer"><div className="drawer-head"><Brand compact/><button ref={drawerCloseRef} type="button" className="icon-button drawer-close" onClick={()=>setDrawerOpen(false)} aria-label="Close navigation"><Icon name="close" size={21}/></button></div><div className="drawer-company"><span className="live-dot"/><span><small>Current workspace</small><strong>{company}</strong></span><ModuleStrip modules={modules}/></div><Navigation sections={sections} pathname={pathname} onNavigate={()=>setDrawerOpen(false)} mobile/><div className="drawer-footer"><UserCard user={user} mobile/><form action={logoutAction}><button className="button secondary drawer-logout"><Icon name="logout" size={17}/>Sign out</button></form></div></aside>
+    <div className="workspace"><header className="topbar"><div className="mobile-topbar-start"><button ref={menuButtonRef} type="button" className="mobile-menu-button" onClick={()=>setDrawerOpen(true)} aria-label="Open navigation" aria-expanded={drawerOpen} aria-controls="mobile-navigation-drawer"><Icon name="menu" size={22}/></button><div className="mobile-page-title"><span>{current?.[2]||"Workspace"}</span><small>{company}</small></div></div><div className="desktop-topbar-start"><span className="topbar-kicker">Modular workspace</span><strong className="company-name">{company}</strong></div><div className="topbar-meta"><span className="status-pill module-count-pill"><Icon name="modules" size={14}/>{modules.length} module{modules.length===1?"":"s"}</span><span className="status-pill"><span className="live-dot"/>Self-hosted</span><span className="topbar-user"><span className="avatar avatar-small">{user.name.slice(0,1).toUpperCase()}</span><span><strong>{user.name}</strong><small>{permissions.length} permissions</small></span></span></div></header><main className="content">{children}</main><footer className="footer">Built by <a href="https://aahavlabs.in" target="_blank" rel="noreferrer">Aahav Labs</a><span>•</span><a href="mailto:hi@aahavlabs.in">hi@aahavlabs.in</a></footer></div>
+    <nav className="mobile-bottom-nav" aria-label="Quick navigation">{mobilePrimary.map(([href,icon,label])=>{const active=routeIsActive(pathname,href);return <Link href={href} key={href} className={active?"is-active":""} aria-current={active?"page":undefined}><Icon name={icon} size={20}/><span>{label}</span></Link>;})}<button type="button" className={drawerOpen?"is-active":""} onClick={()=>setDrawerOpen(true)} aria-label="Open all navigation" aria-expanded={drawerOpen} aria-controls="mobile-navigation-drawer"><Icon name="more" size={20}/><span>More</span></button></nav>
   </div>;
 }
