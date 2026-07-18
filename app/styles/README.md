@@ -8,9 +8,10 @@ The architecture is now transitional but explicit:
 - `part-12.css` remains temporarily because it contains the v0.10 vertical/responsive release contract.
 - `part-13.css` remains temporarily because repository verification treats it as the semantic interaction/state contract.
 - `foundation.css` contains enterprise tokens, shell, shared controls, surfaces, forms, tables, and responsive foundations.
+- `branding.css` contains the bundled NivasaOS identity, white-label previews, and responsive brand surfaces.
 - `portfolio.css` contains properties, people, and agreement operating views.
 - `finance.css` contains invoices, payments, billing policy, and reporting views.
-- `operations.css` contains maintenance work orders and hostel reservation/front-desk views.
+- `operations.css` contains maintenance and reservation operating views.
 
 Do not add new `part-*.css` files. New work must use a named domain layer. When a legacy area is visually certified, move its selectors into the appropriate named file and remove the obsolete compatibility rules in a dedicated refactor.
 

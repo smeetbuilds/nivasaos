@@ -1,0 +1,52 @@
+/* Default NivasaOS identity and governed white-label surfaces. */
+.brand { display: flex; align-items: center; width: 100%; }
+.brand-logo { display: inline-flex; align-items: center; min-width: 0; }
+.brand-logo img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left center; }
+.brand-logo-horizontal { width: min(204px, 100%); height: 46px; }
+.brand-logo-symbol { width: 40px; height: 40px; }
+.brand-logo-compact { width: 166px; height: 38px; }
+.auth-brand { min-height: 48px; display: flex; align-items: center; }
+.auth-brand .brand-logo-horizontal { width: min(220px, 72vw); height: 50px; }
+.drawer-head .brand { padding: 0; }
+.drawer-head .brand-logo-horizontal { width: 165px; }
+.mobile-brand-symbol { display: none; flex: 0 0 auto; width: 30px; height: 30px; }
+
+.settings-general-branding-form { grid-row: span 2; }
+.settings-section-divider { margin-top: 4px; padding: 20px 22px 0; border-top: 1px solid var(--line); }
+.settings-section-divider h2 { margin: 0; color: var(--ink); font-size: 18px; }
+.settings-section-divider p { max-width: 760px; margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.branding-settings-stack { padding-top: 16px !important; }
+.branding-preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.branding-preview { min-height: 142px; display: grid; align-content: center; gap: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.branding-preview > span { font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+.branding-preview .brand-logo-horizontal { width: min(230px, 90%); height: 52px; }
+.branding-preview-light { background: #fff; }
+.branding-preview-light > span { color: var(--muted); }
+.branding-preview-dark { border-color: #253149; background: #101828; }
+.branding-preview-dark > span { color: #98a2b3; }
+.white-label-toggle { margin-top: 2px; }
+.brand-assets-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.brand-asset-field { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: #fafbfc; }
+.brand-asset-field input[type="file"] { padding: 7px; background: #fff; }
+.brand-remove-option { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 10px; }
+.brand-remove-option input { width: auto; min-height: 0; margin-top: 2px; }
+.brand-remove-option span { color: var(--muted); font-size: 10px; font-weight: 600; line-height: 1.4; }
+
+@media (max-width: 960px) {
+  .mobile-brand-symbol { display: inline-flex; }
+  .settings-general-branding-form { grid-row: auto; }
+}
+@media (max-width: 720px) {
+  .brand-logo-horizontal { width: 178px; height: 40px; }
+  .auth-brand .brand-logo-horizontal { width: min(190px, 70vw); height: 44px; }
+  .branding-preview-grid, .brand-assets-grid { grid-template-columns: 1fr; }
+  .branding-preview { min-height: 124px; }
+  .settings-section-divider { padding-inline: 17px; }
+}
+
+.portal-brand { display: flex; align-items: center; min-height: 52px; padding: 4px 2px 14px; }
+.portal-brand .brand-logo-horizontal { width: min(196px, 100%); height: 44px; }
+.portal-workspace-context { margin: 0 0 12px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: rgba(255,255,255,.035); }
+.portal-workspace-context small, .portal-workspace-context strong { display: block; }
+.portal-workspace-context small { color: #7786a1; font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.portal-workspace-context strong { margin-top: 3px; overflow: hidden; color: #f8fafc; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }

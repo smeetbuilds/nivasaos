@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { isInstalled } from "@/lib/auth";
+import { DEFAULT_BRANDING } from "@/lib/branding";
 import { installationProtection } from "@/lib/runtime-config";
+import BrandLogo from "@/components/BrandLogo";
 import InstallWizard from "@/components/InstallWizard";
 import Icon from "@/components/Icon";
 
@@ -12,7 +14,7 @@ export default function InstallPage() {
   const protection = installationProtection();
   return <main className="modular-install-page">
     <aside className="modular-install-story">
-      <div className="auth-brand"><span className="brand-mark"><Icon name="building" size={24}/></span>NivasaOS</div>
+      <div className="auth-brand"><BrandLogo branding={DEFAULT_BRANDING} variant="dark"/></div>
       <div className="modular-story-copy"><span className="pill">One platform · Multiple operating models</span><h1>Build the property operating system your portfolio actually needs.</h1><p>Choose residential, PG, hostel, student, staff, or commercial workflows. Every property stays module-specific while finance, security, audit, and reporting remain unified.</p></div>
       <div className="modular-story-points">
         <span><Icon name="modules" size={20}/><strong>Capability driven</strong><small>Relevant inventory, services, visitors, and portal tools appear only where they belong.</small></span>

@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { get } from "@/lib/db";
+import { loadBranding } from "@/lib/branding";
 import { capabilitiesForModules, modulesForUser } from "@/lib/modules/server";
 import { portfolioPermissionsForUser } from "@/lib/permissions";
 import AppShell from "@/components/AppShell";
@@ -9,8 +10,9 @@ export const dynamic = "force-dynamic";
 export default async function WorkspaceLayout({ children }) {
   const user = await requireUser();
   const company = get("SELECT value FROM settings WHERE key='company_name'")?.value || "Property portfolio";
+  const branding = loadBranding();
   const modules = modulesForUser(user);
   const capabilities = capabilitiesForModules(modules);
   const permissions = portfolioPermissionsForUser(user);
-  return <AppShell user={user} company={company} modules={modules} capabilities={capabilities} permissions={permissions}>{children}</AppShell>;
+  return <AppShell user={user} company={company} branding={branding} modules={modules} capabilities={capabilities} permissions={permissions}>{children}</AppShell>;
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">NivasaOS symbol — dark mode</title>
+  <desc id="desc">NivasaOS symbol for dark mode using primary color #101828.</desc>
+  <g transform="translate(132.000,132.000) scale(2.96875000)">
+    <path d="M 40,58 L 78,82 L 78,214 L 40,190 Z" fill="#FFFFFF"/>
+<path d="M 78,80 L 116,104 L 190,152 L 152,176 Z" fill="#FFFFFF"/>
+<path d="M 78,122 L 116,146 L 190,194 L 152,218 Z" fill="#FFFFFF"/>
+<path d="M 165,46 L 206,72 L 180,90 L 139,64 Z" fill="#FFFFFF"/>
+<path d="M 165,80 L 206,54 L 206,96 L 165,122 Z" fill="#FFFFFF"/>
+<path d="M 165,126 L 206,100 L 206,142 L 165,168 Z" fill="#FFFFFF"/>
+<path d="M 165,172 L 206,146 L 206,188 L 165,214 Z" fill="#FFFFFF"/>
+  </g>
+</svg>

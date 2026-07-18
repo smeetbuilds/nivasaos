@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { tenantLogoutAction } from "@/app/actions";
+import BrandLogo from "@/components/BrandLogo";
 import Icon from "@/components/Icon";
 
 function activeRoute(pathname, href) {
   return href === "/portal" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function TenantPortalShell({ tenant, company, module, children }) {
+export default function TenantPortalShell({ tenant, company, branding, module, children }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const nav = [
@@ -37,7 +38,8 @@ export default function TenantPortalShell({ tenant, company, module, children })
 
   return <div className={`tenant-portal-shell module-${module.id}`}>
     <aside className="tenant-portal-sidebar">
-      <Link href="/portal" className="portal-brand"><span className="portal-brand-mark"><Icon name={module.icon} size={22}/></span><span><strong>{company}</strong><small>{module.terminology.portal}</small></span></Link>
+      <Link href="/portal" className="portal-brand" aria-label={`${branding.name} resident portal`}><BrandLogo branding={branding} variant="dark"/></Link>
+      <div className="portal-workspace-context"><small>Resident workspace</small><strong>{company}</strong></div>
       <div className="portal-module-chip"><Icon name={module.icon} size={15}/><span>{module.shortLabel}</span></div>
       <div className="portal-resident-card"><span className="avatar">{tenant.full_name.slice(0, 1).toUpperCase()}</span><span><strong>{tenant.full_name}</strong><small>{tenant.property_name} · {module.terminology.occupant}</small></span></div>
       <nav aria-label="Tenant portal navigation">{nav.map(([href, icon, label]) => { const active = activeRoute(pathname, href); return <Link href={href} key={href} className={active ? "is-active" : ""} aria-current={active ? "page" : undefined}><Icon name={icon} size={19}/><span>{label}</span></Link>; })}</nav>
@@ -46,7 +48,7 @@ export default function TenantPortalShell({ tenant, company, module, children })
     <div className="tenant-portal-workspace">
       <header className="tenant-portal-topbar"><div><span className="eyebrow">{module.terminology.portal}</span><strong>{current[2]}</strong></div><span className="portal-top-user"><span className="avatar avatar-small">{tenant.full_name.slice(0, 1).toUpperCase()}</span><span><strong>{tenant.full_name}</strong><small>{tenant.property_name}</small></span></span></header>
       <main className="tenant-portal-content">{children}</main>
-      <footer className="tenant-portal-footer">Powered by NivasaOS · {module.label} · Built by <a href="https://aahavlabs.in" target="_blank" rel="noreferrer">Aahav Labs</a></footer>
+      <footer className="tenant-portal-footer">{branding.whiteLabel ? <>{branding.name} · {module.label} · Self-hosted</> : <>Powered by {branding.name} · {module.label} · Built by <a href="https://aahavlabs.in" target="_blank" rel="noreferrer">Aahav Labs</a></>}</footer>
     </div>
     <button type="button" className={`portal-more-scrim${moreOpen ? " is-open" : ""}`} aria-label="Close portal menu" onClick={() => setMoreOpen(false)}/>
     <section className={`portal-more-sheet${moreOpen ? " is-open" : ""}`} role="dialog" aria-modal="true" aria-hidden={!moreOpen} inert={!moreOpen} aria-label="More portal options">
@@ -54,6 +56,6 @@ export default function TenantPortalShell({ tenant, company, module, children })
       <div className="portal-more-grid">{secondary.map(([href,icon,label]) => <Link href={href} key={href} className={activeRoute(pathname,href)?"is-active":""}><span><Icon name={icon} size={21}/></span><strong>{label}</strong></Link>)}</div>
       <form action={tenantLogoutAction}><button className="button secondary portal-more-logout"><Icon name="logout" size={17}/>Sign out</button></form>
     </section>
-    <nav className="tenant-portal-bottom-nav module-bottom-nav" aria-label="Tenant portal quick navigation">{primary.map(([href, icon, label]) => { const active = activeRoute(pathname, href); return <Link href={href} key={href} className={active ? "is-active" : ""} aria-current={active ? "page" : undefined}><Icon name={icon} size={20}/><span>{label}</span></Link>; })}<button type="button" className={moreOpen || secondary.some(([href])=>activeRoute(pathname,href)) ? "is-active" : ""} onClick={() => setMoreOpen(true)} aria-expanded={moreOpen}><Icon name="more" size={20}/><span>More</span></button></nav>
+    <nav className="tenant-portal-bottom-nav module-bottom-nav" aria-label="Tenant portal quick navigation">{primary.map(([href, icon, label]) => { const active = activeRoute(pathname, href); return <Link href={href} key={href} className={active ? "is-active" : ""} aria-current={active ? "page" : undefined}><Icon name={icon} size={20}/><span>{label}</span></Link>; })}<button type="button" className={moreOpen || secondary.some(([href]) => activeRoute(pathname,href)) ? "is-active" : ""} onClick={() => setMoreOpen(true)} aria-expanded={moreOpen}><Icon name="more" size={20}/><span>More</span></button></nav>
   </div>;
 }
