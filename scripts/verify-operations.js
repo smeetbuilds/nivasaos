@@ -45,8 +45,14 @@ try {
   verified.close(true);
   assert(marker.value === "before-backup", "Restored database content does not match the backup");
   assert(await Bun.file(path.join(uploadsPath, "proof.txt")).text() === "original-proof", "Restored upload content does not match the backup");
+
+  const backupCli = await Bun.file(new URL("./backup.js", import.meta.url)).text();
+  const restoreCli = await Bun.file(new URL("./restore.js", import.meta.url)).text();
+  assert(backupCli.includes('from "./lib/operations.js"'), "Backup CLI must import the verified operations implementation");
+  assert(restoreCli.includes('from "./lib/operations.js"'), "Restore CLI must import the verified operations implementation");
+  assert(!backupCli.includes("./backup/lib/operations.js") && !restoreCli.includes("./backup/lib/operations.js"), "Backup CLI paths must not reference a nonexistent nested directory");
 } finally {
   if (fs.existsSync(root)) await fsp.rm(root, { recursive: true, force: true });
 }
 
-console.log("Backup creation, checksum inspection, safety backup, and atomic restore verified.");
+console.log("Backup creation, checksum inspection, CLI wiring, safety backup, and atomic restore verified.");

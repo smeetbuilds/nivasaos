@@ -7,11 +7,19 @@ jobs:
     resource_class: medium
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - nivasaos-bun-v1-{{ checksum "bun.lock" }}
       - run:
           name: Install pinned dependencies
           command: bun install --frozen-lockfile
+      - save_cache:
+          key: nivasaos-bun-v1-{{ checksum "bun.lock" }}
+          paths:
+            - node_modules
+            - /root/.bun/install/cache
       - run:
-          name: Run repository release gate
+          name: Run complete repository release gate
           command: bun run gate
 
 workflows:

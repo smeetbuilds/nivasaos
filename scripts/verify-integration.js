@@ -95,6 +95,6 @@ try {
 
   console.log("End-to-end SQLite workflow verified: scoped staff access, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
 } finally {
-  db.close(true);
+  db.close();
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
 }

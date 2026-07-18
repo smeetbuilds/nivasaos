@@ -8,6 +8,9 @@ import { assertRuntimeEnvironment, runtimeValidationErrors } from "../lib/runtim
 
 const bun = Bun.which("bun") || process.execPath;
 const setsid = process.platform === "win32" ? null : Bun.which("setsid");
+const skipVerify = process.env.NIVASA_GATE_SKIP_VERIFY === "1";
+const skipBuild = process.env.NIVASA_GATE_SKIP_BUILD === "1";
+const stopAfter = process.env.NIVASA_GATE_STOP_AFTER || "";
 
 async function command(args, env = process.env) {
   const child = Bun.spawn(args, { cwd: process.cwd(), env, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
@@ -90,60 +93,72 @@ const env = {
   NIVASA_ALLOW_INSECURE_LOCALHOST: "1",
   NIVASA_INSTALL_TOKEN: "local-gate-install-token-32-characters"
 };
-let server = null;
+
+async function runGate() {
+  let server = null;
+  try {
+    verifyRuntimeRejections();
+    assertRuntimeEnvironment(env, { installed: false });
+    if (!skipVerify) await command([bun, "run", "verify"]);
+    if (!skipBuild) await command([bun, "run", "build"]);
+    await fsp.mkdir(uploadPath, { recursive: true });
+    await fsp.mkdir(backupPath, { recursive: true });
+
+    server = startServer(env, port);
+    const firstHealth = await waitForHealth(`${publicUrl}/api/health`, server);
+    await smoke(publicUrl, "/install", [200]);
+    await smoke(publicUrl, "/dashboard", [303, 307, 308], ["/install", "/login"]);
+    await smoke(publicUrl, "/portal/login", [200]);
+    await stopServer(server);
+    server = null;
+    console.log(`Production startup and route smoke checks passed (${firstHealth.latencyMs}ms).`);
+    if (stopAfter === "runtime") return;
+
+    const database = new Database(databasePath, { strict: true });
+    database.query("INSERT OR REPLACE INTO settings (key,value,updated_at) VALUES ('gate_restore_marker','before-backup',CURRENT_TIMESTAMP)").run();
+    database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+    database.close(true);
+    await fsp.writeFile(proofPath, "before-backup", { mode: 0o600 });
+
+    await command([bun, "run", "backup", "--", "--output", archivePath], env);
+    if (!fs.existsSync(archivePath)) throw new Error("Release backup archive was not created");
+    console.log("Production database and upload backup creation passed.");
+    if (stopAfter === "backup") return;
+
+    const mutated = new Database(databasePath, { strict: true });
+    mutated.query("UPDATE settings SET value='mutated' WHERE key='gate_restore_marker'").run();
+    mutated.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+    mutated.close(true);
+    await fsp.writeFile(proofPath, "mutated", { mode: 0o600 });
+
+    await command([bun, "run", "restore", "--", archivePath, "--force"], env);
+    const restored = new Database(databasePath, { readonly: true, strict: true });
+    const marker = restored.query("SELECT value FROM settings WHERE key='gate_restore_marker'").get();
+    restored.close(true);
+    if (marker?.value !== "before-backup") throw new Error("Database backup/restore did not recover the original marker");
+    if ((await fsp.readFile(proofPath, "utf8")) !== "before-backup") throw new Error("Upload backup/restore did not recover the original file");
+    console.log("Production database and upload restore checks passed.");
+    if (stopAfter === "restore") return;
+
+    server = startServer(env, port);
+    const restoredHealth = await waitForHealth(`${publicUrl}/api/health`, server);
+    await smoke(publicUrl, "/install", [200]);
+    await smoke(publicUrl, "/portal/login", [200]);
+
+    console.log(`Production health checks passed before and after restore (${firstHealth.latencyMs}ms / ${restoredHealth.latencyMs}ms).`);
+    console.log("Production routes, runtime rejection, database backup, upload backup, restore, and restart checks passed.");
+    console.log("Local release gate passed independently of hosted CI.");
+  } finally {
+    await stopServer(server);
+    if (fs.existsSync(temporary)) await fsp.rm(temporary, { recursive: true, force: true });
+  }
+}
 
 try {
-  verifyRuntimeRejections();
-  assertRuntimeEnvironment(env, { installed: false });
-  await command([bun, "run", "verify"]);
-  await command([bun, "run", "build"]);
-  await fsp.mkdir(uploadPath, { recursive: true });
-  await fsp.mkdir(backupPath, { recursive: true });
-
-  server = startServer(env, port);
-  const firstHealth = await waitForHealth(`${publicUrl}/api/health`, server);
-  await smoke(publicUrl, "/install", [200]);
-  await smoke(publicUrl, "/dashboard", [303, 307, 308], ["/install", "/login"]);
-  await smoke(publicUrl, "/portal/login", [200]);
-  await stopServer(server);
-  server = null;
-
-  const database = new Database(databasePath, { strict: true });
-  database.query("INSERT OR REPLACE INTO settings (key,value,updated_at) VALUES ('gate_restore_marker','before-backup',CURRENT_TIMESTAMP)").run();
-  database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-  database.close(true);
-  await fsp.writeFile(proofPath, "before-backup", { mode: 0o600 });
-
-  await command([bun, "run", "backup", "--", "--output", archivePath], env);
-  if (!fs.existsSync(archivePath)) throw new Error("Release backup archive was not created");
-
-  const mutated = new Database(databasePath, { strict: true });
-  mutated.query("UPDATE settings SET value='mutated' WHERE key='gate_restore_marker'").run();
-  mutated.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-  mutated.close(true);
-  await fsp.writeFile(proofPath, "mutated", { mode: 0o600 });
-
-  await command([bun, "run", "restore", "--", archivePath, "--force"], env);
-  const restored = new Database(databasePath, { readonly: true, strict: true });
-  const marker = restored.query("SELECT value FROM settings WHERE key='gate_restore_marker'").get();
-  restored.close(true);
-  if (marker?.value !== "before-backup") throw new Error("Database backup/restore did not recover the original marker");
-  if ((await fsp.readFile(proofPath, "utf8")) !== "before-backup") throw new Error("Upload backup/restore did not recover the original file");
-
-  server = startServer(env, port);
-  const restoredHealth = await waitForHealth(`${publicUrl}/api/health`, server);
-  await smoke(publicUrl, "/install", [200]);
-  await smoke(publicUrl, "/portal/login", [200]);
-
-  console.log(`Production health checks passed before and after restore (${firstHealth.latencyMs}ms / ${restoredHealth.latencyMs}ms).`);
-  console.log("Production routes, runtime rejection, database backup, upload backup, restore, and restart checks passed.");
-  console.log("Local release gate passed independently of hosted CI.");
+  await runGate();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
-} finally {
-  await stopServer(server);
-  if (fs.existsSync(temporary)) await fsp.rm(temporary, { recursive: true, force: true });
 }
 
 process.exit(process.exitCode || 0);

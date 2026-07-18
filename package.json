@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "bun --bun next dev",
-    "build": "bun --bun next build",
+    "build": "bun --bun next build --webpack",
     "start": "bun run scripts/start.js",
     "setup:token": "bun run scripts/create-install-token.js",
     "verify:secrets": "bun run scripts/verify-secrets.js",

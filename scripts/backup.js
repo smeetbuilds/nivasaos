@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createBackup } from "./backup/lib/operations.js";
+import { createBackup } from "./lib/operations.js";
 
 function argument(name) {
   const index = process.argv.indexOf(name);

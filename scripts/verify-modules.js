@@ -116,7 +116,8 @@ try {
     "lib/actions/auth.js", "lib/actions/modules.js", "lib/actions/properties.js", "lib/actions/leases.js",
     "lib/actions/spaces.js", "lib/actions/services.js", "lib/actions/visitors.js", "lib/actions/commercial.js",
     "lib/actions/handover.js", "lib/module-data.js", "lib/modules/server.js", "components/AppShell.js",
-    "components/TenantPortalShell.js", "components/InstallWizard.js", "app/(workspace)/layout.js", "app/(workspace)/visitors/page.js"
+    "components/TenantPortalShell.js", "components/InstallWizard.js", "app/(workspace)/layout.js",
+    "app/(workspace)/visitors/page.js", "app/(workspace)/visitors/workspace.js"
   ];
   const source = sourceFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n");
   for (const contract of [
@@ -130,6 +131,7 @@ try {
     "This service period was already billed",
     "Quarterly service period must use YYYY-Q1 to YYYY-Q4",
     "Annual service period must use YYYY",
+    "renderPermissionScopedPage(\"visitors.manage\"",
     "Residents can pre-register expected visitors",
     "Ended leases cannot receive newly issued or replacement keys",
     "SELECT DISTINCT p.module_id",

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { inspectBackup, restoreBackup } from "./backup/lib/operations.js";
+import { inspectBackup, restoreBackup } from "./lib/operations.js";
 
 const archivePath = process.argv.find((value, index) => index > 1 && !value.startsWith("--"));
 const forced = process.argv.includes("--force");
