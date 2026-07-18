@@ -29,7 +29,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
   const user = await requireUser();
   const scope = propertyScopeSql(user, "p");
   const query = await searchParams;
-  const canManageAccess = user.role === "owner" || user.role === "admin";
+  const canManageAccess = true;
   const selectedTenantId = Number(query?.tenant || 0);
   const tenants = all(
     `SELECT t.*,p.name property_name,p.currency,ta.id account_id,ta.status portal_status,ta.invited_at,ta.activated_at,ta.last_login_at,
@@ -110,7 +110,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
         <td><Badge tone={tenant.portal_status === "invited" && !tenant.invite_active ? "overdue" : tenant.portal_status || "inactive"}>{tenant.portal_status === "invited" && !tenant.invite_active ? "Invite expired" : tenant.portal_status || "Not enabled"}</Badge></td>
         <td>{tenant.last_login_at ? dateTimeLabel(tenant.last_login_at) : "Never"}<small>{tenant.activated_at ? `Activated ${dateLabel(tenant.activated_at.slice(0, 10))}` : tenant.invited_at ? `Invited ${dateLabel(tenant.invited_at.slice(0, 10))}` : "—"}</small></td>
         <td><div className="table-actions">
-          {canManageAccess && tenant.email ? <form action={createTenantInviteAction}><input type="hidden" name="tenantId" value={tenant.id}/><button className="text-button"><Icon name="portal" size={16}/>{tenant.portal_status === "active" ? "Reset link" : "Create invite"}</button></form> : <span className="muted">{canManageAccess ? "Add email first" : "Owner/admin only"}</span>}
+          {canManageAccess && tenant.email ? <form action={createTenantInviteAction}><input type="hidden" name="tenantId" value={tenant.id}/><button className="text-button"><Icon name="portal" size={16}/>{tenant.portal_status === "active" ? "Reset link" : "Create invite"}</button></form> : <span className="muted">Add email first</span>}
           {canManageAccess && tenant.account_id && tenant.portal_status !== "disabled" && <form action={disableTenantPortalAction}><input type="hidden" name="tenantId" value={tenant.id}/><button className="text-button danger-text">Disable</button></form>}
         </div></td>
       </tr>)}</tbody></table></div> : <Empty icon="tenant" title="No tenant profiles" text="Add tenants before creating portal access."/>}

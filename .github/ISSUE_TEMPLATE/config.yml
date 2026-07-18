@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/smeetbuilds/nivasaos/security/policy
+    about: Report vulnerabilities privately. Do not publish exploit details or resident data.
+  - name: Deployment documentation
+    url: https://github.com/smeetbuilds/nivasaos/blob/main/docs/PRODUCTION_RELEASE.md
+    about: Review the production and release requirements before opening a setup issue.

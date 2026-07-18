@@ -2,9 +2,15 @@
 
 **Open-source, self-hosted modular property operations. No API keys required.**
 
-NivasaOS 1.0 lets one installation operate residential rentals, PG and co-living, hostels, student housing, staff accommodation, and commercial properties without forcing every property into one generic workflow.
+NivasaOS 1.1 lets one installation operate residential rentals, PG and co-living, hostels, student housing, staff accommodation, and commercial properties without forcing every property into one generic workflow.
 
 Built by [Aahav Labs](https://aahavlabs.in) and released under the MIT License.
+
+## Project status
+
+The 1.1 release line closes the known route/action authorization gaps, adds database-backed staff login throttling and atomic first-owner installation, and expands the repository gate with integration, container-contract, backup, restore, and restart checks.
+
+NivasaOS remains a **manual-first, single-instance, self-hosted application**. Read [Known limitations](docs/KNOWN_LIMITATIONS.md) before using real financial or resident data.
 
 ## Why it is inexpensive to run
 
@@ -35,7 +41,7 @@ See [Modular operating models](docs/MODULES.md).
 
 Every operating model reuses the same trusted services:
 
-- properties, units, people and agreements;
+- properties, units, spaces, people and agreements;
 - rent runs, manual invoices and late-fee controls;
 - partial/full payments and payment-proof review;
 - refundable deposit ledger;
@@ -47,6 +53,14 @@ Every operating model reuses the same trusted services:
 - global and property-specific permissions;
 - immutable audit history;
 - SQLite backup and restore validation.
+
+## Authorization model
+
+NivasaOS enforces permission contracts at navigation, route-read, visible-action, row-action and Server Action boundaries.
+
+Property-scoped permissions include portfolio viewing, inventory, people, agreements, billing, payments, deposits, portal access, services, visitors, maintenance, handover, vertical operations, request review, reservations, housekeeping, reports and property-scoped audit history.
+
+Portfolio-wide governance permissions include property creation, team management and workspace settings. Owners retain full authority; delegated users receive only effective permissions for assigned properties.
 
 ## Technology
 
@@ -115,7 +129,7 @@ bun run setup:token
 docker compose -f compose.production.yml up -d --build
 ```
 
-Open the configured HTTPS URL and enter the installer token when creating the first owner. After installation succeeds, the token may be removed from `.env.production` and the application restarted.
+Open the configured HTTPS URL and enter the installer token when creating the first owner. After installation succeeds, remove the token from `.env.production` and restart the application.
 
 The application container is not exposed directly in the production compose file. Only Caddy publishes ports 80 and 443.
 
@@ -150,9 +164,25 @@ bun run verify
 bun run gate
 ```
 
-`verify:secrets` scans tracked repository files for common credentials, private keys, credential-bearing database URLs, personal workstation paths, private registry references, and accidentally tracked environment files.
+`verify:secrets` scans Git-tracked files when Git metadata is present and safely falls back to scanning the build context inside containers.
 
-`bun run gate` runs every verifier, builds Next.js, starts an isolated production server, and smoke-tests health, installation, protected workspace routing, and tenant login. It is repository-owned and does not depend on GitHub Actions.
+`bun run gate`:
+
+1. runs every repository verifier;
+2. builds the production Next.js application;
+3. starts an isolated production server;
+4. tests runtime rejection of unsafe production configuration;
+5. checks fresh-install, protected-workspace and tenant-login routes;
+6. creates and restores a real database-and-upload backup;
+7. restarts the production server and rechecks health.
+
+For Docker and Compose changes, also run:
+
+```bash
+bun run gate:container
+```
+
+The optional CircleCI configuration runs the same `bun run gate`. CircleCI is a runner, not the source of truth, and the application does not require hosted CI to build or operate.
 
 ## Backups
 
@@ -161,11 +191,11 @@ bun run backup
 bun run restore -- ./backups/<backup-file>.tar.gz --force
 ```
 
-The built-in archive is checksummed and permission-restricted but intentionally not encrypted. Encrypt off-host copies using an operator-controlled tool such as age or restic. See [Backups and restore](docs/BACKUPS.md).
+The built-in archive is checksummed and permission-restricted but intentionally not encrypted. Encrypt off-host copies using an operator-controlled tool such as age or restic. Scheduled cron, systemd and Docker examples are in [Backups and restore](docs/BACKUPS.md).
 
 ## Extensions
 
-The extension registry supports additional payment methods, notification drivers, dashboard sections, and settings sections without changing the core data model. Optional integrations may require their own credentials, but the base project never requires them.
+The extension registry supports additional payment methods, notification drivers, dashboard sections and settings sections without changing the core data model. Optional integrations may require their own credentials, but the base project never requires them.
 
 Extension entrypoint: `plugins/index.js`.
 
@@ -174,23 +204,24 @@ Extension entrypoint: `plugins/index.js`.
 - Scrypt password hashing with per-user random salts
 - SHA-256 session and invitation-token hashes
 - HTTP-only SameSite cookies
-- One-time tenant activation links
-- Production first-run installer token
-- Property and permission-scoped staff access
-- Authenticated document and proof delivery
-- Transactional financial and occupancy updates
-- Database integrity triggers
-- Auditable staff and tenant actions
+- database-backed staff and tenant login throttling
+- one-time tenant activation links
+- atomic production first-owner installation
+- property and permission-scoped staff access
+- authenticated document and proof delivery
+- transactional financial and occupancy updates
+- database integrity triggers
+- auditable staff and tenant actions
 
 Read [SECURITY.md](SECURITY.md) before deployment.
 
 ## Scale boundary
 
-NivasaOS 1.0 targets one self-hosted application instance using SQLite. For multi-instance or very high-volume deployments, plan a PostgreSQL and durable-worker evolution instead of sharing one SQLite file across replicas.
+NivasaOS 1.1 targets one self-hosted application instance using SQLite. Do not share one SQLite file across multiple application replicas. For multi-instance or very high-volume deployments, plan a PostgreSQL and durable-worker evolution.
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md). Contributions are verified locally and remain MIT licensed.
+Read [CONTRIBUTING.md](CONTRIBUTING.md). Use the repository issue templates for reproducible bugs and scoped feature proposals. Contributions are verified locally and remain MIT licensed.
 
 ## License
 

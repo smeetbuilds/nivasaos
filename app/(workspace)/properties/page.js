@@ -1,6 +1,7 @@
 import { createPropertyAction, updatePropertyAction } from "@/app/actions";
 import { requireUser, propertyScopeSql } from "@/lib/auth";
 import { all, get } from "@/lib/db";
+import { hasGlobalPermission } from "@/lib/permission-core";
 import { money } from "@/lib/format";
 import { enabledModules } from "@/lib/modules/server";
 import { moduleById, supportsCapability } from "@/lib/modules/catalog";
@@ -13,13 +14,15 @@ import Empty from "@/components/Empty";
 import ModuleBadge from "@/components/ModuleBadge";
 
 export const metadata = { title: "Properties" };
-const currencies = ["INR", "USD", "GBP", "EUR", "AED", "AUD", "CAD", "SGD"];
+const currencies = ["USD", "EUR", "GBP", "INR", "AED", "AUD", "CAD", "SGD"];
 
 export default async function PropertiesPage({ searchParams }) {
   const user = await requireUser();
   const scope = propertyScopeSql(user, "p");
   const modules = enabledModules();
   const primaryModule = get("SELECT value FROM settings WHERE key='primary_module'")?.value || modules[0]?.id;
+  const defaultCountry = get("SELECT value FROM settings WHERE key='default_country'")?.value || "Not specified";
+  const defaultCurrency = get("SELECT value FROM settings WHERE key='default_currency'")?.value || "USD";
   const rows = all(
     `SELECT p.*,COUNT(DISTINCT u.id) units,
       SUM(CASE WHEN u.status='occupied' THEN 1 ELSE 0 END) occupied_units,
@@ -34,7 +37,7 @@ export default async function PropertiesPage({ searchParams }) {
     scope.params
   );
   const query = await searchParams;
-  const canEdit = user.role !== "staff";
+  const canEdit = hasGlobalPermission(user, "properties.manage");
 
   return <>
     <Flash searchParams={query}/>
@@ -57,7 +60,7 @@ export default async function PropertiesPage({ searchParams }) {
       </article>;
     })}</div> : <Empty title="No properties yet" text="Create the first property and choose the operating model that controls its inventory, services, workflows, and portal."/>}
 
-    {canEdit && <form action={createPropertyAction}><ModalForm id="property-modal" title="Add a modular property" description="Choose the operating model first. NivasaOS will expose only relevant inventory and operational tools." submitLabel="Create property" pendingLabel="Creating…"><div className="modal-body"><label><span>Property name</span><input name="name" required placeholder="Palm Residency"/></label><label><span>Operating model</span><select name="moduleId" defaultValue={primaryModule}>{modules.map((module) => <option value={module.id} key={module.id}>{module.label} · {module.family}</option>)}</select><small>This locks after units, tenants, leases, invoices, or maintenance activity exists.</small></label><label className="check-row"><input type="checkbox" name="seedTemplate"/><span><strong>Create recommended starter structure</strong><small>Adds model-relevant units, spaces, and service templates with zero pricing.</small></span></label><label><span>Street address</span><input name="address" required/></label><div className="field-grid three"><label><span>City</span><input name="city"/></label><label><span>Country</span><input name="country" defaultValue="India"/></label><label><span>Currency</span><select name="currency" defaultValue="INR">{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label></div></div></ModalForm></form>}
+    {canEdit && <form action={createPropertyAction}><ModalForm id="property-modal" title="Add a modular property" description="Choose the operating model first. NivasaOS will expose only relevant inventory and operational tools." submitLabel="Create property" pendingLabel="Creating…"><div className="modal-body"><label><span>Property name</span><input name="name" required placeholder="Palm Residency"/></label><label><span>Operating model</span><select name="moduleId" defaultValue={primaryModule}>{modules.map((module) => <option value={module.id} key={module.id}>{module.label} · {module.family}</option>)}</select><small>This locks after units, tenants, leases, invoices, or maintenance activity exists.</small></label><label className="check-row"><input type="checkbox" name="seedTemplate"/><span><strong>Create recommended starter structure</strong><small>Adds model-relevant units, spaces, and service templates with zero pricing.</small></span></label><label><span>Street address</span><input name="address" required/></label><div className="field-grid three"><label><span>City</span><input name="city"/></label><label><span>Country</span><input name="country" defaultValue={defaultCountry}/></label><label><span>Currency</span><select name="currency" defaultValue={defaultCurrency}>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label></div></div></ModalForm></form>}
 
     {canEdit && rows.map((row) => {
       const moduleLocked = Number(row.operational_count || 0) > 0;

@@ -1,6 +1,8 @@
-# NivasaOS 1.0 production release guide
+# NivasaOS 1.1 production release guide
 
-NivasaOS is self-hosted and requires no paid platform or external API for core operation. Production readiness is proven by the repository-owned local gate, not by GitHub Actions or another hosted CI service.
+NivasaOS is self-hosted and requires no paid platform or external API for core operation. Production readiness is proven by the repository-owned gate. CircleCI is an optional runner for the same gate, not a separate source of truth.
+
+Read [Known limitations](KNOWN_LIMITATIONS.md) before using real financial or resident data.
 
 ## Fast production setup
 
@@ -40,18 +42,41 @@ bun run gate
 
 The gate performs:
 
-1. tracked-secret and environment-file verification;
+1. tracked-secret and environment-file verification, including Docker build-context fallback;
 2. JavaScript and JSX parsing;
-3. fresh-schema and legacy-migration verification;
-4. finance and operations verification;
-5. responsive UI and portal contract verification;
-6. handover and modular integrity verification;
-7. vertical workflow, permission, reservation and bulk-job verification;
+3. fresh-schema, release-migration and legacy-migration verification;
+4. authorization, staff-login throttling and atomic-installation verification;
+5. finance, deposits, services, reservations and operations integration verification;
+6. responsive UI, tenant portal, handover and modular contract verification;
+7. Dockerfile, Compose, Caddy and persistent-storage contract verification;
 8. open-source packaging and production-runtime verification;
 9. a production Next.js build;
-10. an isolated production server smoke test.
+10. runtime rejection tests for unsafe public URLs and missing installation protection;
+11. an isolated production server smoke test;
+12. real database-and-upload backup and restore recovery;
+13. a post-restore production restart and health check.
 
 Do not deploy when any gate step fails.
+
+For changes to Docker, Compose, Caddy or container startup, also run:
+
+```bash
+bun run gate:container
+```
+
+This builds the image, starts the local Compose stack, waits for container health and tears down the isolated test volumes.
+
+## Optional CircleCI evidence
+
+`.circleci/config.yml` installs the pinned dependency graph and runs:
+
+```bash
+bun run gate
+```
+
+A CircleCI failure is a release failure. A CircleCI success does not replace operator testing against a copy of production data.
+
+The application remains buildable and deployable without CircleCI.
 
 ## Production environment contract
 
@@ -72,7 +97,7 @@ NIVASA_PUBLIC_URL=https://property.example.com
 NIVASA_INSTALL_TOKEN=<generated locally>
 ```
 
-`NIVASA_PUBLIC_URL` must contain only an HTTPS scheme and host. Credentials, paths, query strings, fragments, localhost, and plain HTTP are rejected in production. The local compose stack explicitly opts into localhost for development.
+`NIVASA_PUBLIC_URL` must contain only an HTTPS scheme and host. Credentials, paths, query strings, fragments, localhost and plain HTTP are rejected in production. The local compose stack explicitly opts into localhost for development.
 
 ## Protected first installation
 
@@ -84,7 +109,11 @@ Generate the token locally:
 bun run setup:token
 ```
 
-The installer requires that token only while no owner exists. The token is compared in constant time and is not stored in SQLite. Remove it after successful installation.
+The installer requires that token only while no owner exists. The token is compared in constant time and is not stored in SQLite.
+
+Owner creation and the installation marker are committed in one database transaction. A concurrent second installation request is rejected.
+
+Remove the token after successful installation.
 
 ## Reproducible containers
 
@@ -96,6 +125,8 @@ bun install --frozen-lockfile
 
 Local `.env` files are excluded from the Docker build context. Only environment templates are permitted in the image source tree.
 
+Secret verification uses Git metadata when available and a safe build-context filesystem scan when `.git` is absent.
+
 ## Minimum production requirements
 
 - persistent writable storage for SQLite, uploads and backups;
@@ -103,6 +134,7 @@ Local `.env` files are excluded from the Docker build context. Only environment 
 - a process supervisor or container restart policy;
 - adequate upload limits for approved documents;
 - encrypted off-host backups and a tested restore procedure;
+- monitoring for backup age, disk capacity and failed jobs;
 - host, Bun/container image, Next.js and reverse-proxy patching.
 
 ## Deployment sequence
@@ -125,7 +157,8 @@ For an existing installation:
 4. test the release against a copy of production data;
 5. verify migrations, health, staff login and tenant login;
 6. start against production storage;
-7. verify invoices, payments, uploads and one module-specific workflow.
+7. verify invoices, payments, deposits, uploads and one module-specific workflow;
+8. record release evidence.
 
 ## Reverse-proxy baseline
 
@@ -138,7 +171,9 @@ The included Caddy configuration:
 - adds HSTS, content-type and referrer-policy headers;
 - removes the server response header.
 
-Operators using another reverse proxy must forward `Host`, `X-Forwarded-For`, and `X-Forwarded-Proto`, disable public caching on authenticated routes, and apply appropriate upload and login rate limits.
+Operators using another reverse proxy must forward `Host`, `X-Forwarded-For` and `X-Forwarded-Proto`, disable public caching on authenticated routes and apply appropriate upload limits.
+
+Staff and tenant login throttling is enforced in SQLite, but edge-level abuse controls are still recommended.
 
 ## Storage and data protection
 
@@ -160,6 +195,7 @@ Monitor at minimum:
 - disk capacity for data, uploads and backups;
 - backup age and restore-test date;
 - HTTP 5xx responses and slow requests;
+- staff and tenant account lockouts;
 - failed payment-proof or document uploads;
 - bulk jobs left in `running` state;
 - reservation, allocation and permission integrity errors.
@@ -169,15 +205,21 @@ Monitor at minimum:
 - Use unique owner and staff passwords.
 - Remove the installer token after first-owner creation.
 - Disable accounts immediately when access ends.
-- Grant minimum property and action permissions.
+- Grant minimum global, property and action permissions.
 - Keep HTTPS enabled for every staff and portal request.
 - Run `bun run verify:secrets` before every release.
 - Never commit `.env`, database files, uploads, backup archives, keys or tokens.
 - Review `SECURITY.md` before launch.
 
+## Manual-first boundary
+
+Core NivasaOS does not automatically capture payments or send provider-backed email, SMS or WhatsApp messages. Those are optional extensions and may introduce credentials, provider fees and compliance obligations.
+
+Do not describe an extension as part of the zero-key base installation.
+
 ## Scale boundary
 
-NivasaOS 1.0 is designed for one application instance backed by SQLite. Do not share one SQLite file across multiple application replicas. Very large or multi-instance deployments should plan PostgreSQL and durable background workers.
+NivasaOS 1.1 is designed for one application instance backed by SQLite. Do not share one SQLite file across multiple application replicas. Very large or multi-instance deployments should plan PostgreSQL and durable background workers.
 
 ## Rollback
 
@@ -186,16 +228,19 @@ Application rollback and data rollback are separate decisions.
 - Roll back code only when the previous release understands the migrated schema.
 - Stop all writers before restoring a database.
 - Preserve failed-release data and logs for investigation.
-- Run `bun run restore -- <backup-file> --force`, then `bun run gate` before reopening access.
+- Run `bun run restore -- <backup-file> --force`, then verify health before reopening access.
+- Run the target commit's gate before deploying that code.
 
 ## Release evidence
 
 Record:
 
-- commit SHA;
+- commit SHA and release version;
 - Bun and container-image version;
-- gate output;
+- `bun run gate` output;
+- `bun run gate:container` output when infrastructure changed;
+- CircleCI result when enabled;
 - backup path and checksum;
-- restore-drill evidence;
+- backup and restore recovery result;
 - deployment timestamp and operator;
 - post-deployment health and smoke-test results.

@@ -1,0 +1,59 @@
+name: Feature request
+description: Propose a scoped improvement or optional extension
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      description: Describe the operator or resident workflow, not only the desired implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: Explain the user flow, permissions, data changes and failure states.
+    validations:
+      required: true
+  - type: dropdown
+    id: boundary
+    attributes:
+      label: Product boundary
+      options:
+        - Core self-hosted functionality
+        - Optional extension
+        - Documentation or operator tooling
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost and dependency impact
+      description: List any API keys, paid providers, background workers, new services or infrastructure.
+      placeholder: State "None" when the base installation remains dependency-free.
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and permission impact
+      description: Identify affected roles, properties, records, uploads, financial state or personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmation
+      options:
+        - label: This proposal preserves the manual-first, single-instance base unless it is explicitly an optional extension.
+          required: true
+        - label: I searched existing issues for a similar proposal.
+          required: true

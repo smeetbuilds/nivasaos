@@ -2,6 +2,40 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## 1.1.0 - 2026-07-18
+
+### Added
+
+- Central authorization contracts for route reads, navigation, visible actions, row actions and Server Actions.
+- Dedicated `properties.manage`, `inventory.manage`, `deposits.manage` and `portal.manage` permissions.
+- Property-scoped audit delegation while portfolio-wide security and governance history remains owner-controlled.
+- Database-backed staff login throttling with temporary lockout and successful-login reset.
+- Atomic first-owner installation using a unique transactional installation marker.
+- Integration verification for financial, deposit, service, reservation and database-integrity workflows.
+- Production backup, restore and restart recovery checks in the repository gate.
+- Docker/Compose contract verification, optional container gate and an optional CircleCI runner that invokes the repository gate.
+- Globally neutral country, currency and timezone onboarding defaults.
+- Known-limitations, scheduled-backup and contributor issue-template documentation.
+
+### Fixed
+
+- Tenant-portal reads and payment/deposit actions now enforce their declared permissions.
+- Handover, document, service, visitor, space, report and commercial routes now align reads and mutations with property permissions.
+- Individual service billing requires both service-management and billing authority.
+- Space allocation and release require both inventory and agreement authority.
+- Delegated service, inventory, visitor and commercial operators are no longer blocked by leftover owner/admin role checks.
+- Property and unit configuration now follows explicit governance permissions.
+- Audit navigation and route enforcement now use the same permission contract.
+- Secret scanning works in Docker build contexts where `.git` is intentionally absent.
+- Property creation and updates inherit workspace country and currency instead of India-specific fallbacks.
+
+### Release
+
+- Version promoted to 1.1.0.
+- `bun run gate` remains the repository-owned release source of truth.
+- `bun run gate:container` verifies Docker build, Compose startup, persistent-volume wiring and container health.
+- The base product remains manual-first and single-instance; optional integrations remain extensions.
+
 ## 1.0.0 - 2026-07-17
 
 ### Added
