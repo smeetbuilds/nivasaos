@@ -4,6 +4,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import { createHash, randomBytes } from "node:crypto";
 import { runtimePaths } from "../../lib/runtime-paths.js";
+import { createTarGzip, readTarGzip } from "./tar-archive.js";
 
 const FORMAT_VERSION = 1;
 const DATABASE_ENTRY = "database/nivasaos.sqlite";
@@ -117,7 +118,7 @@ export async function createBackup(options = {}) {
   };
   archiveEntries[MANIFEST_ENTRY] = JSON.stringify(manifest, null, 2);
 
-  const archive = new Bun.Archive(archiveEntries, { compress: "gzip", level: 6 });
+  const archive = createTarGzip(archiveEntries, { level: 6, modifiedAt: createdAt });
   await writeAtomic(outputPath, archive);
 
   return { outputPath, manifest };
@@ -127,20 +128,25 @@ export async function inspectBackup(archivePath) {
   const resolvedArchive = path.resolve(archivePath);
   if (!fs.existsSync(resolvedArchive)) throw new Error(`Backup does not exist: ${resolvedArchive}`);
 
-  const archive = new Bun.Archive(await Bun.file(resolvedArchive).bytes());
-  const files = await archive.files();
+  const files = readTarGzip(await Bun.file(resolvedArchive).bytes());
   const manifestFile = files.get(MANIFEST_ENTRY);
   const databaseFile = files.get(DATABASE_ENTRY);
   if (!manifestFile || !databaseFile) throw new Error("Backup is missing its manifest or database");
 
-  const manifest = JSON.parse(await manifestFile.text());
+  const manifest = JSON.parse(new TextDecoder().decode(manifestFile));
   if (manifest.format !== "nivasaos-backup" || manifest.formatVersion !== FORMAT_VERSION) {
     throw new Error("Unsupported NivasaOS backup format");
   }
 
-  const databaseBytes = new Uint8Array(await databaseFile.arrayBuffer());
-  if (sha256(databaseBytes) !== manifest.database?.sha256) {
+  const databaseBytes = new Uint8Array(databaseFile);
+  if (databaseBytes.byteLength !== Number(manifest.database?.bytes) || sha256(databaseBytes) !== manifest.database?.sha256) {
     throw new Error("Backup database checksum does not match the manifest");
+  }
+
+  const uploadEntries = [...files.entries()].filter(([entryPath]) => entryPath.startsWith("uploads/"));
+  const uploadBytes = uploadEntries.reduce((total, [, bytes]) => total + bytes.byteLength, 0);
+  if (uploadEntries.length !== Number(manifest.uploads?.count) || uploadBytes !== Number(manifest.uploads?.bytes)) {
+    throw new Error("Backup upload manifest does not match archive contents");
   }
 
   return { resolvedArchive, files, manifest, databaseBytes };

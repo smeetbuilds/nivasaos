@@ -16,6 +16,8 @@ const requiredFiles = [
   "lib/schema/security-migrations.js",
   "scripts/create-install-token.js",
   "scripts/start.js",
+  "scripts/lib/operations.js",
+  "scripts/lib/tar-archive.js",
   "scripts/verify-secrets.js",
   "scripts/verify-auth-hardening.js",
   "scripts/verify-authorization.js",
@@ -70,6 +72,8 @@ const contracts = {
   "lib/runtime-config.js": ["NIVASA_PUBLIC_URL", "NIVASA_INSTALL_TOKEN", "installationExists", "timingSafeEqual"],
   "lib/schema/release-migrations.js": ["is_customized", "trg_properties_module_reset_defaults", "trg_hostel_reservation_overlap_insert", "trg_space_allocation_reservation_insert", "idx_permission_grants_global_unique", "schema_release"],
   "lib/actions/verticals.js": ["reservationOverlap", "bulkServiceBillingAction", "idempotencyKey"],
+  "scripts/lib/operations.js": ["createTarGzip", "readTarGzip", "Backup upload manifest does not match archive contents"],
+  "scripts/lib/tar-archive.js": ["gzipSync", "gunzipSync", "ustar"],
   "scripts/local-gate.js": ["runtimeValidationErrors", "gate_restore_marker", "release-backup.tar.gz", "independently of hosted CI"],
   "scripts/verify-integration.js": ["payment_submissions", "deposit_transactions", "service_billing_runs", "hostel_reservations", "PRAGMA integrity_check"],
   "scripts/verify-compose.js": ["private application networking", "compose.production.yml"],
@@ -89,6 +93,7 @@ for (const [filename, needles] of Object.entries(contracts)) {
   const source = read(filename);
   for (const needle of needles) if (!source.includes(needle)) failures.push(`${filename}: missing ${needle}`);
 }
+if (read("scripts/lib/operations.js").includes("Bun.Archive")) failures.push("scripts/lib/operations.js: Bun.Archive is not supported by the minimum Bun runtime");
 
 const responsive = read("app/styles/part-12.css");
 for (const needle of ["@media (max-width: 820px)", "env(safe-area-inset-bottom)", ":focus-visible", "prefers-reduced-motion"]) {
