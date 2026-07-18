@@ -55,8 +55,8 @@ try {
   const legacy = new Database(":memory:", { strict: true });
   legacy.exec(`
     PRAGMA foreign_keys=ON;
-    CREATE TABLE users(id INTEGER PRIMARY KEY,name TEXT,email TEXT,password_hash TEXT,role TEXT,status TEXT DEFAULT 'active');
-    CREATE TABLE properties(id INTEGER PRIMARY KEY,name TEXT,address TEXT,currency TEXT DEFAULT 'INR',status TEXT DEFAULT 'active');
+    CREATE TABLE users(id INTEGER PRIMARY KEY,name TEXT,email TEXT,password_hash TEXT,role TEXT,status TEXT DEFAULT 'active',created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE properties(id INTEGER PRIMARY KEY,name TEXT,type TEXT DEFAULT 'apartment',address TEXT,city TEXT,country TEXT DEFAULT 'India',currency TEXT DEFAULT 'INR',status TEXT DEFAULT 'active',created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE units(id INTEGER PRIMARY KEY,property_id INTEGER,status TEXT DEFAULT 'available');
     CREATE TABLE tenants(id INTEGER PRIMARY KEY,property_id INTEGER,full_name TEXT,email TEXT,phone TEXT,status TEXT DEFAULT 'active');
     CREATE TABLE leases(id INTEGER PRIMARY KEY,property_id INTEGER,unit_id INTEGER,reference TEXT,start_date TEXT,monthly_rent REAL,deposit REAL,billing_day INTEGER,status TEXT);
@@ -69,13 +69,16 @@ try {
     CREATE TABLE sessions(id INTEGER PRIMARY KEY,user_id INTEGER,token_hash TEXT,expires_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE user_properties(user_id INTEGER,property_id INTEGER,PRIMARY KEY(user_id,property_id));
     CREATE TABLE notification_log(id INTEGER PRIMARY KEY,property_id INTEGER,tenant_id INTEGER,invoice_id INTEGER,driver TEXT,recipient TEXT,message TEXT,status TEXT,metadata TEXT,created_by INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    INSERT INTO properties(id,name,type,address,city,country,currency,status) VALUES (1,'Legacy House','boarding_house','1 Legacy Road','Surat','India','INR','active');
   `);
   legacy.exec(schema);
   applyMigrations(legacy);
   const migratedInvoiceColumns = legacy.query("PRAGMA table_info(invoices)").all().map((column) => column.name);
   const migratedAuditColumns = legacy.query("PRAGMA table_info(audit_log)").all().map((column) => column.name);
+  const migratedProperty = legacy.query("SELECT type,module_id FROM properties WHERE id=1").get();
   assert(["rent_period", "charge_type", "source_invoice_id"].every((column) => migratedInvoiceColumns.includes(column)), "Legacy invoice migration failed");
   assert(migratedAuditColumns.includes("actor_tenant_id"), "Legacy tenant audit migration failed");
+  assert(migratedProperty.type === "boarding_house" && migratedProperty.module_id === "pg_coliving", "Legacy property module migration failed");
   for (const table of tables) assert(Boolean(legacy.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=$table").get({ table })), `Legacy migration did not create ${table}`);
   legacy.close();
 
