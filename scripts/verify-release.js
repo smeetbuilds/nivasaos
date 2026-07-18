@@ -2,14 +2,22 @@ import fs from "node:fs";
 
 const requiredFiles = [
   ".env.production.example",
+  ".circleci/config.yml",
   "Caddyfile",
+  "compose.yml",
   "compose.production.yml",
   "docs/BACKUPS.md",
   "docs/PRODUCTION_RELEASE.md",
   "lib/runtime-config.js",
+  "lib/schema/security-migrations.js",
   "scripts/create-install-token.js",
   "scripts/start.js",
   "scripts/verify-secrets.js",
+  "scripts/verify-auth-hardening.js",
+  "scripts/verify-authorization.js",
+  "scripts/verify-compose.js",
+  "scripts/verify-integration.js",
+  "scripts/container-gate.js",
   "app/(workspace)/operations/page.js",
   "app/(workspace)/reservations/page.js",
   "app/(workspace)/housekeeping/page.js",
@@ -33,7 +41,9 @@ const privateRegistryMarkers = ["applied-" + "caas", "internal.api." + "openai.o
 if (privateRegistryMarkers.some((marker) => lockfile.includes(marker))) failures.push("bun.lock: contains environment-specific registry URLs");
 
 if (packageJson.version !== "1.0.0") failures.push("package.json: expected version 1.0.0");
-for (const script of ["setup:token", "verify:secrets", "verify:verticals", "verify:release", "gate"]) if (!packageJson.scripts?.[script]) failures.push(`package.json: missing ${script}`);
+for (const script of ["setup:token", "verify:secrets", "verify:auth", "verify:authorization", "verify:compose", "verify:integration", "verify:verticals", "verify:release", "gate", "gate:container"]) {
+  if (!packageJson.scripts?.[script]) failures.push(`package.json: missing ${script}`);
+}
 if (!packageJson.scripts.verify.startsWith("bun run verify:secrets")) failures.push("package.json: secret verification must run before the remaining release checks");
 if (packageJson.scripts.start !== "bun run scripts/start.js") failures.push("package.json: production start must validate runtime configuration");
 
@@ -45,18 +55,22 @@ for (const needle of [".env", ".env.*", "!.env.example", "!.env.production.examp
 const contracts = {
   "app/globals.css": ["part-12.css"],
   "app/(workspace)/layout.js": ["portfolioPermissionsForUser"],
-  "app/actions.js": ["propertyRelease.updatePropertyReleaseAction"],
-  "app/(workspace)/tenant-portal/page.js": ["configuredPublicUrl", "portal/activate"],
+  "app/actions.js": ["propertyRelease.updatePropertyReleaseAction", "authorizeEntityAction"],
+  "app/(workspace)/tenant-portal/page.js": ["renderPermissionScopedPage", "portal.manage", "payments.manage", "deposits.manage"],
+  "app/(workspace)/tenant-portal/workspace.js": ["configuredPublicUrl", "portal/activate"],
   "app/install/page.js": ["installationProtection", "InstallWizard installationProtection"],
   "components/InstallWizard.js": ["Installation token", "detectedTimezone", "Select currency"],
-  "lib/actions/auth.js": ["assertInstallationToken", "Select a supported currency"],
-  "lib/db.js": ["applyReleaseMigrations(database)"],
+  "lib/actions/auth.js": ["assertInstallationToken", "installation_state", "failed_attempts", "locked_until"],
+  "lib/db.js": ["applySecurityMigrations(database)", "applyReleaseMigrations(database)"],
   "lib/runtime-config.js": ["NIVASA_PUBLIC_URL", "NIVASA_INSTALL_TOKEN", "installationExists", "timingSafeEqual"],
   "lib/schema/release-migrations.js": ["is_customized", "trg_properties_module_reset_defaults", "trg_hostel_reservation_overlap_insert", "trg_space_allocation_reservation_insert", "idx_permission_grants_global_unique", "schema_release"],
   "lib/actions/property-module-update.js": ["is_customized=1", "operatingDefaultsReset"],
   "lib/actions/verticals.js": ["reservationOverlap", "bulkServiceBillingAction", "idempotencyKey"],
-  "scripts/local-gate.js": ["assertRuntimeEnvironment", "/api/health", "/install", "/dashboard", "without GitHub Actions"],
+  "scripts/local-gate.js": ["runtimeValidationErrors", "gate_restore_marker", "release-backup.tar.gz", "independently of hosted CI"],
+  "scripts/verify-integration.js": ["payment_submissions", "deposit_transactions", "service_billing_runs", "hostel_reservations", "PRAGMA integrity_check"],
+  "scripts/verify-compose.js": ["private application networking", "compose.production.yml"],
   "scripts/verify-secrets.js": ["git", "ls-files", "PRIVATE KEY", "tracked environment file is not allowed"],
+  ".circleci/config.yml": ["oven/bun:1.3.0", "bun install --frozen-lockfile", "bun run gate"],
   ".env.production.example": ["NIVASA_DOMAIN", "NIVASA_PUBLIC_URL", "NIVASA_INSTALL_TOKEN"],
   "compose.production.yml": ["caddy:2-alpine", "condition: service_healthy", "nivasa_backups"],
   "README.md": ["No API keys required", "compose.production.yml", "setup:token", "verify:secrets"],
@@ -75,11 +89,13 @@ for (const needle of ["@media (max-width: 820px)", "env(safe-area-inset-bottom)"
 
 if (fs.existsSync(".github/workflows")) {
   const workflowFiles = fs.readdirSync(".github/workflows").filter((name) => /\.ya?ml$/i.test(name));
-  if (workflowFiles.length) failures.push("Release must not depend on GitHub Actions workflows");
+  for (const workflow of workflowFiles) {
+    if (!read(`.github/workflows/${workflow}`).includes("bun run gate")) failures.push(`.github/workflows/${workflow}: hosted CI must invoke the repository gate`);
+  }
 }
 
 if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS 1.0 open-source packaging, secret hygiene, protected installation, reproducible containers, release wiring, and self-hosted verification are intact.");
+console.log("NivasaOS 1.0 packaging, secret hygiene, authorization, authentication, integration workflow, backup recovery, container contracts, and optional CI evidence are intact.");
