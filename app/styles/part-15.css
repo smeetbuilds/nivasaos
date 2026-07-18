@@ -1,0 +1,122 @@
+/* v1.2 portfolio, people, and agreement operating views */
+.portfolio-summary-grid { margin-bottom: 16px; }
+.compact-metric { min-height: 132px; }
+.compact-metric .metric-icon { margin-bottom: 13px; }
+
+.portfolio-toolbar {
+  display: grid;
+  grid-template-columns: minmax(190px,.52fr) minmax(0,1.48fr);
+  align-items: end;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  overflow: visible;
+}
+.portfolio-toolbar-copy { min-width: 0; }
+.portfolio-toolbar-copy .eyebrow { margin-bottom: 3px; }
+.portfolio-toolbar-copy strong,.portfolio-toolbar-copy small { display: block; }
+.portfolio-toolbar-copy strong { color: var(--ink); font-size: 15px; letter-spacing: -.015em; }
+.portfolio-toolbar-copy small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.portfolio-filter-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(210px,1.3fr) repeat(3,minmax(135px,.62fr)) auto;
+  align-items: end;
+  gap: 10px;
+}
+.property-filter-grid { grid-template-columns: minmax(230px,1.45fr) minmax(135px,.6fr) minmax(190px,.85fr) auto; }
+.portfolio-filter-grid label { min-width: 0; gap: 5px; }
+.portfolio-filter-grid label > span { color: var(--muted); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
+.portfolio-filter-grid input,.portfolio-filter-grid select { min-height: 38px; padding-block: 7px; font-size: 11px; }
+.portfolio-search-field input { min-width: 0; }
+.portfolio-filter-actions { min-height: 38px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.portfolio-filter-actions .button { min-height: 38px; }
+.portfolio-filter-actions .text-link { padding-inline: 4px; }
+.directory-panel { margin-bottom: 18px; }
+.portfolio-table th:last-child,.portfolio-table td:last-child { text-align: right; }
+.portfolio-table td:last-child .table-actions { justify-content: flex-end; }
+
+/* Property operating cards */
+.enterprise-property-grid { align-items: stretch; }
+.enterprise-property-grid .property-card { display: flex; min-height: 100%; flex-direction: column; }
+.enterprise-property-grid .property-cover {
+  height: 92px;
+  padding: 15px 17px;
+  background:
+    radial-gradient(circle at 92% 5%,rgba(255,255,255,.16),transparent 8rem),
+    linear-gradient(135deg,#18243b,#3152b7);
+}
+.enterprise-property-grid .property-cover > span:first-child { font-size: 30px; letter-spacing: -.055em; }
+.enterprise-property-grid .property-body { display: flex; flex: 1; flex-direction: column; padding: 17px; }
+.property-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.property-card-heading > div { min-width: 0; }
+.property-card-heading h2 { margin: 9px 0 0; overflow: hidden; font-size: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.property-currency { flex: none; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: #f8f9fb; color: var(--muted); font-size: 9px; font-weight: 800; }
+.property-address { min-height: 39px; margin: 7px 0 13px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.property-model-copy { margin-bottom: 12px; padding: 9px 10px; border: 1px solid #edf0f4; border-radius: 7px; background: #f9fafb; }
+.property-model-copy span,.property-model-copy small { display: block; text-align: left; }
+.property-model-copy span { color: var(--ink-2); font-size: 10px; }
+.property-model-copy small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+.property-card-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin-bottom: 14px; }
+.property-card-facts > span { min-width: 0; padding: 9px; border: 1px solid #edf0f4; border-radius: 7px; background: #fff; }
+.property-card-facts small,.property-card-facts strong { display: block; }
+.property-card-facts small { color: var(--muted); font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.property-card-facts strong { margin-top: 4px; overflow: hidden; color: var(--ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.enterprise-property-grid .occupancy-line { margin-top: auto; color: var(--muted); font-size: 10px; }
+.enterprise-property-grid .occupancy-line strong { color: var(--ink); }
+.enterprise-property-grid .progress { margin: 7px 0 12px; }
+.enterprise-property-grid .record-actions { margin-top: 0; }
+
+/* People directory */
+.people-table .person-cell { min-width: 185px; }
+.people-table .person-cell .avatar { width: 34px; height: 34px; }
+.people-table td:nth-child(2),.people-table td:nth-child(3) { min-width: 160px; }
+.people-table td:nth-child(5) { min-width: 125px; }
+.people-table .table-actions { flex-wrap: nowrap; }
+
+/* Agreement register */
+.agreements-table td:first-child { min-width: 145px; }
+.agreements-table td:nth-child(2) { min-width: 175px; }
+.agreements-table td:nth-child(3) { min-width: 190px; }
+.agreements-table td:nth-child(4),.agreements-table td:nth-child(5) { min-width: 125px; }
+.agreements-table td:nth-child(6) { min-width: 155px; }
+.agreements-table .module-badge { margin-bottom: 6px; }
+.agreements-table td > strong { line-height: 1.4; }
+
+@media (max-width: 1260px) {
+  .portfolio-toolbar { grid-template-columns: 1fr; gap: 13px; }
+  .portfolio-filter-grid,.property-filter-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .portfolio-search-field { grid-column: 1 / -1; }
+  .portfolio-filter-actions { justify-content: flex-start; }
+}
+
+@media (max-width: 960px) {
+  .enterprise-property-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .portfolio-toolbar { padding: 15px; }
+}
+
+@media (max-width: 720px) {
+  .portfolio-summary-grid { margin-bottom: 14px; }
+  .compact-metric { min-height: 126px; }
+  .portfolio-toolbar { gap: 12px; margin-bottom: 14px; padding: 14px; border-radius: 10px; }
+  .portfolio-filter-grid,.property-filter-grid { grid-template-columns: 1fr; }
+  .portfolio-search-field { grid-column: auto; }
+  .portfolio-filter-actions { display: grid; grid-template-columns: minmax(0,1fr) auto; }
+  .portfolio-filter-actions .button { width: 100%; }
+  .enterprise-property-grid { grid-template-columns: 1fr; gap: 12px; }
+  .enterprise-property-grid .property-cover { height: 84px; }
+  .property-card-facts { grid-template-columns: repeat(3,minmax(94px,1fr)); overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .property-card-facts::-webkit-scrollbar { display: none; }
+  .directory-panel { border-radius: 10px; }
+}
+
+@media (max-width: 480px) {
+  .portfolio-toolbar-copy strong { font-size: 14px; }
+  .property-card-heading h2 { font-size: 17px; }
+  .property-address { min-height: auto; }
+  .property-card-facts { grid-template-columns: repeat(3,minmax(105px,1fr)); margin-right: -17px; padding-right: 17px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enterprise-property-grid .property-card { transform: none !important; }
+}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createPropertyAction, updatePropertyAction } from "@/app/actions";
 import { requireUser, propertyScopeSql } from "@/lib/auth";
 import { all, get } from "@/lib/db";
@@ -12,6 +13,7 @@ import Flash from "@/components/Flash";
 import Badge from "@/components/Badge";
 import Empty from "@/components/Empty";
 import ModuleBadge from "@/components/ModuleBadge";
+import Icon from "@/components/Icon";
 
 export const metadata = { title: "Properties" };
 const currencies = ["USD", "EUR", "GBP", "INR", "AED", "AUD", "CAD", "SGD"];
@@ -38,11 +40,49 @@ export default async function PropertiesPage({ searchParams }) {
   );
   const query = await searchParams;
   const canEdit = hasGlobalPermission(user, "properties.manage");
+  const filters = {
+    q: String(query?.q || "").trim().toLowerCase(),
+    status: String(query?.status || ""),
+    module: String(query?.module || "")
+  };
+  const filteredRows = rows.filter((row) => {
+    const module = moduleById(row.module_id);
+    const haystack = `${row.name} ${row.address || ""} ${row.city || ""} ${row.country || ""} ${module.label}`.toLowerCase();
+    return (!filters.q || haystack.includes(filters.q)) && (!filters.status || row.status === filters.status) && (!filters.module || module.id === filters.module);
+  });
+  const inventory = rows.reduce((summary, row) => {
+    const module = moduleById(row.module_id);
+    const spaceMode = supportsCapability(module.id, "spaceInventory") && Number(row.space_total || 0) > 0;
+    summary.total += spaceMode ? Number(row.space_total || 0) : Number(row.units || 0);
+    summary.occupied += spaceMode ? Number(row.space_occupied || 0) : Number(row.occupied_units || 0);
+    return summary;
+  }, { total: 0, occupied: 0 });
+  const portfolioOccupancy = inventory.total ? Math.round(inventory.occupied / inventory.total * 100) : 0;
+  const activeProperties = rows.filter((row) => row.status === "active").length;
+  const operatingModels = new Set(rows.map((row) => moduleById(row.module_id).id)).size;
 
   return <>
     <Flash searchParams={query}/>
-    <PageHeader eyebrow="Modular portfolio" title="Properties" description="Each property runs one operating model, while portfolio finance, security, reporting, and audit remain unified." actions={canEdit && <OpenModalButton target="property-modal">Add property</OpenModalButton>}/>
-    {rows.length ? <div className="property-grid module-property-grid">{rows.map((row) => {
+    <PageHeader eyebrow="Portfolio architecture" title="Properties" description="Manage each site under the correct operating model while keeping finance, security, reporting, and audit unified across the portfolio." actions={canEdit && <OpenModalButton target="property-modal" icon="plus">Add property</OpenModalButton>}/>
+
+    <section className="metric-grid portfolio-summary-grid" aria-label="Property portfolio summary">
+      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="property"/></div><span>Properties</span><strong>{rows.length}</strong><small>{activeProperties} active in your scope</small></article>
+      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="modules"/></div><span>Operating models</span><strong>{operatingModels}</strong><small>Across enabled property types</small></article>
+      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="unit"/></div><span>Managed inventory</span><strong>{inventory.total}</strong><small>Units, beds, spaces, or commercial inventory</small></article>
+      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="report"/></div><span>Portfolio occupancy</span><strong>{portfolioOccupancy}%</strong><small>{inventory.occupied} currently occupied</small></article>
+    </section>
+
+    {rows.length > 0 && <form className="panel portfolio-toolbar" method="get" aria-label="Filter properties">
+      <div className="portfolio-toolbar-copy"><span className="eyebrow">Directory</span><strong>Property portfolio</strong><small>{filteredRows.length} of {rows.length} properties shown</small></div>
+      <div className="portfolio-filter-grid property-filter-grid">
+        <label className="portfolio-search-field"><span>Search</span><input type="search" name="q" defaultValue={query?.q || ""} placeholder="Name, location, or model"/></label>
+        <label><span>Status</span><select name="status" defaultValue={filters.status}><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+        <label><span>Operating model</span><select name="module" defaultValue={filters.module}><option value="">All models</option>{modules.map((module) => <option value={module.id} key={module.id}>{module.label}</option>)}</select></label>
+        <div className="portfolio-filter-actions"><button className="button secondary" type="submit">Apply</button><Link href="/properties" className="text-link">Reset</Link></div>
+      </div>
+    </form>}
+
+    {filteredRows.length ? <div className="property-grid module-property-grid enterprise-property-grid">{filteredRows.map((row) => {
       const module = moduleById(row.module_id);
       const spaceMode = supportsCapability(module.id, "spaceInventory") && Number(row.space_total || 0) > 0;
       const total = spaceMode ? Number(row.space_total || 0) : Number(row.units || 0);
@@ -51,14 +91,15 @@ export default async function PropertiesPage({ searchParams }) {
       return <article className={`property-card module-property-card module-${module.id}`} key={row.id}>
         <div className="property-cover"><span>{row.name.slice(0, 2).toUpperCase()}</span><Badge tone={row.status}>{row.status}</Badge></div>
         <div className="property-body">
-          <ModuleBadge moduleId={module.id}/><h2>{row.name}</h2><p>{row.address}{row.city ? `, ${row.city}` : ""}</p>
+          <div className="property-card-heading"><div><ModuleBadge moduleId={module.id}/><h2>{row.name}</h2></div><span className="property-currency">{row.currency}</span></div>
+          <p className="property-address">{row.address}{row.city ? `, ${row.city}` : ""}{row.country ? ` · ${row.country}` : ""}</p>
           <div className="property-model-copy"><span>{module.family}</span><small>{module.terminology.occupant} · {module.terminology.unit} · {module.terminology.agreement}</small></div>
-          <div className="occupancy-line"><span><strong>{occupied}</strong> of {total} {spaceMode ? "spaces" : "units"} occupied</span><strong>{pct}%</strong></div><div className="progress"><i style={{ width: `${pct}%` }}/></div>
-          <div className="property-foot"><span>Active contracted value</span><strong>{money(row.monthly_value, row.currency)}/mo</strong></div>
+          <div className="property-card-facts"><span><small>Inventory</small><strong>{total} {spaceMode ? "spaces" : "units"}</strong></span><span><small>Occupied</small><strong>{occupied}</strong></span><span><small>Contracted</small><strong>{money(row.monthly_value, row.currency)}/mo</strong></span></div>
+          <div className="occupancy-line"><span>Occupancy</span><strong>{pct}%</strong></div><div className="progress" aria-label={`${pct}% occupied`}><i style={{ width: `${pct}%` }}/></div>
           {canEdit && <div className="record-actions"><OpenModalButton target={`property-edit-${row.id}`} icon="edit" className="text-button">Edit property</OpenModalButton></div>}
         </div>
       </article>;
-    })}</div> : <Empty title="No properties yet" text="Create the first property and choose the operating model that controls its inventory, services, workflows, and portal."/>}
+    })}</div> : rows.length ? <Empty icon="property" title="No properties match these filters" text="Adjust the search, status, or operating model filters to view more properties."/> : <Empty title="No properties yet" text="Create the first property and choose the operating model that controls its inventory, services, workflows, and portal."/>}
 
     {canEdit && <form action={createPropertyAction}><ModalForm id="property-modal" title="Add a modular property" description="Choose the operating model first. NivasaOS will expose only relevant inventory and operational tools." submitLabel="Create property" pendingLabel="Creating…"><div className="modal-body"><label><span>Property name</span><input name="name" required placeholder="Palm Residency"/></label><label><span>Operating model</span><select name="moduleId" defaultValue={primaryModule}>{modules.map((module) => <option value={module.id} key={module.id}>{module.label} · {module.family}</option>)}</select><small>This locks after units, tenants, leases, invoices, or maintenance activity exists.</small></label><label className="check-row"><input type="checkbox" name="seedTemplate"/><span><strong>Create recommended starter structure</strong><small>Adds model-relevant units, spaces, and service templates with zero pricing.</small></span></label><label><span>Street address</span><input name="address" required/></label><div className="field-grid three"><label><span>City</span><input name="city"/></label><label><span>Country</span><input name="country" defaultValue={defaultCountry}/></label><label><span>Currency</span><select name="currency" defaultValue={defaultCurrency}>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label></div></div></ModalForm></form>}
 
