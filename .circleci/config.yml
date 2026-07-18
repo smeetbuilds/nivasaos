@@ -22,7 +22,37 @@ jobs:
           name: Run complete repository release gate
           command: bun run gate
 
+  container-gate:
+    machine:
+      image: ubuntu-2404:2026.05.1
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Install pinned Bun runtime
+          command: |
+            command -v unzip >/dev/null || (sudo apt-get update && sudo apt-get install -y unzip)
+            curl -fsSL https://bun.com/install | bash -s "bun-v1.3.0"
+            echo 'export BUN_INSTALL="$HOME/.bun"' >> "$BASH_ENV"
+            echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Verify container tooling
+          command: |
+            test "$(bun --version)" = "1.3.0"
+            docker version
+            docker compose version
+      - run:
+          name: Run Docker and Compose certification
+          command: bun run gate:container
+
 workflows:
   verify:
     jobs:
       - release-gate
+      - container-gate:
+          requires:
+            - release-gate
+          filters:
+            branches:
+              only:
+                - main
