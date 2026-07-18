@@ -10,6 +10,7 @@ const legacyIndex = read("app/styles/legacy/index.css");
 const foundation = read("app/styles/foundation.css");
 const portfolio = read("app/styles/portfolio.css");
 const finance = read("app/styles/finance.css");
+const operationsCss = read("app/styles/operations.css");
 const shell = read("components/AppShell.js");
 const pageHeader = read("components/PageHeader.js");
 const dashboard = read("app/(workspace)/dashboard/page.js");
@@ -21,8 +22,10 @@ const invoiceTable = read("app/(workspace)/invoices/InvoiceTable.js");
 const payments = read("app/(workspace)/payments/page.js");
 const billing = read("app/(workspace)/billing/page.js");
 const reports = read("app/(workspace)/reports/workspace.js");
+const maintenance = read("app/(workspace)/maintenance/page.js");
+const reservations = read("app/(workspace)/reservations/page.js");
 
-for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css"]) {
+for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css"]) {
   contains(globals, `@import "./styles/${filename}";`, `Global CSS must load ${filename}.`);
 }
 excludes(globals, "part-14.css", "Anonymous enterprise stylesheet imports must be retired.");
@@ -43,7 +46,7 @@ contains(shell, "sidebar-context", "Desktop navigation must expose the active wo
 contains(shell, '{current?.[2] || "Workspace"}', "Topbar must expose the current operational area.");
 contains(shell, "{user.role}", "User identity must expose role rather than an abstract permission count.");
 contains(pageHeader, "page-header-copy", "Page headings require a stable copy container.");
-contains(pageHeader, "className = \"\"", "Page headings must support page-level composition without duplicated markup.");
+contains(pageHeader, 'className = ""', "Page headings must support page-level composition without duplicated markup.");
 contains(dashboard, 'title="Portfolio overview"', "Dashboard must use a task-oriented enterprise title.");
 contains(dashboard, "Operating model health", "Dashboard module section must use operational language.");
 
@@ -70,4 +73,16 @@ contains(billing, 'aria-label="Filter billing policies"', "Billing policies requ
 contains(reports, 'aria-label="Reporting summary"', "Reports require an intelligence summary.");
 contains(reports, 'aria-label="Filter reports by property"', "Reports require one explicit scope control.");
 
-console.log("Enterprise shell, CSS architecture, portfolio workflows, finance workflows, responsive behavior, and visual contracts verified.");
+contains(operationsCss, ".operations-toolbar", "Maintenance and reservation views require a shared filter toolbar.");
+contains(operationsCss, ".enterprise-kanban", "Maintenance requires a responsive operational board.");
+contains(operationsCss, ".enterprise-reservation-board", "Reservations require a responsive front-desk board.");
+contains(operationsCss, "@media (prefers-reduced-motion: reduce)", "Operations must respect reduced-motion preferences.");
+contains(maintenance, 'aria-label="Maintenance workload summary"', "Maintenance requires workload metrics.");
+contains(maintenance, 'aria-label="Filter maintenance tickets"', "Maintenance requires URL-shareable filters.");
+contains(maintenance, "<ActionButton", "Maintenance transitions must retain pending states.");
+contains(reservations, 'aria-label="Reservation operations summary"', "Reservations require front-desk metrics.");
+contains(reservations, 'aria-label="Filter reservations"', "Reservations require URL-shareable filters.");
+contains(reservations, "<TransitionConfirmation", "Reservation destructive transitions must retain confirmation.");
+contains(reservations, "activeValueLabel", "Reservation value must remain currency-safe.");
+
+console.log("Enterprise shell, CSS architecture, portfolio, finance, maintenance, and front-desk visual contracts verified.");

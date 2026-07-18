@@ -10,6 +10,7 @@ The architecture is now transitional but explicit:
 - `foundation.css` contains enterprise tokens, shell, shared controls, surfaces, forms, tables, and responsive foundations.
 - `portfolio.css` contains properties, people, and agreement operating views.
 - `finance.css` contains invoices, payments, billing policy, and reporting views.
+- `operations.css` contains maintenance work orders and hostel reservation/front-desk views.
 
 Do not add new `part-*.css` files. New work must use a named domain layer. When a legacy area is visually certified, move its selectors into the appropriate named file and remove the obsolete compatibility rules in a dedicated refactor.
 
