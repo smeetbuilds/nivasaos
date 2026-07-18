@@ -1,16 +1,6 @@
-@import "./styles/part-1.css";
-@import "./styles/part-2.css";
-@import "./styles/part-3.css";
-@import "./styles/part-4.css";
-
-@import "./styles/part-5.css";
-@import "./styles/part-6.css";
-@import "./styles/part-7.css";
-@import "./styles/part-8.css";
-@import "./styles/part-9.css";
-@import "./styles/part-10.css";
-@import "./styles/part-11.css";
+@import "./styles/legacy/index.css";
 @import "./styles/part-12.css";
 @import "./styles/part-13.css";
-@import "./styles/part-14.css";
-@import "./styles/part-15.css";
+@import "./styles/foundation.css";
+@import "./styles/portfolio.css";
+@import "./styles/finance.css";

@@ -1,3 +1,70 @@
-import { requireUser } from "@/lib/auth"; import { accessibleProperties,reportData } from "@/lib/data"; import { money,dateLabel } from "@/lib/format"; import PageHeader from "@/components/PageHeader"; import Empty from "@/components/Empty";
-export const metadata={title:"Reports"};
-export default async function ReportsPage({searchParams}){const user=await requireUser();const q=await searchParams;const propertyId=q?.property?Number(q.property):null;const properties=accessibleProperties(user);const data=reportData(user,propertyId);const arrearsGroups=[...data.arrears.reduce((map,row)=>map.set(row.currency,(map.get(row.currency)||0)+Number(row.balance)),new Map()).entries()].map(([currency,balance])=>({currency,balance}));const arrearsLabel=arrearsGroups.length===0?money(0):arrearsGroups.length===1?money(arrearsGroups[0].balance,arrearsGroups[0].currency):`${arrearsGroups.length} currencies`;const arrearsDetail=arrearsGroups.length?arrearsGroups.map(r=>money(r.balance,r.currency)).join(" · "):"No overdue balance";return <><PageHeader eyebrow="Property-scoped intelligence" title="Reports" description="Occupancy, arrears, and collection trends are limited to the properties available to your account." actions={<form method="get" className="inline-filter"><select name="property" defaultValue={propertyId||""}><option value="">All accessible properties</option>{properties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><button className="button secondary">Apply</button></form>}/><section className="metric-grid report-metrics"><article className="metric-card"><span>Properties in report</span><strong>{data.occupancy.length}</strong><small>Property access scope applied</small></article><article className="metric-card risk"><span>Total overdue</span><strong>{arrearsLabel}</strong><small>{data.arrears.length} invoice(s) · {arrearsDetail}</small></article><article className="metric-card"><span>Occupied units</span><strong>{data.occupancy.reduce((s,r)=>s+Number(r.occupied||0),0)}</strong><small>of {data.occupancy.reduce((s,r)=>s+Number(r.total_units||0),0)} configured</small></article></section><section className="dashboard-grid"><article className="panel"><div className="panel-head"><div><span className="eyebrow">Utilisation</span><h2>Occupancy by property</h2></div></div>{data.occupancy.length?<div className="report-list">{data.occupancy.map(r=>{const pct=r.total_units?Math.round(r.occupied/r.total_units*100):0;return <div className="report-row" key={r.property_name}><div><strong>{r.property_name}</strong><span>{r.occupied||0} occupied · {r.available||0} available</span></div><div className="report-value"><strong>{pct}%</strong><span>{money(r.occupied_value,r.currency)}/mo</span></div><div className="progress full"><i style={{width:`${pct}%`}}/></div></div>})}</div>:<Empty title="No occupancy data" text="Add units to see property utilisation."/>}</article><article className="panel"><div className="panel-head"><div><span className="eyebrow">Cash movement</span><h2>Collections by month</h2></div></div>{data.collections.length?<div className="bar-list">{data.collections.map(r=>{const max=Math.max(...data.collections.map(x=>Number(x.total)),1);return <div className="bar-row" key={`${r.month}-${r.currency}`}><span>{r.month}</span><div><i style={{width:`${Math.max(5,Number(r.total)/max*100)}%`}}/></div><strong>{money(r.total,r.currency)}</strong></div>})}</div>:<div className="quiet-state">No payment history in the last 12 months.</div>}</article><article className="panel span-2"><div className="panel-head"><div><span className="eyebrow">Risk</span><h2>Arrears register</h2></div></div>{data.arrears.length?<div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Tenant</th><th>Property</th><th>Due date</th><th>Billed</th><th>Paid</th><th>Balance</th></tr></thead><tbody>{data.arrears.map(r=><tr key={r.number}><td><strong>{r.number}</strong></td><td>{r.tenant_name||'Unassigned'}</td><td>{r.property_name}</td><td>{dateLabel(r.due_date)}</td><td>{money(r.amount,r.currency)}</td><td>{money(r.amount_paid,r.currency)}</td><td><strong>{money(r.balance,r.currency)}</strong></td></tr>)}</tbody></table></div>:<div className="quiet-state">No overdue invoices in this scope.</div>}</article></section></>}
+import Link from "next/link";
+import { requireUser } from "@/lib/auth";
+import { accessibleProperties, reportData } from "@/lib/data";
+import { money, dateLabel } from "@/lib/format";
+import PageHeader from "@/components/PageHeader";
+import Empty from "@/components/Empty";
+import Icon from "@/components/Icon";
+
+export const metadata = { title: "Reports" };
+
+function currencySummary(rows, amountField) {
+  const groups = [...rows.reduce((map, row) => map.set(row.currency, (map.get(row.currency) || 0) + Number(row[amountField] || 0)), new Map()).entries()];
+  return {
+    label: groups.length === 0 ? money(0) : groups.length === 1 ? money(groups[0][1], groups[0][0]) : `${groups.length} currencies`,
+    detail: groups.length ? groups.map(([currency, amount]) => money(amount, currency)).join(" · ") : "No activity"
+  };
+}
+
+export default async function ReportsPage({ searchParams }) {
+  const user = await requireUser();
+  const query = await searchParams;
+  const propertyId = query?.property ? Number(query.property) : null;
+  const properties = accessibleProperties(user);
+  const data = reportData(user, propertyId);
+  const arrears = currencySummary(data.arrears, "balance");
+  const collections = currencySummary(data.collections, "total");
+  const occupiedUnits = data.occupancy.reduce((sum, row) => sum + Number(row.occupied || 0), 0);
+  const totalUnits = data.occupancy.reduce((sum, row) => sum + Number(row.total_units || 0), 0);
+  const occupancyRate = totalUnits ? Math.round(occupiedUnits / totalUnits * 100) : 0;
+  const collectionMax = Math.max(...data.collections.map((row) => Number(row.total || 0)), 1);
+
+  return <>
+    <PageHeader eyebrow="Portfolio intelligence" title="Reports" description="Review occupancy, collections, and arrears using only properties available to your account." actions={<><Link href="/invoices" className="button secondary"><Icon name="invoice" size={17}/>Invoices</Link><Link href="/payments" className="button secondary"><Icon name="payment" size={17}/>Payments</Link></>}/>
+
+    <section className="metric-grid finance-summary-grid report-summary-grid" aria-label="Reporting summary">
+      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="property"/></div><span>Properties in report</span><strong>{data.occupancy.length}</strong><small>Property access scope applied</small></article>
+      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="unit"/></div><span>Occupancy</span><strong>{occupancyRate}%</strong><small>{occupiedUnits} of {totalUnits} configured units occupied</small></article>
+      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="payment"/></div><span>Collections shown</span><strong>{collections.label}</strong><small>{collections.detail}</small></article>
+      <article className="metric-card compact-metric risk"><div className="metric-icon"><Icon name="billing"/></div><span>Overdue balance</span><strong>{arrears.label}</strong><small>{data.arrears.length} invoice(s) · {arrears.detail}</small></article>
+    </section>
+
+    <form method="get" className="panel finance-toolbar report-scope-toolbar" aria-label="Filter reports by property">
+      <div className="finance-toolbar-copy"><span className="eyebrow">Report scope</span><strong>{propertyId ? "Single-property view" : "Portfolio-wide view"}</strong><small>All metrics below use the same property boundary.</small></div>
+      <div className="finance-filter-grid report-filter-grid">
+        <label><span>Property</span><select name="property" defaultValue={propertyId || ""}><option value="">All accessible properties</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></label>
+        <div className="finance-filter-actions"><button className="button secondary" type="submit">Apply scope</button>{propertyId && <Link href="/reports" className="text-link">Reset</Link>}</div>
+      </div>
+    </form>
+
+    <section className="dashboard-grid report-dashboard-grid">
+      <article className="panel report-insight-panel">
+        <div className="panel-head"><div><span className="eyebrow">Utilisation</span><h2>Occupancy by property</h2></div><span className="panel-count">{data.occupancy.length} properties</span></div>
+        {data.occupancy.length ? <div className="report-list">{data.occupancy.map((row) => {
+          const pct = row.total_units ? Math.round(row.occupied / row.total_units * 100) : 0;
+          return <div className="report-row" key={row.property_name}><div><strong>{row.property_name}</strong><span>{row.occupied || 0} occupied · {row.available || 0} available</span></div><div className="report-value"><strong>{pct}%</strong><span>{money(row.occupied_value, row.currency)}/mo</span></div><div className="progress full" aria-label={`${pct}% occupied`}><i style={{ width: `${pct}%` }}/></div></div>;
+        })}</div> : <Empty title="No occupancy data" text="Add units to see property utilisation."/>}
+      </article>
+
+      <article className="panel report-insight-panel">
+        <div className="panel-head"><div><span className="eyebrow">Cash movement</span><h2>Collections by month</h2></div><span className="panel-count">Last 12 months</span></div>
+        {data.collections.length ? <div className="bar-list finance-bar-list">{data.collections.map((row) => <div className="bar-row" key={`${row.month}-${row.currency}`}><span>{row.month}</span><div><i style={{ width: `${Math.max(5, Number(row.total) / collectionMax * 100)}%` }}/></div><strong>{money(row.total, row.currency)}</strong></div>)}</div> : <div className="quiet-state">No payment history in the last 12 months.</div>}
+      </article>
+
+      <article className="panel span-2 finance-directory-panel">
+        <div className="panel-head"><div><span className="eyebrow">Receivables risk</span><h2>Arrears register</h2></div><span className="panel-count">{data.arrears.length} overdue</span></div>
+        {data.arrears.length ? <div className="table-wrap"><table className="finance-table arrears-table"><thead><tr><th>Invoice</th><th>Person</th><th>Property</th><th>Due date</th><th>Billed</th><th>Paid</th><th>Balance</th></tr></thead><tbody>{data.arrears.map((row) => <tr key={row.number}><td><strong>{row.number}</strong></td><td>{row.tenant_name || "Unassigned"}</td><td>{row.property_name}</td><td>{dateLabel(row.due_date)}</td><td>{money(row.amount, row.currency)}</td><td>{money(row.amount_paid, row.currency)}</td><td><strong className="finance-balance">{money(row.balance, row.currency)}</strong></td></tr>)}</tbody></table></div> : <div className="quiet-state">No overdue invoices in this scope.</div>}
+      </article>
+    </section>
+  </>;
+}

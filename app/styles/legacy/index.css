@@ -1,0 +1,15 @@
+/*
+ * Frozen compatibility cascade for releases 0.1–0.9.
+ * Keep this order stable while rules are progressively absorbed into named layers.
+ */
+@import "./part-1.css";
+@import "./part-2.css";
+@import "./part-3.css";
+@import "./part-4.css";
+@import "./part-5.css";
+@import "./part-6.css";
+@import "./part-7.css";
+@import "./part-8.css";
+@import "./part-9.css";
+@import "./part-10.css";
+@import "./part-11.css";
