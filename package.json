@@ -14,7 +14,7 @@
     "verify:schema": "bun run scripts/verify-schema.js",
     "verify:auth": "bun run scripts/verify-auth-hardening.js",
     "verify:operations": "bun run scripts/verify-operations.js",
-    "verify:ui": "bun run scripts/verify-ui.js && bun run scripts/verify-handover-ui.js",
+    "verify:ui": "bun run scripts/verify-ui.js && bun run scripts/verify-handover-ui.js && bun run scripts/verify-enterprise-ui.js",
     "verify:authorization": "bun run scripts/verify-authorization.js",
     "verify:portal": "bun run scripts/verify-portal.js",
     "verify:handover": "bun run scripts/verify-handover.js",
