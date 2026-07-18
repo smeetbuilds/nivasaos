@@ -14,12 +14,13 @@
     "verify:schema": "bun run scripts/verify-schema.js",
     "verify:operations": "bun run scripts/verify-operations.js",
     "verify:ui": "bun run scripts/verify-ui.js",
+    "verify:authorization": "bun run scripts/verify-authorization.js",
     "verify:portal": "bun run scripts/verify-portal.js",
     "verify:handover": "bun run scripts/verify-handover.js",
     "verify:modules": "bun run scripts/verify-modules.js",
     "verify:verticals": "bun run scripts/verify-verticals.js",
     "verify:release": "bun run scripts/verify-release.js",
-    "verify": "bun run verify:secrets && bun run verify:source && bun run verify:schema && bun run verify:operations && bun run verify:ui && bun run verify:portal && bun run verify:handover && bun run verify:modules && bun run verify:verticals && bun run verify:release",
+    "verify": "bun run verify:secrets && bun run verify:source && bun run verify:schema && bun run verify:operations && bun run verify:ui && bun run verify:authorization && bun run verify:portal && bun run verify:handover && bun run verify:modules && bun run verify:verticals && bun run verify:release",
     "gate": "bun run scripts/local-gate.js",
     "check": "bun run gate",
     "hooks:install": "bun run scripts/install-hooks.js",
@@ -32,9 +33,18 @@
     "react-dom": "19.2.7",
     "server-only": "0.0.1"
   },
-  "engines": { "bun": ">=1.3.0" },
-  "repository": { "type": "git", "url": "https://github.com/smeetbuilds/nivasaos.git" },
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smeetbuilds/nivasaos.git"
+  },
   "homepage": "https://github.com/smeetbuilds/nivasaos#readme",
-  "bugs": { "url": "https://github.com/smeetbuilds/nivasaos/issues" },
-  "overrides": { "postcss": "8.5.19" }
+  "bugs": {
+    "url": "https://github.com/smeetbuilds/nivasaos/issues"
+  },
+  "overrides": {
+    "postcss": "8.5.19"
+  }
 }

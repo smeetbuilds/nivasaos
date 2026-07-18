@@ -17,14 +17,33 @@ import * as services from "@/lib/actions/services";
 import * as visitors from "@/lib/actions/visitors";
 import * as commercial from "@/lib/actions/commercial";
 import * as verticals from "@/lib/actions/verticals";
+import {
+  authorizeEntityAction,
+  authorizeGlobalAction,
+  authorizePropertyAction
+} from "@/lib/action-authorization";
 
 export async function installAction(formData) { return auth.installAction(formData); }
 export async function loginAction(formData) { return auth.loginAction(formData); }
 export async function logoutAction(formData) { return auth.logoutAction(formData); }
-export async function createPropertyAction(formData) { return properties.createPropertyAction(formData); }
-export async function updatePropertyAction(formData) { return propertyRelease.updatePropertyReleaseAction(formData); }
-export async function createUnitAction(formData) { return properties.createUnitAction(formData); }
-export async function updateUnitAction(formData) { return properties.updateUnitAction(formData); }
+
+export async function createPropertyAction(formData) {
+  await authorizeGlobalAction("properties.manage");
+  return properties.createPropertyAction(formData);
+}
+export async function updatePropertyAction(formData) {
+  await authorizeGlobalAction("properties.manage");
+  await authorizePropertyAction(formData, "portfolio.view");
+  return propertyRelease.updatePropertyReleaseAction(formData);
+}
+export async function createUnitAction(formData) {
+  await authorizePropertyAction(formData, "inventory.manage");
+  return properties.createUnitAction(formData);
+}
+export async function updateUnitAction(formData) {
+  await authorizeEntityAction(formData, "inventory.manage", "unit");
+  return properties.updateUnitAction(formData);
+}
 export async function createTenantAction(formData) { return properties.createTenantAction(formData); }
 export async function updateTenantAction(formData) { return properties.updateTenantAction(formData); }
 export async function createLeaseAction(formData) { return leases.createLeaseAction(formData); }
@@ -45,44 +64,114 @@ export async function updateSettingsAction(formData) { return settings.updateSet
 export async function changePasswordAction(formData) { return settings.changePasswordAction(formData); }
 export async function updateBillingPolicyAction(formData) { return billing.updateBillingPolicyAction(formData); }
 
-export async function createTenantInviteAction(formData) { return portal.createTenantInviteAction(formData); }
-export async function disableTenantPortalAction(formData) { return portal.disableTenantPortalAction(formData); }
+export async function createTenantInviteAction(formData) {
+  await authorizeEntityAction(formData, "portal.manage", "tenant");
+  return portal.createTenantInviteAction(formData);
+}
+export async function disableTenantPortalAction(formData) {
+  await authorizeEntityAction(formData, "portal.manage", "tenant");
+  return portal.disableTenantPortalAction(formData);
+}
 export async function activateTenantPortalAction(formData) { return portal.activateTenantPortalAction(formData); }
 export async function tenantLoginAction(formData) { return portal.tenantLoginAction(formData); }
 export async function tenantLogoutAction(formData) { return portal.tenantLogoutAction(formData); }
 export async function updateTenantPortalProfileAction(formData) { return portal.updateTenantPortalProfileAction(formData); }
 export async function submitTenantPaymentAction(formData) { return portal.submitTenantPaymentAction(formData); }
 export async function cancelTenantPaymentSubmissionAction(formData) { return portal.cancelTenantPaymentSubmissionAction(formData); }
-export async function reviewPaymentSubmissionAction(formData) { return portal.reviewPaymentSubmissionAction(formData); }
-export async function recordDepositTransactionAction(formData) { return portal.recordDepositTransactionAction(formData); }
+export async function reviewPaymentSubmissionAction(formData) {
+  await authorizeEntityAction(formData, "payments.manage", "paymentSubmission");
+  return portal.reviewPaymentSubmissionAction(formData);
+}
+export async function recordDepositTransactionAction(formData) {
+  await authorizeEntityAction(formData, "deposits.manage", "lease");
+  return portal.recordDepositTransactionAction(formData);
+}
 export async function createTenantMaintenanceAction(formData) { return portal.createTenantMaintenanceAction(formData); }
 export async function addTenantMaintenanceCommentAction(formData) { return portal.addTenantMaintenanceCommentAction(formData); }
 export async function addStaffMaintenanceCommentAction(formData) { return portal.addStaffMaintenanceCommentAction(formData); }
 
-export async function createInspectionAction(formData) { return handover.createInspectionAction(formData); }
-export async function addInspectionItemAction(formData) { return handover.addInspectionItemAction(formData); }
-export async function shareInspectionAction(formData) { return handover.shareInspectionAction(formData); }
+export async function createInspectionAction(formData) {
+  await authorizeEntityAction(formData, "handover.manage", "lease");
+  return handover.createInspectionAction(formData);
+}
+export async function addInspectionItemAction(formData) {
+  await authorizeEntityAction(formData, "handover.manage", "inspection");
+  return handover.addInspectionItemAction(formData);
+}
+export async function shareInspectionAction(formData) {
+  await authorizeEntityAction(formData, "handover.manage", "inspection");
+  return handover.shareInspectionAction(formData);
+}
 export async function acknowledgeInspectionAction(formData) { return handover.acknowledgeInspectionAction(formData); }
-export async function completeInspectionAction(formData) { return handover.completeInspectionAction(formData); }
-export async function uploadLeaseDocumentAction(formData) { return handover.uploadLeaseDocumentAction(formData); }
-export async function archiveLeaseDocumentAction(formData) { return handover.archiveLeaseDocumentAction(formData); }
-export async function recordKeyTransactionAction(formData) { return handover.recordKeyTransactionAction(formData); }
+export async function completeInspectionAction(formData) {
+  await authorizeEntityAction(formData, "handover.manage", "inspection");
+  if (formData.get("applyDeduction") === "on") await authorizeEntityAction(formData, "deposits.manage", "inspection");
+  return handover.completeInspectionAction(formData);
+}
+export async function uploadLeaseDocumentAction(formData) {
+  await authorizeEntityAction(formData, "handover.manage", "lease");
+  return handover.uploadLeaseDocumentAction(formData);
+}
+export async function archiveLeaseDocumentAction(formData) {
+  await authorizeEntityAction(formData, "handover.manage", "document");
+  return handover.archiveLeaseDocumentAction(formData);
+}
+export async function recordKeyTransactionAction(formData) {
+  await authorizeEntityAction(formData, "handover.manage", "lease");
+  return handover.recordKeyTransactionAction(formData);
+}
 
 export async function updateWorkspaceModulesAction(formData) { return modules.updateWorkspaceModulesAction(formData); }
-export async function createSpaceAction(formData) { return spaces.createSpaceAction(formData); }
-export async function updateSpaceAction(formData) { return spaces.updateSpaceAction(formData); }
-export async function allocateSpaceAction(formData) { return spaces.allocateSpaceAction(formData); }
-export async function releaseSpaceAllocationAction(formData) { return spaces.releaseSpaceAllocationAction(formData); }
-export async function createServiceAction(formData) { return services.createServiceAction(formData); }
-export async function updateServiceAction(formData) { return services.updateServiceAction(formData); }
-export async function subscribeServiceAction(formData) { return services.subscribeServiceAction(formData); }
-export async function endServiceSubscriptionAction(formData) { return services.endServiceSubscriptionAction(formData); }
-export async function billServiceSubscriptionAction(formData) { return services.billServiceSubscriptionAction(formData); }
-export async function createVisitorEntryAction(formData) { return visitors.createVisitorEntryAction(formData); }
-export async function updateVisitorStatusAction(formData) { return visitors.updateVisitorStatusAction(formData); }
+export async function createSpaceAction(formData) {
+  await authorizePropertyAction(formData, "inventory.manage");
+  return spaces.createSpaceAction(formData);
+}
+export async function updateSpaceAction(formData) {
+  await authorizeEntityAction(formData, "inventory.manage", "space");
+  return spaces.updateSpaceAction(formData);
+}
+export async function allocateSpaceAction(formData) {
+  await authorizeEntityAction(formData, ["inventory.manage", "agreements.manage"], "space");
+  return spaces.allocateSpaceAction(formData);
+}
+export async function releaseSpaceAllocationAction(formData) {
+  await authorizeEntityAction(formData, ["inventory.manage", "agreements.manage"], "allocation");
+  return spaces.releaseSpaceAllocationAction(formData);
+}
+export async function createServiceAction(formData) {
+  await authorizePropertyAction(formData, "services.manage");
+  return services.createServiceAction(formData);
+}
+export async function updateServiceAction(formData) {
+  await authorizeEntityAction(formData, "services.manage", "service");
+  return services.updateServiceAction(formData);
+}
+export async function subscribeServiceAction(formData) {
+  await authorizeEntityAction(formData, "services.manage", "service");
+  return services.subscribeServiceAction(formData);
+}
+export async function endServiceSubscriptionAction(formData) {
+  await authorizeEntityAction(formData, "services.manage", "subscription");
+  return services.endServiceSubscriptionAction(formData);
+}
+export async function billServiceSubscriptionAction(formData) {
+  await authorizeEntityAction(formData, ["services.manage", "billing.manage"], "subscription");
+  return services.billServiceSubscriptionAction(formData);
+}
+export async function createVisitorEntryAction(formData) {
+  await authorizePropertyAction(formData, "visitors.manage");
+  return visitors.createVisitorEntryAction(formData);
+}
+export async function updateVisitorStatusAction(formData) {
+  await authorizeEntityAction(formData, "visitors.manage", "visitor");
+  return visitors.updateVisitorStatusAction(formData);
+}
 export async function preregisterTenantVisitorAction(formData) { return visitors.preregisterTenantVisitorAction(formData); }
 export async function cancelTenantVisitorAction(formData) { return visitors.cancelTenantVisitorAction(formData); }
-export async function saveCommercialProfileAction(formData) { return commercial.saveCommercialProfileAction(formData); }
+export async function saveCommercialProfileAction(formData) {
+  await authorizeEntityAction(formData, "verticals.manage", "lease");
+  return commercial.saveCommercialProfileAction(formData);
+}
 
 export async function savePropertyOperatingConfigAction(formData) { return verticals.savePropertyOperatingConfigAction(formData); }
 export async function saveResidentVerticalProfileAction(formData) { return verticals.saveResidentVerticalProfileAction(formData); }
@@ -94,4 +183,7 @@ export async function createHostelReservationAction(formData) { return verticals
 export async function updateHostelReservationStatusAction(formData) { return verticals.updateHostelReservationStatusAction(formData); }
 export async function createHousekeepingTaskAction(formData) { return verticals.createHousekeepingTaskAction(formData); }
 export async function updateHousekeepingTaskAction(formData) { return verticals.updateHousekeepingTaskAction(formData); }
-export async function bulkServiceBillingAction(formData) { return verticals.bulkServiceBillingAction(formData); }
+export async function bulkServiceBillingAction(formData) {
+  await authorizePropertyAction(formData, ["services.manage", "billing.manage"]);
+  return verticals.bulkServiceBillingAction(formData);
+}

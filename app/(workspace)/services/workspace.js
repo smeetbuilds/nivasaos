@@ -1,7 +1,6 @@
-import { requireUser } from "@/lib/auth";
+import { canAccessProperty, requireUser } from "@/lib/auth";
 import { get, run, scalar, transaction } from "@/lib/db";
 import { recordAudit } from "@/lib/audit";
-import { assertPermission } from "@/lib/permission-core";
 import { today, uid } from "@/lib/format";
 import { choice, integer, number, safeRedirect, text } from "@/lib/actions/shared";
 import { saveProof, validDate } from "@/lib/actions/finance-common";
@@ -69,8 +68,7 @@ export async function reviewPaymentSubmissionAction(formData) {
   const reviewNote = limitedText(formData, "reviewNote", 1200);
   if (decision === "rejected" && !reviewNote) throw new Error("Add a reason when rejecting payment proof");
   const submission = get("SELECT * FROM payment_submissions WHERE id=$submissionId", { submissionId });
-  if (!submission) throw new Error("Submission not found");
-  assertPermission(actor, "payments.manage", submission.property_id);
+  if (!submission || !canAccessProperty(actor, submission.property_id)) throw new Error("Submission access denied");
 
   transaction(() => {
     const current = get("SELECT * FROM payment_submissions WHERE id=$submissionId", { submissionId });

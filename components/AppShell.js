@@ -13,7 +13,7 @@ function buildNavigation(capabilities, modules) {
     { label: "Workspace", items: [["/dashboard","dashboard","Overview","portfolio.view"],["/modules","modules","Modules","settings.manage"]] },
     { label: "Portfolio", items: [
       ["/properties","property","Properties","portfolio.view"],["/units","unit","Units","portfolio.view"],
-      ...(has("spaceInventory") ? [["/spaces","spaces","Beds & spaces","agreements.manage"]] : []),
+      ...(has("spaceInventory") ? [["/spaces","spaces","Beds & spaces","inventory.manage"]] : []),
       ["/tenants","tenant","People","people.manage"],["/leases","lease","Agreements","agreements.manage"]
     ]},
     { label: "Finance", items: [
@@ -24,7 +24,7 @@ function buildNavigation(capabilities, modules) {
       ["/operations","modules","Module operations","verticals.manage|requests.review"],
       ...(has("spaceInventory") ? [["/housekeeping","maintenance","Housekeeping","housekeeping.manage"]] : []),
       ...(hasModule("hostel") ? [["/reservations","hostel","Reservations","reservations.manage"]] : []),
-      ["/tenant-portal","portal","Tenant portal","people.manage"],["/handover","handover","Handover","handover.manage"],
+      ["/tenant-portal","portal","Tenant portal","portal.manage&payments.manage&deposits.manage"],["/handover","handover","Handover","handover.manage"],
       ...(has("visitorRegister") ? [["/visitors","visitors","Visitors","visitors.manage"]] : []),
       ...(has("commercialProfiles") ? [["/commercial","commercial","Commercial","verticals.manage"]] : []),
       ["/maintenance","maintenance","Maintenance","maintenance.manage"],["/reports","report","Reports","reports.view"]
@@ -36,7 +36,7 @@ function buildNavigation(capabilities, modules) {
 }
 
 function permissionAllowed(permissions, requirement) {
-  return String(requirement || "").split("|").some((permission) => permissions.includes(permission));
+  return String(requirement || "").split("|").some((alternative) => alternative.split("&").every((permission) => permissions.includes(permission)));
 }
 
 function routeIsActive(pathname, href) {
