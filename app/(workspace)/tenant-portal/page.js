@@ -9,6 +9,7 @@ import { requireUser, propertyScopeSql } from "@/lib/auth";
 import { all } from "@/lib/db";
 import { dateLabel, dateTimeLabel, money, today } from "@/lib/format";
 import { extensions } from "@/lib/extensions";
+import { configuredPublicUrl } from "@/lib/runtime-config";
 import PageHeader from "@/components/PageHeader";
 import OpenModalButton from "@/components/OpenModalButton";
 import ModalForm from "@/components/ModalForm";
@@ -78,7 +79,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
   const depositGroups = [...deposits.reduce((map, row) => map.set(row.currency, (map.get(row.currency) || 0) + heldSign(row.transaction_type) * Number(row.amount)), new Map()).entries()];
   const depositMetric = depositGroups.length === 0 ? money(0) : depositGroups.length === 1 ? money(depositGroups[0][1], depositGroups[0][0]) : `${depositGroups.length} currencies`;
   const invitedTenant = query?.invite ? tenants.find((item) => Number(item.id) === Number(query.tenant)) : null;
-  const appUrl = String(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = configuredPublicUrl() || "http://localhost:3000";
   const inviteUrl = invitedTenant ? `${appUrl}/portal/activate/${query.invite}` : null;
   const phone = invitedTenant?.phone?.replace(/\D/g, "");
   const shareText = invitedTenant && inviteUrl ? `Hello ${invitedTenant.full_name}, your secure ${invitedTenant.property_name} resident portal is ready. Use this one-time link within 7 days to set your password: ${inviteUrl}` : "";

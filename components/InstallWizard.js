@@ -23,12 +23,17 @@ function inputType(field) {
   return "text";
 }
 
-export default function InstallWizard() {
+function detectedTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; }
+}
+
+export default function InstallWizard({ installationProtection = { required: false, configured: true } }) {
   const [step, setStep] = useState(0);
   const [modules, setModules] = useState([DEFAULT_MODULE_ID]);
   const [primaryModule, setPrimaryModule] = useState(DEFAULT_MODULE_ID);
-  const [workspace, setWorkspace] = useState({ company: "", currency: "INR", timezone: "Asia/Kolkata", demo: false });
+  const [workspace, setWorkspace] = useState({ company: "", currency: "", timezone: detectedTimezone(), demo: false });
   const [owner, setOwner] = useState({ name: "", email: "", password: "" });
+  const [installToken, setInstallToken] = useState("");
   const [moduleConfig, setModuleConfig] = useState({});
   const selectedModules = useMemo(() => MODULE_CATALOG.filter((module) => modules.includes(module.id)), [modules]);
 
@@ -47,8 +52,8 @@ export default function InstallWizard() {
 
   function canContinue() {
     if (step === 0) return modules.length > 0;
-    if (step === 1) return workspace.company.trim().length > 1;
-    if (step === 3) return owner.name.trim().length > 1 && /^\S+@\S+\.\S+$/.test(owner.email) && owner.password.length >= 10;
+    if (step === 1) return workspace.company.trim().length > 1 && workspace.currency && workspace.timezone.trim().length > 1;
+    if (step === 3) return owner.name.trim().length > 1 && /^\S+@\S+\.\S+$/.test(owner.email) && owner.password.length >= 10 && (!installationProtection.required || (installationProtection.configured && installToken.trim().length > 0));
     return true;
   }
 
@@ -69,7 +74,7 @@ export default function InstallWizard() {
 
     <section className={`install-step${step === 1 ? " is-active" : ""}`} hidden={step !== 1}>
       <div className="install-step-head"><span className="eyebrow">Workspace identity</span><h2>Configure the portfolio</h2><p>Shared financial and regional defaults apply across modules. Historical currency remains protected after financial activity begins.</p></div>
-      <div className="install-form-card"><label><span>Company / portfolio name</span><input name="company" value={workspace.company} onChange={(event) => setWorkspace({ ...workspace, company: event.target.value })} required placeholder="Your Property Group"/></label><div className="field-grid two"><label><span>Default currency</span><select name="currency" value={workspace.currency} onChange={(event) => setWorkspace({ ...workspace, currency: event.target.value })}>{["INR","USD","GBP","EUR","AED","AUD","CAD","SGD"].map((currency) => <option key={currency}>{currency}</option>)}</select></label><label><span>Timezone</span><input name="timezone" value={workspace.timezone} onChange={(event) => setWorkspace({ ...workspace, timezone: event.target.value })} required/></label></div><label className="check-row install-demo"><input type="checkbox" name="demo" checked={workspace.demo} onChange={(event) => setWorkspace({ ...workspace, demo: event.target.checked })}/><span><strong>Create a safe starter property</strong><small>Seeds module-relevant rooms, spaces, services and the operating defaults from the next step. No people or finance records are fabricated.</small></span></label></div>
+      <div className="install-form-card"><label><span>Company / portfolio name</span><input name="company" value={workspace.company} onChange={(event) => setWorkspace({ ...workspace, company: event.target.value })} required placeholder="Your Property Group"/></label><div className="field-grid two"><label><span>Default currency</span><select name="currency" value={workspace.currency} onChange={(event) => setWorkspace({ ...workspace, currency: event.target.value })} required><option value="" disabled>Select currency</option>{["INR","USD","GBP","EUR","AED","AUD","CAD","SGD"].map((currency) => <option key={currency}>{currency}</option>)}</select></label><label><span>Timezone</span><input name="timezone" value={workspace.timezone} onChange={(event) => setWorkspace({ ...workspace, timezone: event.target.value })} required/></label></div><label className="check-row install-demo"><input type="checkbox" name="demo" checked={workspace.demo} onChange={(event) => setWorkspace({ ...workspace, demo: event.target.checked })}/><span><strong>Create a safe starter property</strong><small>Seeds module-relevant rooms, spaces, services and the operating defaults from the next step. No people or finance records are fabricated.</small></span></label></div>
     </section>
 
     <section className={`install-step${step === 2 ? " is-active" : ""}`} hidden={step !== 2}>
@@ -79,15 +84,15 @@ export default function InstallWizard() {
 
     <section className={`install-step${step === 3 ? " is-active" : ""}`} hidden={step !== 3}>
       <div className="install-step-head"><span className="eyebrow">System owner</span><h2>Create the highest-trust account</h2><p>The owner controls modules, permissions, security, staff access and every property.</p></div>
-      <div className="install-form-card"><label><span>Owner name</span><input name="name" value={owner.name} onChange={(event) => setOwner({ ...owner, name: event.target.value })} required autoComplete="name"/></label><label><span>Email address</span><input type="email" name="email" value={owner.email} onChange={(event) => setOwner({ ...owner, email: event.target.value })} required autoComplete="email"/></label><label><span>Password</span><input type="password" name="password" value={owner.password} onChange={(event) => setOwner({ ...owner, password: event.target.value })} required minLength="10" autoComplete="new-password"/><small>Use at least 10 characters and store it in a password manager.</small></label></div>
+      <div className="install-form-card">{installationProtection.required && <label><span>Installation token</span><input type="password" name="installToken" value={installToken} onChange={(event) => setInstallToken(event.target.value)} required disabled={!installationProtection.configured} autoComplete="off"/><small>{installationProtection.configured ? "Use the one-time token configured by the server operator." : "The server operator must configure NIVASA_INSTALL_TOKEN before installation can continue."}</small></label>}<label><span>Owner name</span><input name="name" value={owner.name} onChange={(event) => setOwner({ ...owner, name: event.target.value })} required autoComplete="name"/></label><label><span>Email address</span><input type="email" name="email" value={owner.email} onChange={(event) => setOwner({ ...owner, email: event.target.value })} required autoComplete="email"/></label><label><span>Password</span><input type="password" name="password" value={owner.password} onChange={(event) => setOwner({ ...owner, password: event.target.value })} required minLength="10" autoComplete="new-password"/><small>Use at least 10 characters and store it in a password manager.</small></label></div>
     </section>
 
     <section className={`install-step${step === 4 ? " is-active" : ""}`} hidden={step !== 4}>
       <div className="install-step-head"><span className="eyebrow">Review</span><h2>Ready to create the workspace</h2><p>Confirm the module architecture and operating defaults before the first owner and optional starter property are written.</p></div>
       <div className="install-review-grid"><article><span>Portfolio</span><strong>{workspace.company}</strong><small>{workspace.currency} · {workspace.timezone}</small></article><article><span>Owner</span><strong>{owner.name}</strong><small>{owner.email}</small></article><article className="install-review-modules"><span>Enabled modules</span><div>{selectedModules.map((module) => <strong key={module.id}><Icon name={module.icon} size={16}/>{module.shortLabel}</strong>)}</div><small>Primary: {MODULE_CATALOG.find((module) => module.id === primaryModule)?.label}</small></article><article><span>Operating defaults</span><strong>{selectedModules.reduce((sum,module)=>sum+Object.values(moduleConfig[module.id]||{}).filter(Boolean).length,0)} configured</strong><small>Across {selectedModules.length} selected modules</small></article><article><span>Starter data</span><strong>{workspace.demo ? "Module template enabled" : "No demo property"}</strong><small>No people or financial transactions are created.</small></article></div>
-      <div className="install-security-note"><Icon name="audit" size={20}/><span><strong>Private, self-hosted installation</strong><small>SQLite and uploads remain on your server. Run the local release gate before production use.</small></span></div>
+      <div className="install-security-note"><Icon name="audit" size={20}/><span><strong>Private, self-hosted installation</strong><small>SQLite and uploads remain on your server. Production installation is protected by a server-controlled one-time token.</small></span></div>
     </section>
 
-    <div className="install-actions">{step > 0 ? <button type="button" className="button secondary" onClick={() => setStep(step - 1)}>Back</button> : <span/>}{step < steps.length - 1 ? <button type="button" className="button primary" disabled={!canContinue()} onClick={() => canContinue() && setStep(step + 1)}>Continue <Icon name="arrow" size={17}/></button> : <button className="button primary large" type="submit">Install operating system <Icon name="arrow" size={18}/></button>}</div>
+    <div className="install-actions">{step > 0 ? <button type="button" className="button secondary" onClick={() => setStep(step - 1)}>Back</button> : <span/>}{step < steps.length - 1 ? <button type="button" className="button primary" disabled={!canContinue()} onClick={() => canContinue() && setStep(step + 1)}>Continue <Icon name="arrow" size={17}/></button> : <button className="button primary large" type="submit" disabled={!installationProtection.configured}>Install operating system <Icon name="arrow" size={18}/></button>}</div>
   </form>;
 }

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createBackup } from "./lib/operations.js";
+import { createBackup } from "./backup/lib/operations.js";
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -11,10 +11,11 @@ if (process.argv.includes("--help")) {
   process.exit(0);
 }
 
+const applicationVersion = JSON.parse(await Bun.file(new URL("../package.json", import.meta.url)).text()).version;
 try {
   const result = await createBackup({
     outputPath: argument("--output") ? path.resolve(argument("--output")) : undefined,
-    applicationVersion: "0.5.0"
+    applicationVersion
   });
   console.log(`Backup created: ${result.outputPath}`);
   console.log(`Database: ${result.manifest.database.bytes} bytes; uploads: ${result.manifest.uploads.count} file(s)`);

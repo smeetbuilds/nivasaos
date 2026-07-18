@@ -3,6 +3,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
+import { assertRuntimeEnvironment } from "../lib/runtime-config.js";
 
 const bun = Bun.which("bun") || process.execPath;
 const setsid = process.platform === "win32" ? null : Bun.which("setsid");
@@ -47,14 +48,19 @@ try {
   await command([bun, "run", "verify"]);
   await command([bun, "run", "build"]);
   await fsp.mkdir(path.join(temporary, "uploads"), { recursive: true });
+  const publicUrl = `http://127.0.0.1:${port}`;
   const env = {
     ...process.env,
     NODE_ENV: "production",
     NIVASA_DB_PATH: path.join(temporary, "nivasaos.sqlite"),
     NIVASA_UPLOAD_DIR: path.join(temporary, "uploads"),
     NIVASA_BACKUP_DIR: path.join(temporary, "backups"),
-    NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${port}`
+    NIVASA_PUBLIC_URL: publicUrl,
+    NEXT_PUBLIC_APP_URL: publicUrl,
+    NIVASA_ALLOW_INSECURE_LOCALHOST: "1",
+    NIVASA_INSTALL_TOKEN: "local-gate-install-token-32-characters"
   };
+  assertRuntimeEnvironment(env, { installed: false });
   const serverCommand = [bun, "node_modules/next/dist/bin/next", "start", "-H", "127.0.0.1", "-p", String(port)];
   server = Bun.spawn(setsid ? [setsid, ...serverCommand] : serverCommand, {
     cwd: process.cwd(), env, stdin: "ignore", stdout: "inherit", stderr: "inherit"

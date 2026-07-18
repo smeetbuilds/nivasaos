@@ -3,6 +3,10 @@
 .githooks
 .next
 node_modules
+.env
+.env.*
+!.env.example
+!.env.production.example
 storage/*.sqlite
 storage/*.sqlite-*
 storage/uploads/*

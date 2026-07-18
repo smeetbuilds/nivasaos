@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isInstalled } from "@/lib/auth";
+import { installationProtection } from "@/lib/runtime-config";
 import InstallWizard from "@/components/InstallWizard";
 import Icon from "@/components/Icon";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default function InstallPage() {
   if (isInstalled()) redirect("/login");
+  const protection = installationProtection();
   return <main className="modular-install-page">
     <aside className="modular-install-story">
       <div className="auth-brand"><span className="brand-mark"><Icon name="building" size={24}/></span>NivasaOS</div>
@@ -19,6 +21,6 @@ export default function InstallPage() {
       </div>
       <div className="auth-credit">Self-hosted · Built by <a href="https://aahavlabs.in">Aahav Labs</a></div>
     </aside>
-    <section className="modular-install-panel"><InstallWizard/></section>
+    <section className="modular-install-panel"><InstallWizard installationProtection={protection}/></section>
   </main>;
 }

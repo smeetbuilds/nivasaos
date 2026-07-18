@@ -1,6 +1,33 @@
 # NivasaOS 1.0 production release guide
 
-NivasaOS is self-hosted. Production readiness is proven by the repository-owned local gate, not by GitHub Actions or another hosted CI service.
+NivasaOS is self-hosted and requires no paid platform or external API for core operation. Production readiness is proven by the repository-owned local gate, not by GitHub Actions or another hosted CI service.
+
+## Fast production setup
+
+The included `compose.production.yml` runs NivasaOS behind Caddy with automatic HTTPS.
+
+```bash
+git clone https://github.com/smeetbuilds/nivasaos.git
+cd nivasaos
+cp .env.production.example .env.production
+bun run setup:token
+```
+
+Copy the generated `NIVASA_INSTALL_TOKEN=...` line into `.env.production`, then set:
+
+```env
+NIVASA_DOMAIN=property.example.com
+NIVASA_PUBLIC_URL=https://property.example.com
+NIVASA_INSTALL_TOKEN=<generated value>
+```
+
+Point the domain to the server and start:
+
+```bash
+docker compose -f compose.production.yml up -d --build
+```
+
+Complete the browser installer using the token. After the first owner exists, remove `NIVASA_INSTALL_TOKEN` from `.env.production` and restart the application service.
 
 ## Required release gate
 
@@ -11,46 +38,72 @@ bun install --frozen-lockfile
 bun run gate
 ```
 
-The gate performs, in order:
+The gate performs:
 
-1. JavaScript and JSX parsing.
-2. Fresh-schema and legacy-migration verification.
-3. Core finance and operations verification.
-4. Responsive UI and portal contract verification.
-5. Handover and modular integrity verification.
-6. Vertical workflow, permission, reservation and bulk-job verification.
-7. Release wiring and documentation verification.
-8. A production Next.js build.
-9. A temporary production server using isolated SQLite and upload directories.
-10. Health, installation, protected-workspace and tenant-login smoke tests.
+1. tracked-secret and environment-file verification;
+2. JavaScript and JSX parsing;
+3. fresh-schema and legacy-migration verification;
+4. finance and operations verification;
+5. responsive UI and portal contract verification;
+6. handover and modular integrity verification;
+7. vertical workflow, permission, reservation and bulk-job verification;
+8. open-source packaging and production-runtime verification;
+9. a production Next.js build;
+10. an isolated production server smoke test.
 
 Do not deploy when any gate step fails.
 
-## Production environment
+## Production environment contract
 
-Minimum requirements:
+Required for a fresh installation:
 
-- Bun 1.3 or later.
-- Persistent writable storage for SQLite, uploads and backups.
-- HTTPS at the public edge.
-- A reverse proxy with request-size and timeout limits suitable for approved document uploads.
-- A process supervisor or container orchestrator that restarts the Next.js process after failure.
-- Encrypted off-host backups and a tested restore procedure.
+- `NIVASA_PUBLIC_URL` — canonical HTTPS origin;
+- `NIVASA_INSTALL_TOKEN` — at least 24 characters until the first owner is created;
+- persistent paths for SQLite, uploads and backups.
 
-Recommended environment variables:
+The production compose file configures storage paths automatically. Direct installations may use:
 
 ```env
 NODE_ENV=production
-NIVASA_DATA_DIR=/app/data
-NIVASA_DB_PATH=/app/data/nivasaos.sqlite
-NIVASA_UPLOAD_DIR=/app/storage/uploads
-NIVASA_BACKUP_DIR=/app/backups
-NIVASA_BACKUP_RETENTION_DAYS=30
-NIVASAOS_BASE_URL=https://property.example.com
-NEXT_PUBLIC_APP_URL=https://property.example.com
+NIVASA_DB_PATH=/srv/nivasaos/data/nivasaos.sqlite
+NIVASA_UPLOAD_DIR=/srv/nivasaos/uploads
+NIVASA_BACKUP_DIR=/srv/nivasaos/backups
+NIVASA_PUBLIC_URL=https://property.example.com
+NIVASA_INSTALL_TOKEN=<generated locally>
 ```
 
-Persist every configured directory outside the application image. Never place the SQLite database or uploads on ephemeral container storage.
+`NIVASA_PUBLIC_URL` must contain only an HTTPS scheme and host. Credentials, paths, query strings, fragments, localhost, and plain HTTP are rejected in production. The local compose stack explicitly opts into localhost for development.
+
+## Protected first installation
+
+A fresh public server must never allow an arbitrary visitor to claim the owner account.
+
+Generate the token locally:
+
+```bash
+bun run setup:token
+```
+
+The installer requires that token only while no owner exists. The token is compared in constant time and is not stored in SQLite. Remove it after successful installation.
+
+## Reproducible containers
+
+The Docker build copies `package.json` and `bun.lock` before running:
+
+```bash
+bun install --frozen-lockfile
+```
+
+Local `.env` files are excluded from the Docker build context. Only environment templates are permitted in the image source tree.
+
+## Minimum production requirements
+
+- persistent writable storage for SQLite, uploads and backups;
+- HTTPS at the public edge;
+- a process supervisor or container restart policy;
+- adequate upload limits for approved documents;
+- encrypted off-host backups and a tested restore procedure;
+- host, Bun/container image, Next.js and reverse-proxy patching.
 
 ## Deployment sequence
 
@@ -66,77 +119,83 @@ bun run start
 
 For an existing installation:
 
-1. Stop writes or place the application in maintenance mode.
-2. Create and copy an encrypted backup off-host.
-3. Run `bun run gate` against the release commit.
-4. Start the new application version against a copy of production data first.
-5. Confirm migration success, health response and authenticated staff/tenant smoke flows.
-6. Start the release against production storage.
-7. Confirm invoices, payments, uploads, portal login and one module-specific workflow.
+1. stop writes or enter maintenance mode;
+2. create and encrypt an off-host backup;
+3. run the gate against the release commit;
+4. test the release against a copy of production data;
+5. verify migrations, health, staff login and tenant login;
+6. start against production storage;
+7. verify invoices, payments, uploads and one module-specific workflow.
 
 ## Reverse-proxy baseline
 
-- Terminate TLS with a valid certificate.
-- Forward `Host`, `X-Forwarded-For` and `X-Forwarded-Proto` correctly.
-- Redirect HTTP to HTTPS.
-- Set upload limits no lower than the application’s 10 MB document limit.
-- Disable public caching for authenticated application and file routes.
-- Apply rate limits to login and upload endpoints without blocking normal Server Action traffic.
+The included Caddy configuration:
 
-## Data protection
+- obtains and renews TLS certificates;
+- redirects HTTP to HTTPS;
+- proxies only to the internal application service;
+- enables compression;
+- adds HSTS, content-type and referrer-policy headers;
+- removes the server response header.
+
+Operators using another reverse proxy must forward `Host`, `X-Forwarded-For`, and `X-Forwarded-Proto`, disable public caching on authenticated routes, and apply appropriate upload and login rate limits.
+
+## Storage and data protection
 
 - Keep SQLite WAL, SHM and database files on the same persistent volume.
-- Do not copy a live SQLite file with a generic filesystem copy; use the repository backup command.
-- Run a restore drill after infrastructure changes and at least quarterly.
-- Restrict filesystem permissions for the data, upload and backup directories.
-- Encrypt backups before moving them off-host.
-- Retain audit history according to applicable legal and operational requirements.
+- Never serve the data, upload or backup directories publicly.
+- Do not copy a live SQLite file with a generic filesystem copy.
+- Use `bun run backup` and validate restores regularly.
+- Encrypt every off-host archive.
+- Restrict filesystem and Docker-volume access.
+
+See [Backups and restore](BACKUPS.md).
 
 ## Operational monitoring
 
 Monitor at minimum:
 
-- `/api/health` response and latency.
-- Process restarts and non-zero exits.
-- Disk capacity for data, WAL, uploads and backups.
-- Backup age and restore-test date.
-- HTTP 5xx rate and slow requests.
-- Failed payment-proof uploads and file-delivery authorization failures.
-- Bulk-job failures and jobs left in `running` state.
-- Reservation, allocation and permission integrity errors.
+- `/api/health` response and latency;
+- process or container restarts;
+- disk capacity for data, uploads and backups;
+- backup age and restore-test date;
+- HTTP 5xx responses and slow requests;
+- failed payment-proof or document uploads;
+- bulk jobs left in `running` state;
+- reservation, allocation and permission integrity errors.
 
 ## Security checklist
 
 - Use unique owner and staff passwords.
-- Disable accounts immediately when access is no longer required.
-- Grant the minimum property and action permissions needed.
-- Review property-specific overrides periodically.
+- Remove the installer token after first-owner creation.
+- Disable accounts immediately when access ends.
+- Grant minimum property and action permissions.
 - Keep HTTPS enabled for every staff and portal request.
-- Keep the host, Bun and reverse proxy patched.
-- Do not expose SQLite, upload or backup directories through the web server.
+- Run `bun run verify:secrets` before every release.
+- Never commit `.env`, database files, uploads, backup archives, keys or tokens.
 - Review `SECURITY.md` before launch.
 
-## Scale boundaries
+## Scale boundary
 
-NivasaOS 1.0 is designed for a single self-hosted application instance backed by SQLite. Use measured load tests before deploying very large portfolios. Bulk billing is ledgered and idempotent, but long-running work still executes in the application process. For multi-instance or very high-volume deployments, plan a future PostgreSQL and durable-worker migration rather than sharing one SQLite database across application replicas.
+NivasaOS 1.0 is designed for one application instance backed by SQLite. Do not share one SQLite file across multiple application replicas. Very large or multi-instance deployments should plan PostgreSQL and durable background workers.
 
 ## Rollback
 
 Application rollback and data rollback are separate decisions.
 
-- Code-only rollback is acceptable only when the previous release understands the migrated schema.
-- Restore a database backup only after stopping every application process that can write to it.
-- Preserve the failed release database and logs for investigation.
-- Run `bun run restore -- <backup-folder>` and then `bun run gate` before reopening access.
+- Roll back code only when the previous release understands the migrated schema.
+- Stop all writers before restoring a database.
+- Preserve failed-release data and logs for investigation.
+- Run `bun run restore -- <backup-file> --force`, then `bun run gate` before reopening access.
 
 ## Release evidence
 
-Record for every deployment:
+Record:
 
-- Commit SHA.
-- `bun --version`.
-- Gate output.
-- Backup path and checksum.
-- Restore-drill evidence.
-- Deployment timestamp and operator.
-- Post-deployment health and smoke-test results.
+- commit SHA;
+- Bun and container-image version;
+- gate output;
+- backup path and checksum;
+- restore-drill evidence;
+- deployment timestamp and operator;
+- post-deployment health and smoke-test results.
