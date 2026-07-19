@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import { schema, applyMigrations } from "../lib/schema.js";
 import { applySecurityMigrations } from "../lib/schema/security-migrations.js";
 import { applyReleaseMigrations } from "../lib/schema/release-migrations.js";
+import { applyMoneyMigrations } from "../lib/schema/money-migrations.js";
 
 const filename = path.join(tmpdir(), `nivasaos-integration-${randomBytes(8).toString("hex")}.sqlite`);
 const db = new Database(filename, { create: true, strict: true });
@@ -21,6 +22,7 @@ try {
   applySecurityMigrations(db);
   applyMigrations(db);
   applyReleaseMigrations(db);
+  applyMoneyMigrations(db);
 
   const ownerId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Owner','owner@example.com','test','owner')").run().lastInsertRowid);
   const staffId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Finance Staff','staff@example.com','test','staff')").run().lastInsertRowid);
@@ -37,6 +39,10 @@ try {
   );
 
   const unitId = Number(db.query("INSERT INTO units (property_id,name,unit_type,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'A-101','Apartment',1,1000,800,'occupied')").run({ propertyId }).lastInsertRowid);
+  expectFailure(
+    () => db.query("UPDATE units SET monthly_rate=1000.001 WHERE id=$unitId").run({ unitId }),
+    "Database accepted a money value with more than two decimals"
+  );
   const tenantId = Number(db.query("INSERT INTO tenants (property_id,full_name,email,phone,status) VALUES ($propertyId,'Resident','resident@example.com','1000000000','active')").run({ propertyId }).lastInsertRowid);
   const leaseId = Number(db.query("INSERT INTO leases (property_id,unit_id,reference,start_date,monthly_rent,deposit,billing_day,status) VALUES ($propertyId,$unitId,'LEASE-INTEGRATION','2026-07-01',1000,800,1,'active')").run({ propertyId, unitId }).lastInsertRowid);
   db.query("INSERT INTO lease_tenants (lease_id,tenant_id,is_primary) VALUES ($leaseId,$tenantId,1)").run({ leaseId, tenantId });
@@ -93,7 +99,7 @@ try {
   assert(Number(permittedInvoices.total) === 2, "Permission-scoped financial read did not isolate the assigned property");
   assert(db.query("PRAGMA integrity_check").get().integrity_check === "ok", "SQLite integrity check failed");
 
-  console.log("End-to-end SQLite workflow verified: scoped staff access, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
+  console.log("End-to-end SQLite workflow verified: scoped staff access, exact money scale, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
 } finally {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
