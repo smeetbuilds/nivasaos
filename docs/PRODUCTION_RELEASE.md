@@ -29,7 +29,7 @@ Point the domain to the server and start:
 docker compose -f compose.production.yml up -d --build
 ```
 
-Complete the browser installer using the token. After the first owner exists, remove `NIVASA_INSTALL_TOKEN` from `.env.production and restart the application service.
+Complete the browser installer using the token. After the first owner exists, remove `NIVASA_INSTALL_TOKEN` from `.env.production` and restart the application service.
 
 ## Required release evidence
 
