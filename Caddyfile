@@ -1,6 +1,8 @@
 {$NIVASA_DOMAIN} {
   encode zstd gzip
-  reverse_proxy nivasaos:3000
+  reverse_proxy nivasaos:3000 {
+    header_up X-Nivasa-Client-IP {remote_host}
+  }
 
   header {
     Strict-Transport-Security "max-age=31536000; includeSubDomains"
