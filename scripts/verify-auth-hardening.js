@@ -9,6 +9,8 @@ const authLibrary = fs.readFileSync("lib/auth.js", "utf8");
 const throttle = fs.readFileSync("lib/auth-rate-limit.js", "utf8");
 const schema = fs.readFileSync("lib/schema/core-schema.js", "utf8");
 const dbSource = fs.readFileSync("lib/db.js", "utf8");
+const caddy = fs.readFileSync("Caddyfile", "utf8");
+const production = fs.readFileSync("compose.production.yml", "utf8");
 
 for (const field of ["failed_attempts", "locked_until", "last_login_at"]) {
   if (!schema.includes(field)) failures.push(`Fresh schema is missing users.${field}`);
@@ -23,9 +25,13 @@ for (const source of [authAction, portalAction]) {
   if (!source.includes("recordAuthFailure")) failures.push("A login surface does not persist failed abuse attempts");
   if (!source.includes("verifyPasswordOrDummy")) failures.push("A login surface does not equalize unknown-account password verification");
 }
-for (const contract of ["dimension: \"account\"", "dimension: \"network\"", "createHash(\"sha256\")", "x-forwarded-for", "clearAccountThrottle"]) {
-  if (!throttle.includes(contract)) failures.push(`Auth rate limiter is missing ${contract}`);
-}
+for (const contract of [
+  "dimension: \"account\"", "dimension: \"network\"", "createHash(\"sha256\")", "isIP", "NIVASA_TRUST_PROXY_HEADERS",
+  "x-nivasa-client-ip", "clearAccountThrottle"
+]) if (!throttle.includes(contract)) failures.push(`Auth rate limiter is missing ${contract}`);
+for (const spoofable of ["x-forwarded-for", "x-real-ip"]) if (throttle.includes(spoofable)) failures.push(`Auth rate limiter trusts spoofable ${spoofable}`);
+if (!caddy.includes("header_up X-Nivasa-Client-IP {remote_host}")) failures.push("Caddy does not overwrite the trusted client-address header");
+if (!production.includes('NIVASA_TRUST_PROXY_HEADERS: "1"')) failures.push("Production app does not explicitly enable trusted proxy metadata");
 if (portalAction.includes("&invite=${encodeURIComponent(token)}") || portalAction.includes("?invite=${encodeURIComponent(token)}")) failures.push("Portal token is still placed in a redirect query string");
 if (!portalAction.includes("httpOnly: true") || !portalAction.includes("sameSite: \"strict\"")) failures.push("Portal token handoff cookie is not HTTP-only and SameSite=Strict");
 
@@ -56,4 +62,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Timing-equalized login, account and network throttling, secure portal token handoff, idempotent security migrations, and atomic first-owner installation are verified.");
+console.log("Timing-equalized login, trusted-proxy account/network throttling, secure portal token handoff, idempotent security migrations, and atomic first-owner installation are verified.");
