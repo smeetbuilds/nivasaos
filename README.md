@@ -130,8 +130,10 @@ cp .env.production.example .env.production
 bun run setup:token
 # Copy the generated NIVASA_INSTALL_TOKEN line into .env.production,
 # then set NIVASA_DOMAIN and NIVASA_PUBLIC_URL.
-docker compose -f compose.production.yml up -d --build
+docker compose --env-file .env.production -f compose.production.yml up -d --build
 ```
+
+`--env-file .env.production` is required because Compose resolves `NIVASA_DOMAIN` before it starts the Caddy container; a service-level `env_file` does not provide values for Compose-file interpolation.
 
 Open the configured HTTPS URL and enter the installer token when creating the first owner. After installation succeeds, remove the token from `.env.production` and restart the application.
 
@@ -223,7 +225,7 @@ Extension entrypoint: `plugins/index.js`.
 
 - Scrypt password hashing with per-user random salts
 - timing-equalized verification for unknown accounts
-- database-backed account and network throttling without storing raw client addresses
+- database-backed account throttling plus network throttling only from the proxy-overwritten trusted client-address header
 - SHA-256 session, invitation and throttle-key hashes
 - HTTP-only SameSite cookies
 - short-lived HTTP-only administrative handoff for newly generated tenant links
