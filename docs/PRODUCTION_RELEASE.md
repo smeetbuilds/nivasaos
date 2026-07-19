@@ -26,10 +26,12 @@ NIVASA_INSTALL_TOKEN=<generated value>
 Point the domain to the server and start:
 
 ```bash
-docker compose -f compose.production.yml up -d --build
+docker compose --env-file .env.production -f compose.production.yml up -d --build
 ```
 
-Complete the browser installer using the token. After the first owner exists, remove `NIVASA_INSTALL_TOKEN` from `.env.production` and restart the application service.
+The `--env-file .env.production` option is mandatory for this stack because Compose resolves `${NIVASA_DOMAIN}` before service containers start. A service `env_file` populates the container environment but does not supply Compose-file interpolation.
+
+Complete the browser installer using the token. After the first owner exists, remove `NIVASA_INSTALL_TOKEN` from `.env.production` and restart the application service using the same `--env-file` option.
 
 ## Required release evidence
 
@@ -107,6 +109,8 @@ NIVASA_INSTALL_TOKEN=<generated locally>
 
 `NIVASA_PUBLIC_URL` must contain only an HTTPS scheme and host. Credentials, paths, query strings, fragments, localhost and plain HTTP are rejected in production. The local Compose stack explicitly opts into localhost for evaluation.
 
+`NIVASA_TRUST_PROXY_HEADERS=1` must be enabled only when the application is private behind a trusted proxy that overwrites `X-Nivasa-Client-IP`. The bundled Caddy configuration does this. Directly exposed or differently proxied installations should leave the flag unset until an equivalent overwrite contract is configured; account throttling remains active without it.
+
 ## Protected first installation
 
 A fresh public server must never allow an arbitrary visitor to claim the owner account.
@@ -133,7 +137,8 @@ Before release, verify both staff and tenant login with:
 - successful login after the throttle window;
 - account disable/session revocation;
 - tenant invite, reset, consumption and replay rejection;
-- confirmation that raw tenant tokens do not appear in redirect URLs or server access logs.
+- confirmation that raw tenant tokens do not appear in redirect URLs or server access logs;
+- confirmation that spoofed `X-Forwarded-For`, `X-Real-IP`, and incoming `X-Nivasa-Client-IP` values cannot select a fresh rate-limit bucket through the trusted proxy.
 
 Application throttling is not a substitute for firewall or reverse-proxy rate limiting.
 
