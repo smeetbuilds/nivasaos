@@ -24,9 +24,10 @@ if (!failures.length) {
     "NIVASA_DB_PATH", "NIVASA_UPLOAD_DIR", "NIVASA_BACKUP_DIR", "nivasa_data", "nivasa_uploads", "nivasa_backups",
     "healthcheck", "${NIVASA_PORT:-3000}:3000", "local-compose-install-token-32-characters"
   ]) if (!local.includes(needle)) failures.push(`compose.yml: missing ${needle}`);
-  for (const needle of ["env_file", ".env.production", "expose:", "caddy:2-alpine", "condition: service_healthy", '"80:80"', '"443:443"']) {
+  for (const needle of ["env_file", ".env.production", "expose:", "caddy:2.11.4-alpine", "condition: service_healthy", '"80:80"', '"443:443"']) {
     if (!production.includes(needle)) failures.push(`compose.production.yml: missing ${needle}`);
   }
+  if (production.includes("caddy:2-alpine")) failures.push("compose.production.yml: floating Caddy major tag is not allowed");
   const appBlock = production.split("\n  caddy:")[0];
   const caddyBlock = production.split("\n  caddy:")[1] || "";
   if (/\n\s+ports:/.test(appBlock)) failures.push("compose.production.yml: application service must not publish a host port");
@@ -57,4 +58,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical Compose topology, dependency audit, pinned runtime, persistent volumes, non-root certification, proxy environment isolation, private application networking, and browser security headers are verified.");
+console.log("Canonical Compose topology, dependency audit, pinned Bun and Caddy runtimes, persistent volumes, non-root certification, proxy environment isolation, private application networking, and browser security headers are verified.");
