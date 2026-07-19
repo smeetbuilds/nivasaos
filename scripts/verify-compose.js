@@ -2,15 +2,17 @@ import fs from "node:fs";
 
 const failures = [];
 const read = (file) => fs.readFileSync(file, "utf8");
-for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "scripts/container-gate.js", ".circleci/config.yml"]) {
+for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "scripts/container-gate.js", ".circleci/config.yml"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: missing`);
 }
+if (fs.existsSync("docker-compose.yml")) failures.push("docker-compose.yml: obsolete duplicate must be removed");
 
 if (!failures.length) {
   const dockerfile = read("Dockerfile");
   const local = read("compose.yml");
   const production = read("compose.production.yml");
   const caddy = read("Caddyfile");
+  const nextConfig = read("next.config.mjs");
   const dockerignore = read(".dockerignore");
   const containerGate = read("scripts/container-gate.js");
   const circleci = read(".circleci/config.yml");
@@ -25,10 +27,16 @@ if (!failures.length) {
   for (const needle of ["env_file", ".env.production", "expose:", "caddy:2-alpine", "condition: service_healthy", '"80:80"', '"443:443"']) {
     if (!production.includes(needle)) failures.push(`compose.production.yml: missing ${needle}`);
   }
-  const appBlock = production.split("caddy:")[0];
+  const appBlock = production.split("\n  caddy:")[0];
+  const caddyBlock = production.split("\n  caddy:")[1] || "";
   if (/\n\s+ports:/.test(appBlock)) failures.push("compose.production.yml: application service must not publish a host port");
-  for (const needle of ["{$NIVASA_DOMAIN}", "reverse_proxy nivasaos:3000", "Strict-Transport-Security", "X-Content-Type-Options"]) {
+  if (/\n\s+env_file:/.test(caddyBlock)) failures.push("compose.production.yml: Caddy must not receive the application environment file");
+  if (!caddyBlock.includes("NIVASA_DOMAIN:")) failures.push("compose.production.yml: Caddy must receive only its domain variable");
+  for (const needle of ["{$NIVASA_DOMAIN}", "reverse_proxy nivasaos:3000", "Strict-Transport-Security", "Content-Security-Policy", "Permissions-Policy", "X-Content-Type-Options"]) {
     if (!caddy.includes(needle)) failures.push(`Caddyfile: missing ${needle}`);
+  }
+  for (const needle of ["Content-Security-Policy", "Permissions-Policy", "X-Frame-Options", "Referrer-Policy"]) {
+    if (!nextConfig.includes(needle)) failures.push(`next.config.mjs: missing ${needle}`);
   }
   for (const needle of [".env", ".env.*", "!.env.example", "!.env.production.example"]) {
     if (!dockerignore.includes(needle)) failures.push(`.dockerignore: missing ${needle}`);
@@ -41,7 +49,7 @@ if (!failures.length) {
   ]) if (!containerGate.includes(needle)) failures.push(`scripts/container-gate.js: missing ${needle}`);
   for (const needle of [
     "container-gate:", "machine:", "ubuntu-2404:2026.05.1", "resource_class: medium",
-    "bun-v1.3.0", "docker compose version", "bun run gate:container", "requires:", "release-gate", "only:", "- main"
+    "bun-v1.3.0", "docker compose version", "bun run audit:dependencies", "bun run gate:container", "requires:", "release-gate", "only:", "- main"
   ]) if (!circleci.includes(needle)) failures.push(`.circleci/config.yml: missing ${needle}`);
 }
 
@@ -49,4 +57,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Local and production container topology, pinned runtime, persistent volumes, non-root restart certification, private application networking, and Caddy TLS contracts are verified.");
+console.log("Canonical Compose topology, dependency audit, pinned runtime, persistent volumes, non-root certification, proxy environment isolation, private application networking, and browser security headers are verified.");
