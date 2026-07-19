@@ -26,7 +26,16 @@ requireText("lib/db.js", "applyMoneyMigrations(database)", "Database startup doe
 requireText("lib/schema/money-migrations.js", "money values must use no more than two decimal places", "Database money precision triggers are missing");
 requireText("lib/workspace-localization.js", "Intl.DateTimeFormat", "Workspace timezone validation is missing");
 requireText("lib/format.js", "businessDate()", "Business date does not use the workspace timezone");
+requireText("lib/auth-rate-limit.js", "NIVASA_TRUST_PROXY_HEADERS", "Network throttling is not gated by an explicit trusted-proxy setting");
+requireText("lib/auth-rate-limit.js", "x-nivasa-client-ip", "Network throttling does not use the proxy-overwritten header");
+rejectText("lib/auth-rate-limit.js", "x-forwarded-for", "Network throttling trusts spoofable X-Forwarded-For input");
+rejectText("lib/auth-rate-limit.js", "x-real-ip", "Network throttling trusts spoofable X-Real-IP input");
+requireText("Caddyfile", "header_up X-Nivasa-Client-IP {remote_host}", "Caddy does not overwrite the trusted client-address header");
 requireText("Caddyfile", "Content-Security-Policy", "Caddy security headers are incomplete");
+requireText("compose.production.yml", 'NIVASA_TRUST_PROXY_HEADERS: "1"', "Production Compose does not enable trusted proxy metadata explicitly");
+requireText("README.md", "docker compose --env-file .env.production -f compose.production.yml", "README production command does not load Compose interpolation values");
+requireText("docs/PRODUCTION_RELEASE.md", "docker compose --env-file .env.production -f compose.production.yml", "Production guide does not load Compose interpolation values");
+requireText("docs/BACKUPS.md", "docker compose --env-file .env.production -f compose.production.yml", "Backup guide does not load Compose interpolation values");
 requireText("next.config.mjs", "Permissions-Policy", "Direct Next.js deployments are missing security headers");
 if (fs.existsSync("docker-compose.yml")) failures.push("Obsolete docker-compose.yml duplicate remains tracked");
 if (fs.existsSync("brand-assets/NivasaOS_Brand_Assets.zip")) failures.push("Duplicated binary brand archive remains tracked");
@@ -48,4 +57,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Document authorization, secure login/token handling, exact money reconciliation, strict dates, atomic transitions, deployment headers, and repository cleanup contracts are verified.");
+console.log("Document authorization, trusted-proxy login throttling, secure token handling, exact money reconciliation, strict dates, atomic transitions, deployment headers, Compose environment loading, and repository cleanup contracts are verified.");
