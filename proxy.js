@@ -8,6 +8,7 @@ function contentSecurityPolicy(nonce) {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' ${development ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
+    "style-src-attr 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self' data:",
     `connect-src 'self'${development ? " ws: wss:" : ""}`,
