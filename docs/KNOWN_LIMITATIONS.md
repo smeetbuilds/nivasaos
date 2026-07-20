@@ -8,6 +8,7 @@ The existence of a gate or CI configuration is not evidence that a particular co
 
 - `bun run audit:dependencies`;
 - `bun run gate`;
+- `bun run gate:browser` with retained browser evidence;
 - `bun run gate:container`;
 - deployment-specific browser, permission and recovery acceptance checks.
 
@@ -86,11 +87,11 @@ Long-running integrations should be implemented as optional workers rather than 
 
 ## Verification boundary
 
-`bun run gate` provides repository-owned verification: static contracts, schema migrations, authorization checks, integration workflows, production build, runtime rejection, backup/restore and restart health.
+`bun run gate` provides repository-owned static, schema, authorization, integration, build, runtime and recovery verification. `bun run gate:browser` adds an authenticated Chrome pass against representative owner routes, Chrome accessibility-tree checks, browser runtime-error capture, mobile overflow checks and screenshots for the people, agreement and invoice registers.
 
-A significant portion of UI and authorization verification is source-contract based. It is not a complete authenticated, cross-browser end-to-end suite and does not prove rendered layout, keyboard behavior, screen-reader output, field-level validation or every permission combination.
+This is not a complete cross-browser suite. It does not prove every staff and tenant permission combination, keyboard workflow, production font or white-label asset, screen-reader announcement, structured field-validation state, locale, browser engine or physical touch device.
 
-Releases still require manual browser testing. A future release should add authenticated browser automation, accessibility checks and screenshot regression coverage without making the core application dependent on a paid service.
+Releases still require deployment-specific manual browser and assistive-technology testing. The browser evidence proves only the exact commit, browser version, viewport set and route set recorded by that run.
 
 ## User-facing validation
 
@@ -98,7 +99,9 @@ Some Server Action failures still fall through to the shared error boundary rath
 
 ## Responsive data density
 
-Wide operational tables remain horizontally scrollable on small screens. This prevents clipping but is not equivalent to a purpose-built mobile card layout. High-use tables should be converted incrementally with visual and accessibility certification.
+The people, agreement and invoice registers use purpose-built labeled record cards at mobile widths and are checked for horizontal overflow by the browser gate.
+
+Other wide operational tables may still use horizontal scrolling on small screens. Those lower-frequency registers should be converted incrementally with the same rendered mobile and accessibility certification.
 
 ## Transitional CSS architecture
 

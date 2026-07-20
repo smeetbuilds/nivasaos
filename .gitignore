@@ -8,5 +8,6 @@ storage/uploads/*
 !storage/uploads/.gitkeep
 storage/backups/*
 !storage/backups/.gitkeep
+artifacts/browser/
 .DS_Store
 *.log

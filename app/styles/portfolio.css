@@ -108,6 +108,76 @@
   .property-card-facts { grid-template-columns: repeat(3,minmax(94px,1fr)); overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
   .property-card-facts::-webkit-scrollbar { display: none; }
   .directory-panel { border-radius: 10px; }
+
+  .directory-panel .table-wrap { overflow: visible !important; }
+  .people-table,.agreements-table {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+    border: 0;
+    background: transparent;
+  }
+  .people-table thead,.agreements-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+  .people-table tbody,.agreements-table tbody { display: grid; gap: 12px; }
+  .people-table tbody tr,.agreements-table tbody tr {
+    display: grid !important;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: var(--shadow-xs);
+  }
+  .people-table tbody td,.agreements-table tbody td {
+    display: block;
+    width: auto;
+    min-width: 0 !important;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid #edf0f4;
+    text-align: left !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .people-table tbody td:last-child,.agreements-table tbody td:last-child { border-bottom: 0; }
+  .people-table tbody td::before,.agreements-table tbody td::before {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+  .people-table td:nth-child(1)::before { content: "Person"; }
+  .people-table td:nth-child(2)::before { content: "Property / unit"; }
+  .people-table td:nth-child(3)::before { content: "Contact"; }
+  .people-table td:nth-child(4)::before { content: "Emergency"; }
+  .people-table td:nth-child(5)::before { content: "Portal"; }
+  .people-table td:nth-child(6)::before { content: "Status"; }
+  .people-table td:nth-child(7)::before { content: "Actions"; }
+  .agreements-table td:nth-child(1)::before { content: "Agreement"; }
+  .agreements-table td:nth-child(2)::before { content: "People"; }
+  .agreements-table td:nth-child(3)::before { content: "Property / inventory"; }
+  .agreements-table td:nth-child(4)::before { content: "Term"; }
+  .agreements-table td:nth-child(5)::before { content: "Rent"; }
+  .agreements-table td:nth-child(6)::before { content: "Operating details"; }
+  .agreements-table td:nth-child(7)::before { content: "Status"; }
+  .agreements-table td:nth-child(8)::before { content: "Actions"; }
+  .people-table .person-cell { min-width: 0; }
+  .people-table .table-actions,.agreements-table .table-actions { justify-content: flex-start !important; flex-wrap: wrap; }
 }
 
 @media (max-width: 480px) {
