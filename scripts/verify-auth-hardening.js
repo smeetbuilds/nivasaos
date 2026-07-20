@@ -59,7 +59,15 @@ legacy.exec(`
   );
   CREATE TABLE settings (key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 `);
+const legacyColumnsBeforeCore = new Set(legacy.query("PRAGMA table_info(users)").all().map((row) => row.name));
+for (const field of ["failed_attempts", "locked_until", "last_login_at"]) {
+  if (legacyColumnsBeforeCore.has(field)) failures.push(`Legacy fixture unexpectedly contains users.${field} before core schema`);
+}
 legacy.exec(coreSchema);
+const legacyColumnsAfterCore = new Set(legacy.query("PRAGMA table_info(users)").all().map((row) => row.name));
+for (const field of ["failed_attempts", "locked_until", "last_login_at"]) {
+  if (legacyColumnsAfterCore.has(field)) failures.push(`coreSchema replaced the preexisting legacy users table instead of preserving IF NOT EXISTS behavior for ${field}`);
+}
 applySecurityMigrations(legacy);
 applySecurityMigrations(legacy);
 const columns = new Set(legacy.query("PRAGMA table_info(users)").all().map((row) => row.name));
@@ -75,4 +83,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Timing-equalized login, retained throttle counters, shared password parsing, trusted-proxy throttling, legacy lock preservation, authenticated portal handoff, single-source schema, and atomic installation are verified.");
+console.log("Timing-equalized login, retained throttle counters, shared password parsing, trusted-proxy throttling, explicit legacy-schema migration, authenticated portal handoff, single-source schema, and atomic installation are verified.");
