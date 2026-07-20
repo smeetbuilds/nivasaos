@@ -8,9 +8,11 @@ The existence of a gate or CI configuration is not evidence that a particular co
 
 - `bun run audit:dependencies`;
 - `bun run gate`;
-- `bun run gate:browser` with retained browser evidence;
+- `bun run gate:browser` with retained Chrome evidence;
+- `bun run gate:cross-browser` with retained Firefox and WebKit evidence;
 - `bun run gate:container`;
-- deployment-specific browser, permission and recovery acceptance checks.
+- completed screen-reader and physical-device evidence validated by `bun run certify:device`;
+- deployment-specific permission and recovery acceptance checks.
 
 An uncertified `main` commit should be treated as development code.
 
@@ -87,11 +89,9 @@ Long-running integrations should be implemented as optional workers rather than 
 
 ## Verification boundary
 
-`bun run gate` provides repository-owned static, schema, authorization, integration, build, runtime and recovery verification. `bun run gate:browser` adds an authenticated Chrome pass against representative owner routes, Chrome accessibility-tree checks, browser runtime-error capture, mobile overflow checks and screenshots for the people, agreement and invoice registers.
+`bun run gate` provides repository-owned static, schema, authorization, integration, build, runtime and recovery verification. `bun run gate:browser` adds Chrome accessibility-tree and rendered-route checks. `bun run gate:cross-browser` adds Firefox and WebKit coverage for structured rejection, modal keyboard focus, property-scoped staff access, forbidden-route denial, tenant invoice visibility, tenant profile persistence, mobile overflow and screenshots.
 
-This is not a complete cross-browser suite. It does not prove every staff and tenant permission combination, keyboard workflow, production font or white-label asset, screen-reader announcement, structured field-validation state, locale, browser engine or physical touch device.
-
-Releases still require deployment-specific manual browser and assistive-technology testing. The browser evidence proves only the exact commit, browser version, viewport set and route set recorded by that run.
+These automated jobs are not physical-device or manual screen-reader certification. They do not prove production fonts and white-label assets, every permission combination, every locale, mobile browser chrome, virtual keyboards, safe-area insets, touch behavior, VoiceOver or TalkBack output. Those claims require completed evidence for the exact commit through the documented certification workflow.
 
 ## User-facing validation
 
@@ -101,7 +101,7 @@ Browser security prevents file inputs from being repopulated. A rejected payment
 
 ## Responsive data density
 
-The people, agreement and invoice registers use purpose-built labeled record cards at mobile widths and are checked for horizontal overflow by the browser gate.
+The people, agreement and invoice registers use purpose-built labeled record cards at mobile widths and are checked for horizontal overflow by the browser gates.
 
 Other wide operational tables may still use horizontal scrolling on small screens. Those lower-frequency registers should be converted incrementally with the same rendered mobile and accessibility certification.
 

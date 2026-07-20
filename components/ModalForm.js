@@ -15,7 +15,13 @@ function resolvedPendingLabel(submitLabel, pendingLabel) {
 }
 
 export default function ModalForm({ id, title, description, children, submitLabel = "Save", pendingLabel, intent = "primary" }) {
-  const close = () => document.getElementById(id)?.close();
+  const dialog = () => document.getElementById(id);
+  const close = () => dialog()?.close();
+  const restoreFocus = (event) => {
+    const target = event.currentTarget?.nivasaReturnFocus;
+    event.currentTarget.nivasaReturnFocus = null;
+    requestAnimationFrame(() => target?.isConnected && target.focus({ preventScroll: true }));
+  };
   const descriptionId = description ? `${id}-description` : undefined;
   return <dialog
     id={id}
@@ -23,6 +29,7 @@ export default function ModalForm({ id, title, description, children, submitLabe
     data-intent={intent}
     aria-labelledby={`${id}-title`}
     aria-describedby={descriptionId}
+    onClose={restoreFocus}
     onClick={(event) => { if (event.target === event.currentTarget) close(); }}
   >
     <div className="sheet-grabber" aria-hidden="true"><span/></div>

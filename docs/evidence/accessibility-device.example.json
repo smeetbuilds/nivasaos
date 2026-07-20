@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "commit": "REPLACE_WITH_40_CHARACTER_COMMIT_SHA",
+  "testedAt": "REPLACE_WITH_ISO_8601_TIMESTAMP",
+  "tester": "REPLACE_WITH_TESTER_NAME",
+  "environment": "REPLACE_WITH_DEPLOYMENT_DESCRIPTION",
+  "screenReaders": [
+    {
+      "platform": "Windows 11",
+      "browser": "Firefox REPLACE_VERSION",
+      "assistiveTechnology": "NVDA REPLACE_VERSION",
+      "routes": ["/login", "/dashboard", "/properties", "/tenants", "/portal"],
+      "status": "not_run",
+      "notes": "REPLACE_WITH_FINDINGS"
+    },
+    {
+      "platform": "macOS REPLACE_VERSION",
+      "browser": "Safari REPLACE_VERSION",
+      "assistiveTechnology": "VoiceOver REPLACE_VERSION",
+      "routes": ["/login", "/dashboard", "/properties", "/invoices", "/portal/profile"],
+      "status": "not_run",
+      "notes": "REPLACE_WITH_FINDINGS"
+    }
+  ],
+  "devices": [
+    {
+      "platform": "Android REPLACE_VERSION",
+      "device": "REPLACE_ANDROID_DEVICE",
+      "browser": "Chrome REPLACE_VERSION",
+      "viewport": { "width": 0, "height": 0 },
+      "routes": ["/dashboard", "/tenants", "/leases", "/invoices", "/portal"],
+      "visualReview": "not_run",
+      "screenshots": [
+        { "path": "REPLACE_ANDROID_SCREENSHOT.png", "sha256": "" }
+      ],
+      "notes": "REPLACE_WITH_FINDINGS"
+    },
+    {
+      "platform": "iOS REPLACE_VERSION",
+      "device": "REPLACE_IPHONE_DEVICE",
+      "browser": "Safari REPLACE_VERSION",
+      "viewport": { "width": 0, "height": 0 },
+      "routes": ["/dashboard", "/tenants", "/leases", "/invoices", "/portal/profile"],
+      "visualReview": "not_run",
+      "screenshots": [
+        { "path": "REPLACE_IOS_SCREENSHOT.png", "sha256": "" }
+      ],
+      "notes": "REPLACE_WITH_FINDINGS"
+    }
+  ],
+  "approval": {
+    "status": "not_approved",
+    "approvedBy": "REPLACE_WITH_APPROVER",
+    "approvedAt": "REPLACE_WITH_ISO_8601_TIMESTAMP"
+  }
+}

@@ -68,13 +68,45 @@ jobs:
             source "$BASH_ENV"
             bun run build
       - run:
-          name: Run authenticated browser and accessibility gate
+          name: Run authenticated Chrome accessibility gate
           command: |
             source "$BASH_ENV"
             NIVASA_BROWSER_BIN="$(command -v google-chrome)" bun run gate:browser
       - store_artifacts:
           path: artifacts/browser
           destination: browser-gate
+
+  cross-browser-gate:
+    docker:
+      - image: mcr.microsoft.com/playwright:v1.61.1-noble
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install pinned Bun runtime
+          command: |
+            curl -fsSL https://bun.com/install | bash -s "bun-v1.3.0"
+            echo 'export BUN_INSTALL="$HOME/.bun"' >> "$BASH_ENV"
+            echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Install application and pinned browser driver
+          command: |
+            source "$BASH_ENV"
+            bun install --frozen-lockfile
+            npm install --no-save --package-lock=false playwright@1.61.1
+      - run:
+          name: Build production application
+          command: |
+            source "$BASH_ENV"
+            bun run build
+      - run:
+          name: Run Firefox and WebKit certification
+          command: |
+            source "$BASH_ENV"
+            bun run gate:cross-browser
+      - store_artifacts:
+          path: artifacts/cross-browser
+          destination: cross-browser-gate
 
   container-gate:
     machine:
@@ -104,6 +136,13 @@ workflows:
     jobs:
       - release-gate
       - browser-gate:
+          requires:
+            - release-gate
+          filters:
+            branches:
+              only:
+                - main
+      - cross-browser-gate:
           requires:
             - release-gate
           filters:

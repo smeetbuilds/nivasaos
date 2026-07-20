@@ -9,5 +9,6 @@ storage/uploads/*
 storage/backups/*
 !storage/backups/.gitkeep
 artifacts/browser/
+artifacts/cross-browser/
 .DS_Store
 *.log
