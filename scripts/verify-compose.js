@@ -34,13 +34,13 @@ if (!failures.length) {
   if (/\n\s+ports:/.test(appBlock)) failures.push("compose.production.yml: application service must not publish a host port");
   if (/\n\s+env_file:/.test(caddyBlock)) failures.push("compose.production.yml: Caddy must not receive the application environment file");
   if (!caddyBlock.includes("NIVASA_DOMAIN:")) failures.push("compose.production.yml: Caddy must receive only its domain variable");
-  for (const needle of ["{$NIVASA_DOMAIN}", "reverse_proxy nivasaos:3000", "header_up X-Nivasa-Client-IP {remote_host}", "Strict-Transport-Security", "Content-Security-Policy", "Permissions-Policy", "X-Content-Type-Options"]) {
+  for (const needle of ["{$NIVASA_DOMAIN}", "reverse_proxy nivasaos:3000", "header_up X-Nivasa-Client-IP {remote_host}", "Strict-Transport-Security", "default-src 'self'", "script-src 'self'", "Permissions-Policy", "X-Content-Type-Options"]) {
     if (!caddy.includes(needle)) failures.push(`Caddyfile: missing ${needle}`);
   }
   for (const source of productionDocs) {
     if (!source.includes("docker compose --env-file .env.production -f compose.production.yml")) failures.push("Production documentation must load .env.production for Compose interpolation");
   }
-  for (const needle of ["Content-Security-Policy", "Permissions-Policy", "X-Frame-Options", "Referrer-Policy"]) {
+  for (const needle of ["default-src 'self'", "script-src 'self'", "Permissions-Policy", "X-Frame-Options", "Referrer-Policy"]) {
     if (!nextConfig.includes(needle)) failures.push(`next.config.mjs: missing ${needle}`);
   }
   for (const needle of [".env", ".env.*", "!.env.example", "!.env.production.example"]) {
@@ -62,4 +62,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical Compose topology, env-file interpolation, dependency audit, pinned Bun and Caddy runtimes, trusted proxy metadata, persistent volumes, non-root certification, proxy environment isolation, private application networking, and browser security headers are verified.");
+console.log("Canonical Compose topology, env-file interpolation, dependency audit, pinned Bun and Caddy runtimes, trusted proxy metadata, persistent volumes, non-root certification, proxy environment isolation, private application networking, and executable-source security headers are verified.");
