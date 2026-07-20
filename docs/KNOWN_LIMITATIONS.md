@@ -21,17 +21,16 @@ Operators must reconcile and approve payments. A payment-gateway extension may a
 
 ## Monetary storage compatibility boundary
 
-Primary financial inputs and reconciliations use integer minor-unit calculations, and database triggers reject protected values with more than two decimal places. This removes tolerance-based comparisons from the main invoice, payment, submission, deposit and late-fee paths.
+Primary financial inputs and reconciliations use integer minor-unit calculations. Database triggers reject protected values with more than two decimal places or outside the supported range, and every protected legacy decimal column has an integer minor-unit mirror that is backfilled and synchronized by migration triggers.
 
-For backward compatibility, NivasaOS 1.1 still stores historical monetary columns using SQLite `REAL`. This is not the same as a completed integer-minor-unit schema. Binary floating-point remains visible to direct database tools, legacy records and any extension that bypasses the protected action layer.
+For backward compatibility, NivasaOS 1.1 still retains historical SQLite `REAL` monetary columns beside each exact minor-unit mirror. The mirror materially improves integrity and provides a migration path, but reports and extensions are not yet universally switched to the integer representation. Binary floating-point can therefore remain visible to direct database tools and code that explicitly reads the legacy decimal column.
 
-Before NivasaOS is positioned as a high-assurance accounting ledger, a staged migration must:
+Before NivasaOS is positioned as a high-assurance accounting ledger, the remaining staged migration must:
 
-1. add integer minor-unit columns and currency-scale metadata;
-2. backfill and reconcile existing values with an operator-reviewed variance report;
-3. dual-read or dual-write during a compatibility window;
-4. switch every report, extension and export to the integer representation;
-5. remove legacy `REAL` columns only after backup and restore certification.
+1. reconcile the new minor-unit mirrors with operator-reviewed variance reports;
+2. switch every report, extension and export to the integer representation;
+3. introduce currency-scale metadata for currencies that do not use two decimal places;
+4. remove legacy `REAL` columns only after backup, restore and reporting certification.
 
 Until then, use NivasaOS as an operational ledger with independent bank/accounting reconciliation, not as the sole statutory accounting record.
 
@@ -71,11 +70,13 @@ The application can create, validate and restore checksummed archives, but it do
 
 The repository gate tests backup and restore recovery. Production operators must still monitor backup age and off-host transfer.
 
-## In-memory backup implementation
+## Bounded streaming backup implementation
 
-The current backup format serializes SQLite and upload contents into memory before compression, and restore reads the archive into memory before extraction. This is acceptable only while database and upload volumes remain within the host’s tested memory budget.
+Backup creation now snapshots SQLite with `VACUUM INTO`, streams the database and uploads through gzip, and records per-file SHA-256 checksums. Inspection and restore stream archive contents to a protected staging directory rather than loading the complete archive into memory.
 
-Large portfolios require a future streaming archive implementation with decompressed-size, file-count and per-entry limits. Operators should monitor backup process memory and test with production-sized copies before relying on the built-in archive.
+The implementation enforces compressed-size, expanded-size, per-entry and file-count limits, rejects traversal and unsupported tar entries, and stages replacements on the target filesystems before atomic activation. These controls bound memory use; they do not remove disk-capacity requirements. Operators must provision working space for the archive, extraction, target staging and the pre-restore safety backup, and must test with production-sized copies.
+
+Default limits are conservative compatibility values and can be reduced with the documented `NIVASA_BACKUP_MAX_*` environment settings. Raising them requires an operator capacity review.
 
 ## No durable background worker
 

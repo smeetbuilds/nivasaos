@@ -11,14 +11,23 @@ All notable changes to NivasaOS will be documented here.
 - Newly generated tenant activation/reset links use a short-lived HTTP-only administrative handoff instead of a redirect query parameter.
 - Application and Caddy responses now include baseline CSP, frame, permissions, referrer and content-type protections.
 - Caddy no longer receives the complete application environment file.
+- Backup extraction now rejects traversal, duplicate and unsupported tar entries and enforces compressed, expanded, per-entry, manifest and file-count bounds.
 
 ### Finance and data integrity
 
 - Primary invoice, payment, tenant-payment, deposit and late-fee paths now reconcile through integer minor units.
-- SQLite money-scale triggers reject protected values with more than two decimal places.
+- SQLite money-scale triggers reject protected values with more than two decimal places or outside the supported monetary range.
+- Protected legacy monetary columns now have backfilled, synchronized integer minor-unit mirror columns with direct-mismatch guards.
 - Request, reservation, housekeeping, invoice and payment-submission transitions now reject stale concurrent updates.
 - Strict date validation rejects impossible calendar dates and service-billing months outside `01`–`12`.
 - Bulk service billing reports actual billable and created counts and rejects a concurrent running job.
+
+### Backup and recovery
+
+- SQLite backup snapshots now use `VACUUM INTO` and archive database/uploads through streamed gzip I/O instead of whole-volume memory buffers.
+- Format version 2 records SHA-256 checksums for every upload while retaining read compatibility with format version 1 archives.
+- Restore now validates and stages data on the target filesystems before activation, preserves live data on pre-activation failure, and rolls back partially activated replacements.
+- Repository verification covers archive bounds, traversal rejection, per-upload checksums and failed-restore isolation.
 
 ### Release and open source
 

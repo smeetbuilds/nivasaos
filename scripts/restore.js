@@ -11,12 +11,22 @@ if (process.argv.includes("--help") || !archivePath) {
 }
 
 const applicationVersion = JSON.parse(await Bun.file(new URL("../package.json", import.meta.url)).text()).version;
+const resolvedArchive = path.resolve(archivePath);
 try {
-  const inspected = await inspectBackup(path.resolve(archivePath));
-  console.log(`Backup created: ${inspected.manifest.createdAt}`);
-  console.log(`Database: ${inspected.manifest.database.bytes} bytes; uploads: ${inspected.manifest.uploads.count} file(s)`);
-  if (!forced) throw new Error("Add --force after stopping the application to confirm the restore");
-  const result = await restoreBackup(path.resolve(archivePath), { force: true, applicationVersion });
+  if (!forced) {
+    const inspected = await inspectBackup(resolvedArchive);
+    try {
+      console.log(`Backup created: ${inspected.manifest.createdAt}`);
+      console.log(`Database: ${inspected.manifest.database.bytes} bytes; uploads: ${inspected.manifest.uploads.count} file(s)`);
+    } finally {
+      await inspected.cleanup();
+    }
+    throw new Error("Add --force after stopping the application to confirm the restore");
+  }
+
+  const result = await restoreBackup(resolvedArchive, { force: true, applicationVersion });
+  console.log(`Backup created: ${result.manifest.createdAt}`);
+  console.log(`Database: ${result.manifest.database.bytes} bytes; uploads: ${result.manifest.uploads.count} file(s)`);
   console.log("Restore completed successfully.");
   if (result.safetyBackup) console.log(`Pre-restore safety backup: ${result.safetyBackup}`);
 } catch (error) {

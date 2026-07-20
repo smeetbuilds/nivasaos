@@ -14,7 +14,27 @@ Choose an explicit destination when the default backup directory is not appropri
 bun run backup -- --output /secure/path/nivasaos-backup.tar.gz
 ```
 
-The command performs SQLite integrity verification before creating the archive and records a SHA-256 checksum in its manifest.
+The command verifies SQLite integrity, creates a consistent snapshot with `VACUUM INTO`, streams the database and uploads through gzip, and records SHA-256 checksums for the database and every upload in the archive manifest.
+
+Backup inspection and restore stream entries into a protected staging directory. The complete database, upload set and expanded archive are not accumulated in process memory.
+
+## Backup safety bounds
+
+The archive layer rejects traversal paths, duplicate entries, unsupported tar entry types, checksum mismatches, excessive file counts and archives beyond configured compressed, expanded, per-entry or manifest limits.
+
+Defaults:
+
+```env
+NIVASA_BACKUP_MAX_ARCHIVE_BYTES=8589934592
+NIVASA_BACKUP_MAX_EXPANDED_BYTES=34359738368
+NIVASA_BACKUP_MAX_ENTRY_BYTES=8589934592
+NIVASA_BACKUP_MAX_ENTRIES=100000
+NIVASA_BACKUP_MAX_MANIFEST_BYTES=1048576
+```
+
+These values represent 8 GiB compressed, 32 GiB expanded content, 8 GiB per entry, 100,000 entries and a 1 MiB manifest. Reduce them for constrained hosts. Increase them only after confirming available disk space for the archive, extraction, target-filesystem staging and pre-restore safety backup.
+
+The backup command rejects symbolic links and unsupported filesystem entries in authenticated upload storage. Store only regular files and directories there.
 
 ## Important limitation
 
@@ -145,7 +165,9 @@ For a non-container installation:
 bun run restore -- /path/to/nivasaos-backup.tar.gz --force
 ```
 
-Restore creates a safety backup of the current installation before replacing the database and uploads. It validates archive checksums, rejects unsafe paths, verifies SQLite integrity and uses staged atomic replacement.
+Restore creates a safety backup of the current installation before replacement. It validates archive and per-upload checksums, rejects unsafe paths and excessive archives, verifies SQLite integrity, and copies the validated database/uploads into staging directories on their respective target filesystems before atomic activation.
+
+A validation, staging or safety-backup failure occurs before activation and leaves live data untouched. An activation failure removes only newly installed targets and restores the renamed live database/uploads.
 
 ## Validate recovery
 
@@ -165,7 +187,7 @@ Then verify:
 - backup age and checksum;
 - application logs.
 
-The repository gate performs an isolated backup–mutate–restore–restart cycle, but production restore drills remain mandatory.
+The repository gate performs an isolated backup–mutate–failed-restore–restore–restart cycle, but production restore drills remain mandatory.
 
 ## Operational policy
 

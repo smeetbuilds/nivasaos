@@ -21,6 +21,7 @@ for (const file of [
   "lib/schema/security-migrations.js", "lib/schema/release-migrations.js", "lib/schema/localization-migrations.js", "lib/schema/money-migrations.js",
   "scripts/verify-secrets.js", "scripts/verify-auth-hardening.js", "scripts/verify-audit-hardening.js",
   "scripts/verify-authorization.js", "scripts/verify-verticals.js", "scripts/verify-compose.js", "scripts/verify-integration.js",
+  "scripts/verify-money-storage.js", "scripts/verify-operations.js", "scripts/lib/tar-archive.js", "scripts/lib/operations.js",
   "scripts/container-gate.js", "scripts/local-gate.js", "bun.lock"
 ]) requireFile(file);
 
@@ -35,9 +36,9 @@ const privateRegistryMarkers = ["applied-" + "caas", "internal.api." + "openai.o
 if (privateRegistryMarkers.some((marker) => lockfile.includes(marker))) failures.push("bun.lock: contains environment-specific registry URLs");
 
 const expectedVerifyScripts = [
-  "verify:secrets", "verify:source", "verify:schema", "verify:auth", "verify:operations", "verify:ui",
+  "verify:secrets", "verify:source", "verify:schema", "verify:auth", "verify:operations", "verify:money", "verify:ui",
   "verify:authorization", "verify:portal", "verify:handover", "verify:modules", "verify:verticals", "verify:integration",
-  "verify:compose", "verify:hardening", "verify:release"
+  "verify:compose", "verify:hardening", "verify:remediation", "verify:release"
 ];
 const requiredScripts = ["setup:token", "audit:dependencies", ...expectedVerifyScripts, "gate", "gate:container"];
 for (const script of requiredScripts) if (!packageJson.scripts?.[script]) failures.push(`package.json: missing ${script}`);
@@ -66,12 +67,16 @@ const contracts = {
   "lib/db.js": ["applySecurityMigrations(database)", "applyReleaseMigrations(database)", "applyLocalizationMigrations(database)", "applyMoneyMigrations(database)"],
   "lib/schema/core-schema.js": ["CREATE TABLE IF NOT EXISTS auth_rate_limits"],
   "lib/schema/localization-migrations.js": ["SELECT 'timezone','UTC'"],
-  "lib/schema/money-migrations.js": ["MONEY_SCALE_CONTRACT_VERSION", "MONEY_SCALE_TOLERANCE", "currentContract !== MONEY_SCALE_CONTRACT_VERSION", "assertHistoricalScale"],
+  "lib/schema/money-migrations.js": ["MONEY_SCALE_CONTRACT_VERSION", "MONEY_MINOR_MIRROR_VERSION", "MONEY_MAX_MINOR", "ensureMinorMirror", "money_minor_mirror_contract"],
   "lib/auth-rate-limit.js": ["auth_rate_limits", "dimension: \"account\"", "dimension: \"network\"", "windowStarted <= nowMs - item.windowMs"],
   "lib/money.js": ["MAX_MONEY_MINOR", "NUMERIC_NOISE_TOLERANCE", "BigInt", "supported monetary range"],
   "lib/workspace-localization.js": ["zonedDateTimeToIso", "setUTCFullYear", "invalidateWorkspaceLocalizationCache"],
   "lib/format.js": ["normalizedTimestamp", "catch { return \"\"; }", "workspaceTimeZone"],
   "scripts/verify-integration.js": ["applyLocalizationMigrations", "applyMoneyMigrations", "historical sub-cent values", "PRAGMA integrity_check"],
+  "scripts/verify-money-storage.js": ["money_minor_mirror_contract", "monthly_rate_minor", "Direct minor-unit mismatch", "Out-of-range money value"],
+  "scripts/verify-operations.js": ["formatVersion === 2", "maxEntryBytes: 1", "pre-activation restore failure", "Archive writer accepted a traversal path"],
+  "scripts/lib/tar-archive.js": ["createGzip", "createGunzip", "maxExpandedBytes", "maxEntryBytes", "maxEntries", "safeDestination"],
+  "scripts/lib/operations.js": ["VACUUM INTO", "formatVersion: FORMAT_VERSION", "upload checksum", "databaseInstalled", "uploadsInstalled"],
   "scripts/verify-audit-hardening.js": ["canDeliverLeaseDocument", "Large adjacent cent values", "Money helper rejected ordinary SQLite REAL aggregate noise", "'nonce-${nonce}'"],
   "scripts/verify-compose.js": ["caddy:2.11.4-alpine", "request nonce CSP", "exact security-header values"],
   ".circleci/config.yml": ["oven/bun:1.3.0", "bun run audit:dependencies", "bun run gate", "bun run gate:container"],
@@ -82,9 +87,9 @@ const contracts = {
   "app/layout.js": ["await headers()"],
   "README.md": ["NivasaOS 1.1", "technical preview", "application append-only", "gate:container"],
   "SECURITY.md": ["network throttling", "minor-unit", "file-delivery"],
-  "CHANGELOG.md": ["## Unreleased", "## 1.1.0 - 2026-07-18", "## 0.1.0 - 2026-07-16"],
-  "docs/KNOWN_LIMITATIONS.md": ["minor-unit", "In-memory backup implementation", "Verification boundary"],
-  "docs/PRODUCTION_RELEASE.md": ["backup and restore recovery", "CircleCI evidence", "audit:dependencies"],
+  "CHANGELOG.md": ["## Unreleased", "streamed", "minor-unit mirror", "## 1.1.0 - 2026-07-18", "## 0.1.0 - 2026-07-16"],
+  "docs/KNOWN_LIMITATIONS.md": ["minor-unit mirror", "Bounded streaming backup implementation", "Verification boundary"],
+  "docs/PRODUCTION_RELEASE.md": ["backup and restore recovery", "bounded streaming", "CircleCI evidence", "audit:dependencies"],
   "docs/WHITE_LABEL.md": ["brand-assets/", "does not include a duplicated ZIP bundle"]
 };
 for (const [file, values] of Object.entries(contracts)) requireText(file, values);
@@ -100,4 +105,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, exact repository gate, registry hygiene, authenticated handoff, throttled authentication, bounded money migrations, scale-safe aggregates, localization, workflow integrity, nonce CSP, container, dependency, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, registry hygiene, authenticated handoff, throttled authentication, bounded money migrations, exact minor-unit mirrors, bounded streaming recovery, scale-safe aggregates, localization, workflow integrity, nonce CSP, container, dependency, governance, and release contracts are intact.");

@@ -50,7 +50,7 @@ The repository gate performs:
 
 1. tracked-secret and environment-file verification, including Docker build-context fallback;
 2. JavaScript and JSX parsing;
-3. fresh-schema, security, release, money-scale and legacy-migration verification;
+3. fresh-schema, security, release, money-scale, minor-unit mirror and legacy-migration verification;
 4. route, Server Action and file-delivery authorization contracts;
 5. timing-equalized staff and tenant login, account/network throttling and atomic installation checks;
 6. exact minor-unit payment, payment-submission, deposit and late-fee reconciliation checks;
@@ -61,7 +61,7 @@ The repository gate performs:
 11. a production Next.js build;
 12. unsafe public-URL and missing-installation-protection rejection tests;
 13. an isolated production server smoke test;
-14. real database-and-upload backup and restore recovery;
+14. real database-and-upload backup and restore recovery using bounded streaming archives;
 15. a post-restore production restart and health check.
 
 The container gate builds the image, starts an isolated Compose stack, verifies a non-root runtime and persistent named volumes, restarts the application, rechecks health, and tears down the test volumes.
@@ -111,6 +111,8 @@ NIVASA_INSTALL_TOKEN=<generated locally>
 
 `NIVASA_TRUST_PROXY_HEADERS=1` must be enabled only when the application is private behind a trusted proxy that overwrites `X-Nivasa-Client-IP`. The bundled Caddy configuration does this. Directly exposed or differently proxied installations should leave the flag unset until an equivalent overwrite contract is configured; account throttling remains active without it.
 
+Optional backup bounds are documented in [Backups and restore](BACKUPS.md). Reduce them for constrained hosts; increase them only after a storage-capacity and restore-drill review.
+
 ## Protected first installation
 
 A fresh public server must never allow an arbitrary visitor to claim the owner account.
@@ -158,9 +160,9 @@ The minimum matrix includes:
 
 ## Financial acceptance checks
 
-Test values including `0.01`, `9.90`, full payment, partial payment, pending proof, deposit receipt and refund. Confirm that inputs with more than two decimal places are rejected by both the action layer and SQLite money-scale triggers.
+Test values including `0.01`, `9.90`, full payment, partial payment, pending proof, deposit receipt and refund. Confirm that inputs with more than two decimal places or outside the supported range are rejected by both the action layer and SQLite triggers.
 
-The current compatibility schema still uses SQLite `REAL`. Follow the independent reconciliation warning in [Known limitations](KNOWN_LIMITATIONS.md); do not treat this release as the sole statutory accounting ledger.
+Confirm that each protected legacy decimal column has a matching `_minor` integer column, that historical values are backfilled, and that decimal updates keep the mirror synchronized. The current compatibility schema still retains SQLite `REAL` columns, so follow the independent reconciliation warning in [Known limitations](KNOWN_LIMITATIONS.md); do not treat this release as the sole statutory accounting ledger.
 
 ## Backup and restore recovery
 
@@ -174,7 +176,7 @@ Before launch and after every schema-sensitive update:
 6. restart twice and confirm health;
 7. retain the pre-restore safety backup until acceptance is complete.
 
-The current archive implementation uses memory proportional to database and upload size. Test against production-sized copies and monitor memory.
+The archive implementation uses bounded streaming I/O and enforces compressed-size, expanded-size, per-entry and file-count limits. It still requires disk capacity for the archive, extraction, same-filesystem staging and pre-restore safety backup. Test production-sized copies and monitor both free space and process memory.
 
 ## Browser and UI acceptance
 
