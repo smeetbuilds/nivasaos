@@ -30,6 +30,9 @@ requireText("lib/actions/verticals.js", "sameStatus", "Housekeeping note-only up
 requireText("lib/actions/verticals.js", "AND status=$currentStatus", "Vertical state transitions are not conditional");
 requireText("lib/actions/verticals.js", "(0[1-9]|1[0-2])", "Monthly billing periods do not validate month range");
 requireText("lib/actions/verticals.js", "`${created.length} service invoice(s) generated`", "Bulk billing success count does not use created rows");
+requireText("lib/actions/verticals.js", "toMinorUnits(item.custom_amount ?? item.default_amount, \"Service amount\")", "Bulk billing eligibility bypasses the money normalization contract");
+requireText("lib/actions/verticals.js", "normalizedMoney(item.custom_amount ?? item.default_amount, \"Service amount\")", "Bulk billing previews or invoices bypass the money normalization contract");
+rejectText("lib/actions/verticals.js", "Number(item.custom_amount ?? item.default_amount)", "Bulk billing still converts service amounts with raw Number()");
 requireText("lib/schema/release-migrations.js", "trg_hostel_reservation_overlap_update", "SQLite does not enforce reservation overlap during status updates");
 requireText("app/(workspace)/tenant-portal/workspace.js", "hashPortalToken(parsedHandoff.token)", "Tenant portal does not verify the handoff against the active invite hash");
 requireText("app/(workspace)/tenant-portal/workspace.js", "ti.expires_at>$now", "Tenant portal does not compare invite expiry using ISO time");
@@ -93,4 +96,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Behavioral authorization, authenticated handoff, retained throttling, scale-safe aggregates, versioned money migration, UTC workflow storage, resilient time rendering, nonce CSP, Compose loading, and repository cleanup are verified.");
+console.log("Behavioral authorization, authenticated handoff, retained throttling, normalized bulk billing, scale-safe aggregates, versioned money migration, UTC workflow storage, resilient time rendering, nonce CSP, Compose loading, and repository cleanup are verified.");
