@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 const failures = [];
 const read = (file) => fs.readFileSync(file, "utf8");
-for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
+for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: missing`);
 }
 if (fs.existsSync("docker-compose.yml")) failures.push("docker-compose.yml: obsolete duplicate must be removed");
@@ -13,6 +13,8 @@ if (!failures.length) {
   const production = read("compose.production.yml");
   const caddy = read("Caddyfile");
   const nextConfig = read("next.config.mjs");
+  const proxy = read("proxy.js");
+  const rootLayout = read("app/layout.js");
   const dockerignore = read(".dockerignore");
   const containerGate = read("scripts/container-gate.js");
   const circleci = read(".circleci/config.yml");
@@ -34,14 +36,38 @@ if (!failures.length) {
   if (/\n\s+ports:/.test(appBlock)) failures.push("compose.production.yml: application service must not publish a host port");
   if (/\n\s+env_file:/.test(caddyBlock)) failures.push("compose.production.yml: Caddy must not receive the application environment file");
   if (!caddyBlock.includes("NIVASA_DOMAIN:")) failures.push("compose.production.yml: Caddy must receive only its domain variable");
-  for (const needle of ["{$NIVASA_DOMAIN}", "reverse_proxy nivasaos:3000", "header_up X-Nivasa-Client-IP {remote_host}", "Strict-Transport-Security", "default-src 'self'", "script-src 'self'", "Permissions-Policy", "X-Content-Type-Options"]) {
-    if (!caddy.includes(needle)) failures.push(`Caddyfile: missing ${needle}`);
+
+  const exactCaddyHeaders = [
+    'Strict-Transport-Security "max-age=31536000; includeSubDomains"',
+    'Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"',
+    'Cross-Origin-Opener-Policy "same-origin"',
+    'X-Frame-Options "DENY"',
+    'X-Content-Type-Options "nosniff"',
+    'Referrer-Policy "strict-origin-when-cross-origin"'
+  ];
+  for (const needle of ["{$NIVASA_DOMAIN}", "reverse_proxy nivasaos:3000", "header_up X-Nivasa-Client-IP {remote_host}", ...exactCaddyHeaders]) {
+    if (!caddy.includes(needle)) failures.push(`Caddyfile: missing secure contract ${needle}`);
   }
+  if (caddy.includes("Content-Security-Policy")) failures.push("Caddyfile: proxy must not overwrite the per-request application CSP");
+
+  const exactNextHeaders = [
+    '{ key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" }',
+    '{ key: "Cross-Origin-Opener-Policy", value: "same-origin" }',
+    '{ key: "X-Frame-Options", value: "DENY" }',
+    '{ key: "X-Content-Type-Options", value: "nosniff" }',
+    '{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }'
+  ];
+  for (const needle of exactNextHeaders) if (!nextConfig.includes(needle)) failures.push(`next.config.mjs: missing secure contract ${needle}`);
+  if (nextConfig.includes("Content-Security-Policy")) failures.push("next.config.mjs: static headers must not override the nonce CSP");
+
+  for (const needle of ["randomUUID", "requestHeaders.set(\"x-nonce\", nonce)", "'nonce-${nonce}'", "'strict-dynamic'", "default-src 'self'", "frame-ancestors 'none'", "object-src 'none'", "upgrade-insecure-requests"]) {
+    if (!proxy.includes(needle)) failures.push(`proxy.js: missing nonce CSP contract ${needle}`);
+  }
+  if (proxy.includes("default-src *") || proxy.includes("script-src *")) failures.push("proxy.js: wildcard executable/content sources are not allowed");
+  if (!rootLayout.includes("await headers()")) failures.push("app/layout.js: nonce-based CSP requires dynamic rendering");
+
   for (const source of productionDocs) {
     if (!source.includes("docker compose --env-file .env.production -f compose.production.yml")) failures.push("Production documentation must load .env.production for Compose interpolation");
-  }
-  for (const needle of ["default-src 'self'", "script-src 'self'", "Permissions-Policy", "X-Frame-Options", "Referrer-Policy"]) {
-    if (!nextConfig.includes(needle)) failures.push(`next.config.mjs: missing ${needle}`);
   }
   for (const needle of [".env", ".env.*", "!.env.example", "!.env.production.example"]) {
     if (!dockerignore.includes(needle)) failures.push(`.dockerignore: missing ${needle}`);
@@ -62,4 +88,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical Compose topology, env-file interpolation, dependency audit, pinned Bun and Caddy runtimes, trusted proxy metadata, persistent volumes, non-root certification, proxy environment isolation, private application networking, and executable-source security headers are verified.");
+console.log("Canonical Compose topology, exact security-header values, request nonce CSP, dynamic rendering, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");
