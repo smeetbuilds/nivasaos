@@ -16,7 +16,7 @@ services:
       NIVASA_ALLOW_INSECURE_LOCALHOST: "1"
       NIVASA_INSTALL_TOKEN: ${NIVASA_INSTALL_TOKEN:-local-compose-install-token-32-characters}
     ports:
-      - "${NIVASA_PORT:-3000}:3000"
+      - "127.0.0.1:${NIVASA_PORT:-3000}:3000"
     volumes:
       - nivasa_data:/app/data
       - nivasa_uploads:/app/storage/uploads

@@ -27,7 +27,11 @@ export default async function ReportsPage({ searchParams }) {
   const occupiedUnits = data.occupancy.reduce((sum, row) => sum + Number(row.occupied || 0), 0);
   const totalUnits = data.occupancy.reduce((sum, row) => sum + Number(row.total_units || 0), 0);
   const occupancyRate = totalUnits ? Math.round(occupiedUnits / totalUnits * 100) : 0;
-  const collectionMax = Math.max(...data.collections.map((row) => Number(row.total || 0)), 1);
+  const collectionMaxByCurrency = data.collections.reduce((map, row) => {
+    const amount = Number(row.total || 0);
+    map.set(row.currency, Math.max(map.get(row.currency) || 0, amount));
+    return map;
+  }, new Map());
 
   return <>
     <PageHeader eyebrow="Portfolio intelligence" title="Reports" description="Review occupancy, collections, and arrears using only properties available to your account." actions={<><Link href="/invoices" className="button secondary"><Icon name="invoice" size={17}/>Invoices</Link><Link href="/payments" className="button secondary"><Icon name="payment" size={17}/>Payments</Link></>}/>
@@ -52,13 +56,17 @@ export default async function ReportsPage({ searchParams }) {
         <div className="panel-head"><div><span className="eyebrow">Utilisation</span><h2>Occupancy by property</h2></div><span className="panel-count">{data.occupancy.length} properties</span></div>
         {data.occupancy.length ? <div className="report-list">{data.occupancy.map((row) => {
           const pct = row.total_units ? Math.round(row.occupied / row.total_units * 100) : 0;
-          return <div className="report-row" key={row.property_name}><div><strong>{row.property_name}</strong><span>{row.occupied || 0} occupied · {row.available || 0} available</span></div><div className="report-value"><strong>{pct}%</strong><span>{money(row.occupied_value, row.currency)}/mo</span></div><div className="progress full" aria-label={`${pct}% occupied`}><i style={{ width: `${pct}%` }}/></div></div>;
+          return <div className="report-row" key={row.property_name}><div><strong>{row.property_name}</strong><span>{row.occupied || 0} occupied · {row.available || 0} available</span></div><div className="report-value"><strong>{pct}%</strong><span>{money(row.occupied_value, row.currency)}/mo</span></div><progress className="progress native-progress full" max="100" value={pct} aria-label={`${pct}% occupied`}>{pct}%</progress></div>;
         })}</div> : <Empty title="No occupancy data" text="Add units to see property utilisation."/>}
       </article>
 
       <article className="panel report-insight-panel">
         <div className="panel-head"><div><span className="eyebrow">Cash movement</span><h2>Collections by month</h2></div><span className="panel-count">Last 12 months</span></div>
-        {data.collections.length ? <div className="bar-list finance-bar-list">{data.collections.map((row) => <div className="bar-row" key={`${row.month}-${row.currency}`}><span>{row.month}</span><div><i style={{ width: `${Math.max(5, Number(row.total) / collectionMax * 100)}%` }}/></div><strong>{money(row.total, row.currency)}</strong></div>)}</div> : <div className="quiet-state">No payment history in the last 12 months.</div>}
+        {data.collections.length ? <div className="bar-list finance-bar-list">{data.collections.map((row) => {
+          const currencyMax = Math.max(collectionMaxByCurrency.get(row.currency) || 0, 1);
+          const pct = Math.max(5, Number(row.total || 0) / currencyMax * 100);
+          return <div className="bar-row" key={`${row.month}-${row.currency}`}><span>{row.month}</span><progress className="progress native-progress" max="100" value={pct} aria-label={`${row.month} ${row.currency} collections relative to other ${row.currency} months`}>{pct}%</progress><strong>{money(row.total, row.currency)}</strong></div>;
+        })}</div> : <div className="quiet-state">No payment history in the last 12 months.</div>}
       </article>
 
       <article className="panel span-2 finance-directory-panel">
