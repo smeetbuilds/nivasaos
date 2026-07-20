@@ -7,7 +7,7 @@ import { schema, applyMigrations } from "../lib/schema.js";
 import { applySecurityMigrations } from "../lib/schema/security-migrations.js";
 import { applyReleaseMigrations } from "../lib/schema/release-migrations.js";
 import { applyLocalizationMigrations } from "../lib/schema/localization-migrations.js";
-import { applyMoneyMigrations } from "../lib/schema/money-migrations.js";
+import { applyMoneyMigrations, MONEY_SCALE_CONTRACT_VERSION } from "../lib/schema/money-migrations.js";
 
 const filename = path.join(tmpdir(), `nivasaos-integration-${randomBytes(8).toString("hex")}.sqlite`);
 const db = new Database(filename, { create: true, strict: true });
@@ -18,14 +18,20 @@ const expectFailure = (callback, message) => {
   assert(failed, message);
 };
 
+function prepareLegacy(database) {
+  database.exec(schema);
+  applySecurityMigrations(database);
+  applyMigrations(database);
+  applyReleaseMigrations(database);
+  applyLocalizationMigrations(database);
+}
+
 try {
-  db.exec(schema);
-  applySecurityMigrations(db);
-  applyMigrations(db);
-  applyReleaseMigrations(db);
-  applyLocalizationMigrations(db);
+  prepareLegacy(db);
+  applyMoneyMigrations(db);
   applyMoneyMigrations(db);
   assert(db.query("SELECT value FROM settings WHERE key='timezone'").get()?.value === "UTC", "Legacy workspace did not receive an explicit UTC timezone");
+  assert(db.query("SELECT value FROM settings WHERE key='money_scale_contract'").get()?.value === MONEY_SCALE_CONTRACT_VERSION, "Money migration did not persist its current version marker");
 
   const ownerId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Owner','owner@example.com','test','owner')").run().lastInsertRowid);
   const staffId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Finance Staff','staff@example.com','test','staff')").run().lastInsertRowid);
@@ -42,14 +48,8 @@ try {
   );
 
   const unitId = Number(db.query("INSERT INTO units (property_id,name,unit_type,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'A-101','Apartment',1,1000,800,'occupied')").run({ propertyId }).lastInsertRowid);
-  expectFailure(
-    () => db.query("UPDATE units SET monthly_rate=1000.001 WHERE id=$unitId").run({ unitId }),
-    "Database accepted a money value with more than two decimals"
-  );
-  expectFailure(
-    () => db.query("UPDATE units SET monthly_rate=0.000000001 WHERE id=$unitId").run({ unitId }),
-    "Database accepted a tiny sub-cent money value"
-  );
+  expectFailure(() => db.query("UPDATE units SET monthly_rate=1000.001 WHERE id=$unitId").run({ unitId }), "Database accepted a money value with more than two decimals");
+  expectFailure(() => db.query("UPDATE units SET monthly_rate=0.000000001 WHERE id=$unitId").run({ unitId }), "Database accepted a tiny sub-cent money value");
   const tenantId = Number(db.query("INSERT INTO tenants (property_id,full_name,email,phone,status) VALUES ($propertyId,'Resident','resident@example.com','1000000000','active')").run({ propertyId }).lastInsertRowid);
   const leaseId = Number(db.query("INSERT INTO leases (property_id,unit_id,reference,start_date,monthly_rent,deposit,billing_day,status) VALUES ($propertyId,$unitId,'LEASE-INTEGRATION','2026-07-01',1000,800,1,'active')").run({ propertyId, unitId }).lastInsertRowid);
   db.query("INSERT INTO lease_tenants (lease_id,tenant_id,is_primary) VALUES ($leaseId,$tenantId,1)").run({ leaseId, tenantId });
@@ -74,51 +74,40 @@ try {
   const subscriptionId = Number(db.query("INSERT INTO lease_services (property_id,lease_id,tenant_id,service_id,start_date,created_by) VALUES ($propertyId,$leaseId,$tenantId,$serviceId,'2026-07-01',$ownerId)").run({ propertyId, leaseId, tenantId, serviceId, ownerId }).lastInsertRowid);
   const serviceInvoiceId = Number(db.query("INSERT INTO invoices (property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,'INV-SERVICE','Parking','2026-07-01','2026-07-05',50,'manual','issued')").run({ propertyId, leaseId, tenantId }).lastInsertRowid);
   db.query("INSERT INTO service_billing_runs (subscription_id,period,invoice_id,created_by) VALUES ($subscriptionId,'2026-07',$invoiceId,$ownerId)").run({ subscriptionId, invoiceId: serviceInvoiceId, ownerId });
-  expectFailure(
-    () => db.query("INSERT INTO service_billing_runs (subscription_id,period,invoice_id,created_by) VALUES ($subscriptionId,'2026-07',$invoiceId,$ownerId)").run({ subscriptionId, invoiceId, ownerId }),
-    "Service billing period can be duplicated"
-  );
+  expectFailure(() => db.query("INSERT INTO service_billing_runs (subscription_id,period,invoice_id,created_by) VALUES ($subscriptionId,'2026-07',$invoiceId,$ownerId)").run({ subscriptionId, invoiceId, ownerId }), "Service billing period can be duplicated");
 
   db.query("INSERT INTO visitor_entries (property_id,lease_id,tenant_id,visitor_name,purpose,expected_at,created_by_user) VALUES ($propertyId,$leaseId,$tenantId,'Visitor','Visit','2026-07-10T10:00',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
-  expectFailure(
-    () => db.query("INSERT INTO visitor_entries (property_id,tenant_id,visitor_name,purpose,expected_at,created_by_user) VALUES ($otherPropertyId,$tenantId,'Invalid','Visit','2026-07-10T10:00',$ownerId)").run({ otherPropertyId, tenantId, ownerId }),
-    "Visitor relationship trigger accepted a cross-property resident"
-  );
+  expectFailure(() => db.query("INSERT INTO visitor_entries (property_id,tenant_id,visitor_name,purpose,expected_at,created_by_user) VALUES ($otherPropertyId,$tenantId,'Invalid','Visit','2026-07-10T10:00',$ownerId)").run({ otherPropertyId, tenantId, ownerId }), "Visitor relationship trigger accepted a cross-property resident");
 
   const hostelPropertyId = Number(db.query("INSERT INTO properties (name,type,module_id,address,city,country,currency) VALUES ('Integration Hostel','boarding_house','hostel','3 Test Road','Test City','Test Country','USD')").run().lastInsertRowid);
   const hostelUnitId = Number(db.query("INSERT INTO units (property_id,name,unit_type,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'Dorm 1','Dorm',2,0,0,'available')").run({ propertyId: hostelPropertyId }).lastInsertRowid);
   const spaceId = Number(db.query("INSERT INTO rentable_spaces (property_id,unit_id,code,space_type,status) VALUES ($propertyId,$unitId,'Bed A','bed','available')").run({ propertyId: hostelPropertyId, unitId: hostelUnitId }).lastInsertRowid);
   db.query("INSERT INTO hostel_reservations (property_id,unit_id,space_id,reference,guest_name,arrival_date,departure_date,status,created_by) VALUES ($propertyId,$unitId,$spaceId,'BOOK-ONE','Guest One','2026-07-10','2026-07-12','reserved',$ownerId)").run({ propertyId: hostelPropertyId, unitId: hostelUnitId, spaceId, ownerId });
-  expectFailure(
-    () => db.query("INSERT INTO hostel_reservations (property_id,unit_id,space_id,reference,guest_name,arrival_date,departure_date,status,created_by) VALUES ($propertyId,$unitId,$spaceId,'BOOK-TWO','Guest Two','2026-07-11','2026-07-13','reserved',$ownerId)").run({ propertyId: hostelPropertyId, unitId: hostelUnitId, spaceId, ownerId }),
-    "Overlapping hostel reservation was accepted"
-  );
+  expectFailure(() => db.query("INSERT INTO hostel_reservations (property_id,unit_id,space_id,reference,guest_name,arrival_date,departure_date,status,created_by) VALUES ($propertyId,$unitId,$spaceId,'BOOK-TWO','Guest Two','2026-07-11','2026-07-13','reserved',$ownerId)").run({ propertyId: hostelPropertyId, unitId: hostelUnitId, spaceId, ownerId }), "Overlapping hostel reservation was accepted");
 
   db.query("INSERT INTO audit_log (actor_user_id,property_id,action,entity_type,entity_id,summary) VALUES ($ownerId,$propertyId,'record','payment',$invoiceId,'Approved integration payment')").run({ ownerId, propertyId, invoiceId });
-  const permittedInvoices = db.query(
-    `SELECT COUNT(*) total FROM invoices i
-     WHERE i.property_id IN (
-       SELECT up.property_id FROM user_properties up
-       JOIN permission_grants pg ON pg.user_id=up.user_id AND pg.property_id=up.property_id
-       WHERE up.user_id=$staffId AND pg.permission='payments.manage' AND pg.allowed=1
-     )`
-  ).get({ staffId });
+  const permittedInvoices = db.query(`SELECT COUNT(*) total FROM invoices i WHERE i.property_id IN (SELECT up.property_id FROM user_properties up JOIN permission_grants pg ON pg.user_id=up.user_id AND pg.property_id=up.property_id WHERE up.user_id=$staffId AND pg.permission='payments.manage' AND pg.allowed=1)`).get({ staffId });
   assert(Number(permittedInvoices.total) === 2, "Permission-scoped financial read did not isolate the assigned property");
   assert(db.query("PRAGMA integrity_check").get().integrity_check === "ok", "SQLite integrity check failed");
 
+  const residueHistory = new Database(":memory:", { strict: true });
+  prepareLegacy(residueHistory);
+  const residueProperty = Number(residueHistory.query("INSERT INTO properties (name,type,module_id,address,currency) VALUES ('Residue Money','apartment','residential','1 Residue Road','USD')").run().lastInsertRowid);
+  residueHistory.query("INSERT INTO units (property_id,name,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'Residue Unit',1,$amount,0,'available')").run({ propertyId: residueProperty, amount: 0.1 + 0.2 });
+  applyMoneyMigrations(residueHistory);
+  applyMoneyMigrations(residueHistory);
+  assert(residueHistory.query("SELECT value FROM settings WHERE key='money_scale_contract'").get()?.value === MONEY_SCALE_CONTRACT_VERSION, "Tolerant money migration did not persist its version marker");
+  residueHistory.close(true);
+
   const invalidHistory = new Database(":memory:", { strict: true });
-  invalidHistory.exec(schema);
-  applySecurityMigrations(invalidHistory);
-  applyMigrations(invalidHistory);
-  applyReleaseMigrations(invalidHistory);
-  applyLocalizationMigrations(invalidHistory);
+  prepareLegacy(invalidHistory);
   const invalidProperty = Number(invalidHistory.query("INSERT INTO properties (name,type,module_id,address,currency) VALUES ('Invalid Money','apartment','residential','1 Invalid Road','USD')").run().lastInsertRowid);
   invalidHistory.query("INSERT INTO units (property_id,name,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'Invalid Unit',1,10.001,0,'available')").run({ propertyId: invalidProperty });
   expectFailure(() => applyMoneyMigrations(invalidHistory), "Money migration accepted historical sub-cent values");
   assert(!invalidHistory.query("SELECT 1 FROM settings WHERE key='money_scale_contract'").get(), "Blocked money migration still recorded the precision contract");
   invalidHistory.close(true);
 
-  console.log("End-to-end SQLite workflow verified: explicit timezone migration, scoped staff access, exact money scale and preflight, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
+  console.log("End-to-end SQLite workflow verified: explicit timezone migration, versioned tolerant money preflight, scoped staff access, exact scale triggers, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
 } finally {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
