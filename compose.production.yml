@@ -12,6 +12,7 @@ services:
       NIVASA_DB_PATH: /app/data/nivasaos.sqlite
       NIVASA_UPLOAD_DIR: /app/storage/uploads
       NIVASA_BACKUP_DIR: /app/backups
+      NIVASA_TRUST_PROXY_HEADERS: "1"
     expose:
       - "3000"
     volumes:
@@ -26,13 +27,13 @@ services:
       retries: 3
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.4-alpine
     restart: unless-stopped
     depends_on:
       nivasaos:
         condition: service_healthy
-    env_file:
-      - .env.production
+    environment:
+      NIVASA_DOMAIN: ${NIVASA_DOMAIN:?Set NIVASA_DOMAIN in .env.production}
     ports:
       - "80:80"
       - "443:443"

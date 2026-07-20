@@ -1,12 +1,12 @@
 # NivasaOS 1.1 production release guide
 
-NivasaOS is self-hosted and requires no paid platform or external API for core operation. Production readiness is proven by the repository-owned gate. CircleCI is an optional runner for the same gate, not a separate source of truth.
+NivasaOS is self-hosted and requires no paid platform or external API for core operation. Production readiness is established only by successful evidence from the exact commit being deployed. CircleCI is an optional runner for repository-owned checks, not a separate source of truth.
 
-Read [Known limitations](KNOWN_LIMITATIONS.md) before using real financial or resident data.
+Read [Known limitations](KNOWN_LIMITATIONS.md) before using real financial or resident data. The current release line is a technical preview until the exact deployment commit passes every applicable check below.
 
 ## Fast production setup
 
-The included `compose.production.yml` runs NivasaOS behind Caddy with automatic HTTPS.
+The included `compose.production.yml` runs NivasaOS behind Caddy with automatic HTTPS. The application container receives `.env.production`; Caddy receives only `NIVASA_DOMAIN`.
 
 ```bash
 git clone https://github.com/smeetbuilds/nivasaos.git
@@ -26,55 +26,64 @@ NIVASA_INSTALL_TOKEN=<generated value>
 Point the domain to the server and start:
 
 ```bash
-docker compose -f compose.production.yml up -d --build
+docker compose --env-file .env.production -f compose.production.yml up -d --build
 ```
 
-Complete the browser installer using the token. After the first owner exists, remove `NIVASA_INSTALL_TOKEN` from `.env.production` and restart the application service.
+The `--env-file .env.production` option is mandatory for this stack because Compose resolves `${NIVASA_DOMAIN}` before service containers start. A service `env_file` populates the container environment but does not supply Compose-file interpolation.
 
-## Required release gate
+Complete the browser installer using the token. After the first owner exists, remove `NIVASA_INSTALL_TOKEN` from `.env.production` and restart the application service using the same `--env-file` option.
+
+## Required release evidence
 
 Run from the exact commit intended for deployment:
 
 ```bash
 bun install --frozen-lockfile
+bun run audit:dependencies
 bun run gate
+bun run gate:container
 ```
 
-The gate performs:
+`audit:dependencies` requires registry access and fails when Bun reports a high or critical production-dependency advisory. It is deliberately separate from the offline-capable repository gate.
+
+The repository gate performs:
 
 1. tracked-secret and environment-file verification, including Docker build-context fallback;
 2. JavaScript and JSX parsing;
-3. fresh-schema, release-migration and legacy-migration verification;
-4. authorization, staff-login throttling and atomic-installation verification;
-5. finance, deposits, services, reservations and operations integration verification;
-6. responsive UI, tenant portal, handover and modular contract verification;
-7. Dockerfile, Compose, Caddy and persistent-storage contract verification;
-8. open-source packaging and production-runtime verification;
-9. a production Next.js build;
-10. runtime rejection tests for unsafe public URLs and missing installation protection;
-11. an isolated production server smoke test;
-12. real database-and-upload backup and restore recovery;
-13. a post-restore production restart and health check.
+3. fresh-schema, security, release, money-scale and legacy-migration verification;
+4. route, Server Action and file-delivery authorization contracts;
+5. timing-equalized staff and tenant login, account/network throttling and atomic installation checks;
+6. exact minor-unit payment, payment-submission, deposit and late-fee reconciliation checks;
+7. strict date, reservation, request, housekeeping and bulk-job state contracts;
+8. responsive UI, tenant portal, handover and modular source-contract verification;
+9. Dockerfile, canonical Compose, proxy isolation, Caddy and persistent-storage checks;
+10. open-source packaging and production-runtime verification;
+11. a production Next.js build;
+12. unsafe public-URL and missing-installation-protection rejection tests;
+13. an isolated production server smoke test;
+14. real database-and-upload backup and restore recovery;
+15. a post-restore production restart and health check.
 
-Do not deploy when any gate step fails.
+The container gate builds the image, starts an isolated Compose stack, verifies a non-root runtime and persistent named volumes, restarts the application, rechecks health, and tears down the test volumes.
 
-For changes to Docker, Compose, Caddy or container startup, also run:
+Do not deploy when any applicable step fails or has not been executed.
+
+## CircleCI evidence
+
+`.circleci/config.yml` installs the pinned dependency graph and runs:
+
+```bash
+bun run audit:dependencies
+bun run gate
+```
+
+After that succeeds on `main`, the machine-executor job runs:
 
 ```bash
 bun run gate:container
 ```
 
-This builds the image, starts the local Compose stack, waits for container health and tears down the isolated test volumes.
-
-## Optional CircleCI evidence
-
-`.circleci/config.yml` installs the pinned dependency graph and runs:
-
-```bash
-bun run gate
-```
-
-A CircleCI failure is a release failure. A CircleCI success does not replace operator testing against a copy of production data.
+A missing CircleCI status is not a success. A CircleCI failure is a release failure. A CircleCI success does not replace operator testing against production-sized data and deployment-specific browser workflows.
 
 The application remains buildable and deployable without CircleCI.
 
@@ -83,10 +92,11 @@ The application remains buildable and deployable without CircleCI.
 Required for a fresh installation:
 
 - `NIVASA_PUBLIC_URL` — canonical HTTPS origin;
-- `NIVASA_INSTALL_TOKEN` — at least 24 characters until the first owner is created;
-- persistent paths for SQLite, uploads and backups.
+- `NIVASA_INSTALL_TOKEN` — generated value of at least 24 characters until the first owner is created;
+- persistent paths for SQLite, uploads and backups;
+- a real IANA workspace timezone selected during installation.
 
-The production compose file configures storage paths automatically. Direct installations may use:
+The production Compose file configures storage paths automatically. Direct installations may use:
 
 ```env
 NODE_ENV=production
@@ -97,7 +107,9 @@ NIVASA_PUBLIC_URL=https://property.example.com
 NIVASA_INSTALL_TOKEN=<generated locally>
 ```
 
-`NIVASA_PUBLIC_URL` must contain only an HTTPS scheme and host. Credentials, paths, query strings, fragments, localhost and plain HTTP are rejected in production. The local compose stack explicitly opts into localhost for development.
+`NIVASA_PUBLIC_URL` must contain only an HTTPS scheme and host. Credentials, paths, query strings, fragments, localhost and plain HTTP are rejected in production. The local Compose stack explicitly opts into localhost for evaluation.
+
+`NIVASA_TRUST_PROXY_HEADERS=1` must be enabled only when the application is private behind a trusted proxy that overwrites `X-Nivasa-Client-IP`. The bundled Caddy configuration does this. Directly exposed or differently proxied installations should leave the flag unset until an equivalent overwrite contract is configured; account throttling remains active without it.
 
 ## Protected first installation
 
@@ -115,132 +127,90 @@ Owner creation and the installation marker are committed in one database transac
 
 Remove the token after successful installation.
 
-## Reproducible containers
+## Authentication acceptance checks
 
-The Docker build copies `package.json` and `bun.lock` before running:
+Before release, verify both staff and tenant login with:
 
-```bash
-bun install --frozen-lockfile
-```
+- valid credentials;
+- unknown email and wrong password responses that remain generic;
+- repeated failures from one client network;
+- successful login after the throttle window;
+- account disable/session revocation;
+- tenant invite, reset, consumption and replay rejection;
+- confirmation that raw tenant tokens do not appear in redirect URLs or server access logs;
+- confirmation that spoofed `X-Forwarded-For`, `X-Real-IP`, and incoming `X-Nivasa-Client-IP` values cannot select a fresh rate-limit bucket through the trusted proxy.
 
-Local `.env` files are excluded from the Docker build context. Only environment templates are permitted in the image source tree.
+Application throttling is not a substitute for firewall or reverse-proxy rate limiting.
 
-Secret verification uses Git metadata when available and a safe build-context filesystem scan when `.git` is absent.
+## Permission acceptance checks
 
-## Minimum production requirements
+Use at least two properties and delegated users with intentionally different permissions. Verify direct URLs as well as navigation visibility.
 
-- persistent writable storage for SQLite, uploads and backups;
-- HTTPS at the public edge;
-- a process supervisor or container restart policy;
-- adequate upload limits for approved documents;
-- encrypted off-host backups and a tested restore procedure;
-- monitoring for backup age, disk capacity and failed jobs;
-- host, Bun/container image, Next.js and reverse-proxy patching.
+The minimum matrix includes:
 
-## Deployment sequence
+- assigned property without `handover.manage` cannot retrieve lease documents;
+- billing manager without payments permission cannot record or approve payments;
+- payments manager without billing permission cannot issue or void invoices;
+- tenant portal manager cannot view or mutate deposits without `deposits.manage`;
+- delegated users cannot read another property by editing IDs;
+- archived/internal documents remain unavailable to tenants;
+- permission changes revoke existing staff sessions.
 
-```bash
-git fetch --all --tags
-git checkout <release-commit>
-bun install --frozen-lockfile
-bun run gate
-bun run backup
-bun run build
-bun run start
-```
+## Financial acceptance checks
 
-For an existing installation:
+Test values including `0.01`, `9.90`, full payment, partial payment, pending proof, deposit receipt and refund. Confirm that inputs with more than two decimal places are rejected by both the action layer and SQLite money-scale triggers.
 
-1. stop writes or enter maintenance mode;
-2. create and encrypt an off-host backup;
-3. run the gate against the release commit;
-4. test the release against a copy of production data;
-5. verify migrations, health, staff login and tenant login;
-6. start against production storage;
-7. verify invoices, payments, deposits, uploads and one module-specific workflow;
-8. record release evidence.
+The current compatibility schema still uses SQLite `REAL`. Follow the independent reconciliation warning in [Known limitations](KNOWN_LIMITATIONS.md); do not treat this release as the sole statutory accounting ledger.
 
-## Reverse-proxy baseline
+## Backup and restore recovery
 
-The included Caddy configuration:
+Before launch and after every schema-sensitive update:
 
-- obtains and renews TLS certificates;
-- redirects HTTP to HTTPS;
-- proxies only to the internal application service;
-- enables compression;
-- adds HSTS, content-type and referrer-policy headers;
-- removes the server response header.
+1. create a production-sized backup;
+2. copy it off-host and encrypt it;
+3. stop the application;
+4. restore into an isolated environment;
+5. verify database integrity, uploads, permissions and financial totals;
+6. restart twice and confirm health;
+7. retain the pre-restore safety backup until acceptance is complete.
 
-Operators using another reverse proxy must forward `Host`, `X-Forwarded-For` and `X-Forwarded-Proto`, disable public caching on authenticated routes and apply appropriate upload limits.
+The current archive implementation uses memory proportional to database and upload size. Test against production-sized copies and monitor memory.
 
-Staff and tenant login throttling is enforced in SQLite, but edge-level abuse controls are still recommended.
+## Browser and UI acceptance
 
-## Storage and data protection
+Source verifiers do not prove rendered behavior. Manually test the relevant routes on current desktop and mobile browsers, including:
 
-- Keep SQLite WAL, SHM and database files on the same persistent volume.
-- Never serve the data, upload or backup directories publicly.
-- Do not copy a live SQLite file with a generic filesystem copy.
-- Use `bun run backup` and validate restores regularly.
-- Encrypt every off-host archive.
-- Restrict filesystem and Docker-volume access.
+- keyboard-only navigation and dialog focus;
+- form validation and retained values after rejection;
+- tables at small viewport widths;
+- long names, addresses and currency values;
+- screen zoom and reduced-motion preference;
+- tenant portal invitation, billing, maintenance and document workflows;
+- white-label assets and fallback branding.
 
-See [Backups and restore](BACKUPS.md).
+Record screenshots and the tested browser/device matrix with the release evidence.
 
-## Operational monitoring
+## Monitoring
 
 Monitor at minimum:
 
-- `/api/health` response and latency;
-- process or container restarts;
-- disk capacity for data, uploads and backups;
-- backup age and restore-test date;
-- HTTP 5xx responses and slow requests;
-- staff and tenant account lockouts;
-- failed payment-proof or document uploads;
-- bulk jobs left in `running` state;
-- reservation, allocation and permission integrity errors.
-
-## Security checklist
-
-- Use unique owner and staff passwords.
-- Remove the installer token after first-owner creation.
-- Disable accounts immediately when access ends.
-- Grant minimum global, property and action permissions.
-- Keep HTTPS enabled for every staff and portal request.
-- Run `bun run verify:secrets` before every release.
-- Never commit `.env`, database files, uploads, backup archives, keys or tokens.
-- Review `SECURITY.md` before launch.
-
-## Manual-first boundary
-
-Core NivasaOS does not automatically capture payments or send provider-backed email, SMS or WhatsApp messages. Those are optional extensions and may introduce credentials, provider fees and compliance obligations.
-
-Do not describe an extension as part of the zero-key base installation.
-
-## Scale boundary
-
-NivasaOS 1.1 is designed for one application instance backed by SQLite. Do not share one SQLite file across multiple application replicas. Very large or multi-instance deployments should plan PostgreSQL and durable background workers.
+- `/api/health` status and latency;
+- container restarts and disk usage;
+- database, WAL, upload and backup volume capacity;
+- failed login and throttle events;
+- backup age and off-host replication;
+- application and Caddy logs;
+- dependency-advisory update pull requests.
 
 ## Rollback
 
-Application rollback and data rollback are separate decisions.
+Keep the prior image/commit and a verified pre-deployment backup. For a failed release:
 
-- Roll back code only when the previous release understands the migrated schema.
-- Stop all writers before restoring a database.
-- Preserve failed-release data and logs for investigation.
-- Run `bun run restore -- <backup-file> --force`, then verify health before reopening access.
-- Run the target commit's gate before deploying that code.
+1. stop the new application process;
+2. preserve its database and uploads for investigation;
+3. restore the verified backup only when schema/data rollback is required;
+4. start the previous image or commit;
+5. rerun health and browser acceptance checks;
+6. document the failure before attempting another deployment.
 
-## Release evidence
-
-Record:
-
-- commit SHA and release version;
-- Bun and container-image version;
-- `bun run gate` output;
-- `bun run gate:container` output when infrastructure changed;
-- CircleCI result when enabled;
-- backup path and checksum;
-- backup and restore recovery result;
-- deployment timestamp and operator;
-- post-deployment health and smoke-test results.
+A source rollback without a data-compatibility decision is not a complete rollback.

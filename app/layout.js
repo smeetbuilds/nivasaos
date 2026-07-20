@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import "@/app/globals.css";
 import { loadBranding } from "@/lib/branding";
 
@@ -13,6 +14,7 @@ export async function generateMetadata() {
   };
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  await headers();
   return <html lang="en"><body>{children}</body></html>;
 }

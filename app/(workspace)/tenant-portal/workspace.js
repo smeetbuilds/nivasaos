@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import {
   createTenantInviteAction,
@@ -6,10 +7,12 @@ import {
   reviewPaymentSubmissionAction
 } from "@/app/actions";
 import { requireUser, propertyScopeSql } from "@/lib/auth";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
 import { dateLabel, dateTimeLabel, money, today } from "@/lib/format";
 import { extensions } from "@/lib/extensions";
 import { configuredPublicUrl } from "@/lib/runtime-config";
+import { hashPortalToken } from "@/lib/tenant-auth";
+import { PORTAL_HANDOFF_COOKIE, readPortalInviteHandoff } from "@/lib/portal-handoff";
 import PageHeader from "@/components/PageHeader";
 import OpenModalButton from "@/components/OpenModalButton";
 import ModalForm from "@/components/ModalForm";
@@ -29,12 +32,22 @@ export default async function TenantPortalAdminPage({ searchParams }) {
   const user = await requireUser();
   const scope = propertyScopeSql(user, "p");
   const query = await searchParams;
+  const nowIso = new Date().toISOString();
+  const handoffStore = await cookies();
+  const parsedHandoff = readPortalInviteHandoff(handoffStore.get(PORTAL_HANDOFF_COOKIE)?.value);
+  const inviteHandoff = parsedHandoff && get(
+    `SELECT 1 FROM tenant_invites ti
+     JOIN tenant_accounts ta ON ta.id=ti.account_id
+     WHERE ta.tenant_id=$tenantId AND ta.status!='disabled' AND ti.token_hash=$tokenHash
+       AND ti.consumed_at IS NULL AND ti.expires_at>$now`,
+    { tenantId: parsedHandoff.tenantId, tokenHash: hashPortalToken(parsedHandoff.token), now: nowIso }
+  ) ? parsedHandoff : null;
   const canManageAccess = true;
-  const selectedTenantId = Number(query?.tenant || 0);
+  const selectedTenantId = Number(query?.tenant || inviteHandoff?.tenantId || 0);
   const tenants = all(
     `SELECT t.*,p.name property_name,p.currency,ta.id account_id,ta.status portal_status,ta.invited_at,ta.activated_at,ta.last_login_at,
       l.id active_lease_id,l.reference lease_reference,u.name unit_name,
-      EXISTS(SELECT 1 FROM tenant_invites active_invite WHERE active_invite.account_id=ta.id AND active_invite.consumed_at IS NULL AND active_invite.expires_at>CURRENT_TIMESTAMP) invite_active
+      EXISTS(SELECT 1 FROM tenant_invites active_invite WHERE active_invite.account_id=ta.id AND active_invite.consumed_at IS NULL AND active_invite.expires_at>$now) invite_active
      FROM tenants t JOIN properties p ON p.id=t.property_id
      LEFT JOIN tenant_accounts ta ON ta.tenant_id=t.id
      LEFT JOIN lease_tenants lt ON lt.tenant_id=t.id
@@ -42,7 +55,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
      LEFT JOIN units u ON u.id=l.unit_id
      WHERE ${scope.clause}
      GROUP BY t.id ORDER BY t.full_name`,
-    scope.params
+    { ...scope.params, now: nowIso }
   );
   const submissions = all(
     `SELECT ps.*,p.name property_name,p.currency,t.full_name tenant_name,i.number invoice_number,
@@ -78,9 +91,9 @@ export default async function TenantPortalAdminPage({ searchParams }) {
   const invitedAccounts = tenants.filter((item) => item.portal_status === "invited" && item.invite_active).length;
   const depositGroups = [...deposits.reduce((map, row) => map.set(row.currency, (map.get(row.currency) || 0) + heldSign(row.transaction_type) * Number(row.amount)), new Map()).entries()];
   const depositMetric = depositGroups.length === 0 ? money(0) : depositGroups.length === 1 ? money(depositGroups[0][1], depositGroups[0][0]) : `${depositGroups.length} currencies`;
-  const invitedTenant = query?.invite ? tenants.find((item) => Number(item.id) === Number(query.tenant)) : null;
+  const invitedTenant = inviteHandoff ? tenants.find((item) => Number(item.id) === inviteHandoff.tenantId) : null;
   const appUrl = configuredPublicUrl() || "http://localhost:3000";
-  const inviteUrl = invitedTenant ? `${appUrl}/portal/activate/${query.invite}` : null;
+  const inviteUrl = invitedTenant && inviteHandoff ? `${appUrl}/portal/activate/${inviteHandoff.token}` : null;
   const phone = invitedTenant?.phone?.replace(/\D/g, "");
   const shareText = invitedTenant && inviteUrl ? `Hello ${invitedTenant.full_name}, your secure ${invitedTenant.property_name} resident portal is ready. Use this one-time link within 7 days to set your password: ${inviteUrl}` : "";
   const whatsappUrl = phone && shareText ? `https://wa.me/${phone}?text=${encodeURIComponent(shareText)}` : null;
@@ -91,7 +104,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
     <PageHeader eyebrow="Resident self-service" title="Tenant portal" description="Invite residents securely, review payment proofs, maintain deposit ledgers, and give tenants a trustworthy view of their home and account." actions={<><Link href="/tenants" className="button secondary"><Icon name="tenant" size={17}/>Tenant profiles</Link><OpenModalButton target="deposit-modal" icon="deposit">Record deposit</OpenModalButton></>}/>
 
     {inviteUrl && invitedTenant && <section className="portal-share-banner panel">
-      <div><span className="eyebrow">One-time link · expires in 7 days</span><h2>Share portal access with {invitedTenant.full_name}</h2><p>The raw token is stored only as a hash. Once the tenant sets a password, this link cannot be used again.</p><code>{inviteUrl}</code></div>
+      <div><span className="eyebrow">One-time link · expires in 7 days</span><h2>Share portal access with {invitedTenant.full_name}</h2><p>The raw token is shown through a five-minute authenticated HTTP-only handoff and is stored in the database only as a hash. Replaced, disabled, consumed, or expired links are never displayed.</p><code>{inviteUrl}</code></div>
       <CopyPortalLink url={inviteUrl} whatsappUrl={whatsappUrl}/>
     </section>}
 

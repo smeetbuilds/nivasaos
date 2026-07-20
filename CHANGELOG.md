@@ -2,6 +2,31 @@
 
 All notable changes to NivasaOS will be documented here.
 
+## Unreleased
+
+### Security
+
+- Lease-document delivery now enforces `handover.manage` at the file route and excludes archived records.
+- Staff and tenant login now combine account and network throttling with timing-equalized unknown-account password verification.
+- Newly generated tenant activation/reset links use a short-lived HTTP-only administrative handoff instead of a redirect query parameter.
+- Application and Caddy responses now include baseline CSP, frame, permissions, referrer and content-type protections.
+- Caddy no longer receives the complete application environment file.
+
+### Finance and data integrity
+
+- Primary invoice, payment, tenant-payment, deposit and late-fee paths now reconcile through integer minor units.
+- SQLite money-scale triggers reject protected values with more than two decimal places.
+- Request, reservation, housekeeping, invoice and payment-submission transitions now reject stale concurrent updates.
+- Strict date validation rejects impossible calendar dates and service-billing months outside `01`–`12`.
+- Bulk service billing reports actual billable and created counts and rejects a concurrent running job.
+
+### Release and open source
+
+- Added audit-hardening verification and a high-severity production dependency audit to CircleCI.
+- Added `.editorconfig`, CODEOWNERS, Dependabot configuration and a project Code of Conduct.
+- Removed the obsolete `docker-compose.yml` duplicate and non-diffable brand ZIP.
+- Clarified technical-preview, audit-history, money-schema and verification boundaries.
+
 ## 1.1.0 - 2026-07-18
 
 ### Added

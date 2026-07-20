@@ -1,6 +1,6 @@
 # White-label branding
 
-NivasaOS ships with the source-controlled identity in `public/brand/nivasaos/`. The vector-source design package is retained at `brand-assets/NivasaOS_Brand_Assets.zip`.
+NivasaOS ships with the source-controlled identity in `public/brand/nivasaos/`. Editable brand-source files and usage guidance are retained individually in `brand-assets/` so changes remain reviewable in Git; the repository does not include a duplicated ZIP bundle.
 
 ## Change branding from the application
 

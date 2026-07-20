@@ -19,6 +19,9 @@ jobs:
             - node_modules
             - /root/.bun/install/cache
       - run:
+          name: Audit production dependencies
+          command: bun run audit:dependencies
+      - run:
           name: Run complete repository release gate
           command: bun run gate
 

@@ -44,17 +44,17 @@ Restic repository credentials are optional operator infrastructure and are not p
 
 ## Docker volume export
 
-Do not copy a live SQLite file directly from a Docker volume. Run the application backup command inside the container:
+Do not copy a live SQLite file directly from a Docker volume. Run the application backup command inside the container. Every production Compose command must load `.env.production` because the Compose file interpolates `NIVASA_DOMAIN` before running any service command.
 
 ```bash
-docker compose -f compose.production.yml exec -T nivasaos \
+docker compose --env-file .env.production -f compose.production.yml exec -T nivasaos \
   bun run backup -- --output /app/backups/manual.tar.gz
 ```
 
 Then copy and encrypt the resulting archive:
 
 ```bash
-docker compose -f compose.production.yml cp \
+docker compose --env-file .env.production -f compose.production.yml cp \
   nivasaos:/app/backups/manual.tar.gz ./manual.tar.gz
 ```
 
@@ -81,7 +81,7 @@ Do not delete the only off-host or quarterly restore-tested copy.
 ### cron: Docker Compose installation
 
 ```cron
-15 2 * * * cd /srv/nivasaos && docker compose -f compose.production.yml exec -T nivasaos bun run backup -- --output "/app/backups/nivasaos-$(date +\%F).tar.gz" >> /var/log/nivasaos-backup.log 2>&1
+15 2 * * * cd /srv/nivasaos && docker compose --env-file .env.production -f compose.production.yml exec -T nivasaos bun run backup -- --output "/app/backups/nivasaos-$(date +\%F).tar.gz" >> /var/log/nivasaos-backup.log 2>&1
 ```
 
 The archive remains in the persistent backup volume. Add a separate encrypted off-host transfer step.
@@ -99,7 +99,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 WorkingDirectory=/srv/nivasaos
-ExecStart=/usr/bin/docker compose -f compose.production.yml exec -T nivasaos bun run backup -- --output /app/backups/scheduled.tar.gz
+ExecStart=/usr/bin/docker compose --env-file .env.production -f compose.production.yml exec -T nivasaos bun run backup -- --output /app/backups/scheduled.tar.gz
 ```
 
 `/etc/systemd/system/nivasaos-backup.timer`:
@@ -133,10 +133,10 @@ Use timestamped files or an off-host tool before the next run overwrites `schedu
 Stop every NivasaOS process before restoring:
 
 ```bash
-docker compose -f compose.production.yml stop nivasaos
-docker compose -f compose.production.yml run --rm nivasaos \
+docker compose --env-file .env.production -f compose.production.yml stop nivasaos
+docker compose --env-file .env.production -f compose.production.yml run --rm nivasaos \
   bun run restore -- /app/backups/<backup-file>.tar.gz --force
-docker compose -f compose.production.yml up -d nivasaos
+docker compose --env-file .env.production -f compose.production.yml up -d nivasaos
 ```
 
 For a non-container installation:
