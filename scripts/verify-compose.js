@@ -2,7 +2,12 @@ import fs from "node:fs";
 
 const failures = [];
 const read = (file) => fs.readFileSync(file, "utf8");
-for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
+const progressPages = [
+  "app/(workspace)/dashboard/page.js",
+  "app/(workspace)/invoices/page.js",
+  "app/(workspace)/properties/page.js"
+];
+for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "app/globals.css", "app/styles/progress.css", ...progressPages, "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: missing`);
 }
 if (fs.existsSync("docker-compose.yml")) failures.push("docker-compose.yml: obsolete duplicate must be removed");
@@ -15,6 +20,8 @@ if (!failures.length) {
   const nextConfig = read("next.config.mjs");
   const proxy = read("proxy.js");
   const rootLayout = read("app/layout.js");
+  const globalStyles = read("app/globals.css");
+  const progressStyles = read("app/styles/progress.css");
   const dockerignore = read(".dockerignore");
   const containerGate = read("scripts/container-gate.js");
   const circleci = read(".circleci/config.yml");
@@ -60,11 +67,23 @@ if (!failures.length) {
   for (const needle of exactNextHeaders) if (!nextConfig.includes(needle)) failures.push(`next.config.mjs: missing secure contract ${needle}`);
   if (nextConfig.includes("Content-Security-Policy")) failures.push("next.config.mjs: static headers must not override the nonce CSP");
 
-  for (const needle of ["randomUUID", "requestHeaders.set(\"x-nonce\", nonce)", "'nonce-${nonce}'", "'strict-dynamic'", "default-src 'self'", "style-src-attr 'unsafe-inline'", "frame-ancestors 'none'", "object-src 'none'", "upgrade-insecure-requests"]) {
+  for (const needle of ["randomUUID", "requestHeaders.set(\"x-nonce\", nonce)", "'nonce-${nonce}'", "'strict-dynamic'", "default-src 'self'", "frame-ancestors 'none'", "object-src 'none'", "upgrade-insecure-requests"]) {
     if (!proxy.includes(needle)) failures.push(`proxy.js: missing nonce CSP contract ${needle}`);
   }
+  if (proxy.includes("style-src-attr 'unsafe-inline'")) failures.push("proxy.js: production CSP must not permit arbitrary inline style attributes");
   if (proxy.includes("default-src *") || proxy.includes("script-src *") || proxy.includes("style-src *")) failures.push("proxy.js: wildcard executable/content sources are not allowed");
   if (!rootLayout.includes("await headers()")) failures.push("app/layout.js: nonce-based CSP requires dynamic rendering");
+
+  if (!globalStyles.includes('@import "./styles/progress.css";')) failures.push("app/globals.css: CSP-safe progress styles are not imported");
+  for (const needle of ["progress.native-progress", "::-webkit-progress-bar", "::-webkit-progress-value", "::-moz-progress-bar", "appearance: none", "background: var(--accent)"]) {
+    if (!progressStyles.includes(needle)) failures.push(`app/styles/progress.css: missing ${needle}`);
+  }
+  for (const file of progressPages) {
+    const source = read(file);
+    if (!source.includes('<progress className="progress native-progress')) failures.push(`${file}: dynamic progress must use the native CSP-safe control`);
+    if (!source.includes('max="100"') || !source.includes("value={")) failures.push(`${file}: native progress is missing its bounded dynamic value`);
+    if (source.includes("style={{ width:")) failures.push(`${file}: inline progress width remains incompatible with the strict CSP`);
+  }
 
   for (const source of productionDocs) {
     if (!source.includes("docker compose --env-file .env.production -f compose.production.yml")) failures.push("Production documentation must load .env.production for Compose interpolation");
@@ -88,4 +107,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical Compose topology, exact security-header values, nonce-restricted scripts and style elements, scoped dynamic style attributes, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");
+console.log("Canonical Compose topology, exact security-header values, nonce-restricted scripts and styles, CSP-safe native progress controls, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");

@@ -1,0 +1,29 @@
+/* CSP-safe dynamic progress indicators. */
+progress.native-progress {
+  display: block;
+  width: 100%;
+  height: 5px;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #edf0f4;
+  color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+progress.native-progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: #edf0f4;
+}
+
+progress.native-progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+progress.native-progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--accent);
+}

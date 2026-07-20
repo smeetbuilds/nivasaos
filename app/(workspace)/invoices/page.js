@@ -37,7 +37,7 @@ export default async function InvoicesPage({ searchParams }) {
     <section className="billing-strips finance-command-grid" aria-label="Billing operations">
       <article className="rent-run-strip finance-command-card">
         <div className="finance-command-icon"><Icon name="invoice" size={19}/></div>
-        <div className="finance-command-copy"><span className="eyebrow">{rentPeriodLabel(currentPeriod)} rent run</span><strong>{rentPending ? `${rentPending} active agreement${rentPending === 1 ? "" : "s"} still need an invoice` : "Monthly rent billing is complete"}</strong><p>{Number(rentRunStatus.invoiced || 0)} of {Number(rentRunStatus.active || 0)} permitted active agreements have a rent invoice for this period.</p><div className="progress finance-progress"><i style={{ width: `${rentProgress}%` }}/></div></div>
+        <div className="finance-command-copy"><span className="eyebrow">{rentPeriodLabel(currentPeriod)} rent run</span><strong>{rentPending ? `${rentPending} active agreement${rentPending === 1 ? "" : "s"} still need an invoice` : "Monthly rent billing is complete"}</strong><p>{Number(rentRunStatus.invoiced || 0)} of {Number(rentRunStatus.active || 0)} permitted active agreements have a rent invoice for this period.</p><progress className="progress native-progress finance-progress" max="100" value={rentProgress} aria-label={`${rentProgress}% of active agreements invoiced`}>{rentProgress}%</progress></div>
         {canManageBilling && <OpenModalButton target="rent-run-modal" icon="invoice" className="button secondary">{rentPending ? "Generate missing invoices" : "Review rent run"}</OpenModalButton>}
       </article>
       {canManageBilling && <article className="late-fee-strip finance-command-card">

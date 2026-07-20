@@ -95,7 +95,7 @@ export default async function PropertiesPage({ searchParams }) {
           <p className="property-address">{row.address}{row.city ? `, ${row.city}` : ""}{row.country ? ` · ${row.country}` : ""}</p>
           <div className="property-model-copy"><span>{module.family}</span><small>{module.terminology.occupant} · {module.terminology.unit} · {module.terminology.agreement}</small></div>
           <div className="property-card-facts"><span><small>Inventory</small><strong>{total} {spaceMode ? "spaces" : "units"}</strong></span><span><small>Occupied</small><strong>{occupied}</strong></span><span><small>Contracted</small><strong>{money(row.monthly_value, row.currency)}/mo</strong></span></div>
-          <div className="occupancy-line"><span>Occupancy</span><strong>{pct}%</strong></div><div className="progress" aria-label={`${pct}% occupied`}><i style={{ width: `${pct}%` }}/></div>
+          <div className="occupancy-line"><span>Occupancy</span><strong>{pct}%</strong></div><progress className="progress native-progress" max="100" value={pct} aria-label={`${pct}% occupied`}>{pct}%</progress>
           {canEdit && <div className="record-actions"><OpenModalButton target={`property-edit-${row.id}`} icon="edit" className="text-button">Edit property</OpenModalButton></div>}
         </div>
       </article>;
