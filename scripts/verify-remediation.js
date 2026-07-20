@@ -43,8 +43,39 @@ for (const file of ["lib/data.js", "lib/billing.js"]) {
   rejectText(file, "strftime('%Y-%m','now')", `${file} still classifies the billing period using UTC now`);
 }
 
+const portalPage = "app/(workspace)/tenant-portal/page.js";
+const portalWorkspace = "app/(workspace)/tenant-portal/workspace.js";
+const shell = "components/AppShell.js";
+requireText(portalPage, 'anyOf: ["portal.manage", "payments.manage", "deposits.manage"]', "Tenant portal route still requires every portal-related permission");
+rejectText(portalPage, 'allOf: ["portal.manage", "payments.manage", "deposits.manage"]', "Tenant portal route still blocks independent delegation");
+for (const permission of ["portal.manage", "payments.manage", "deposits.manage"]) {
+  requireText(portalWorkspace, `permissionScopeSql(user, \"${permission}\", \"p\")`, `Tenant portal does not independently scope ${permission}`);
+}
+requireText(portalWorkspace, "canManageAccess && <section", "Portal account controls are not conditionally rendered by portal.manage");
+requireText(portalWorkspace, "canReviewPayments && <section", "Payment review is not conditionally rendered by payments.manage");
+requireText(portalWorkspace, "canManageDeposits && <section", "Deposit management is not conditionally rendered by deposits.manage");
+requireText(shell, 'portal.manage|payments.manage|deposits.manage', "Navigation still requires every tenant-portal permission");
+rejectText(shell, 'portal.manage&payments.manage&deposits.manage', "Navigation still uses the all-permission portal contract");
+rejectText(shell, "<style jsx global>", "AppShell still injects runtime styles under the strict CSP");
+
+const serviceActions = "lib/actions/services.js";
+requireText(serviceActions, "moneyInput", "Service actions do not use the shared strict money-input parser");
+for (const stale of [
+  'Math.max(0, number(formData, "amount"',
+  'Math.max(0, number(formData, "customAmount"'
+]) {
+  rejectText(serviceActions, stale, `Service money input still silently coerces invalid values: ${stale}`);
+}
+requireText(serviceActions, "normalizedMoney(subscription.custom_amount ?? subscription.service_amount", "Individual service billing does not normalize stored money before invoicing");
+requireText(serviceActions, "customAmountMinor", "Service assignment audit does not retain normalized custom-amount evidence");
+
+requireText("app/globals.css", '@import "./styles/readability.css";', "Readability overrides are not loaded last");
+for (const needle of [".table-wrap td", "font-size: 13px", "overscroll-behavior-inline", "@media (max-width: 720px)"]) {
+  requireText("app/styles/readability.css", needle, `Readability contract is missing ${needle}`);
+}
+
 if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Financial proof permissions, CSP-safe reports, loopback-only local Compose, currency-safe chart scaling, and workspace-date SQL are verified.");
+console.log("Financial proof permissions, CSP-safe reports, loopback-only local Compose, workspace-date SQL, independently delegated tenant-portal sections, strict secondary money inputs, and operational readability are verified.");

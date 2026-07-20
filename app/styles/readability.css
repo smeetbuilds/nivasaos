@@ -1,0 +1,82 @@
+/* Readability and mobile interaction overrides for operational screens. */
+.brand small,
+.sidebar-context small,
+.nav-section-label,
+.topbar-kicker,
+.topbar-user small,
+.eyebrow,
+.step-label,
+.table-wrap th,
+.badge {
+  font-size: 11px;
+}
+
+.sidebar-context span,
+.user-card small,
+.status-pill,
+.footer,
+.metric-card > small,
+.table-wrap td small,
+label small,
+.modal-head p,
+.module-health-card > p,
+.welcome-banner p,
+.module-health-head p {
+  font-size: 12px;
+}
+
+.sidebar-context strong,
+.side-nav a,
+.drawer-nav a,
+.user-card strong,
+.button,
+.text-button,
+.text-link,
+.metric-card > span,
+label > span {
+  font-size: 13px;
+}
+
+.table-wrap td,
+.table-wrap td strong {
+  font-size: 13px;
+}
+
+.table-wrap th,
+.nav-section-label,
+.eyebrow,
+.step-label {
+  letter-spacing: .08em;
+}
+
+.table-wrap {
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 720px) {
+  .panel:has(> .table-wrap) {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: var(--shadow-xs), 0 9px 26px rgba(35, 46, 74, .045);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+  }
+
+  .table-wrap table {
+    min-width: 760px;
+    display: table;
+  }
+
+  .mobile-page-title small,
+  .mobile-bottom-nav span,
+  .drawer-company small {
+    font-size: 11px;
+  }
+}

@@ -1,13 +1,23 @@
 import fs from "node:fs";
+import path from "node:path";
 
 const failures = [];
 const read = (file) => fs.readFileSync(file, "utf8");
 const progressPages = [
   "app/(workspace)/dashboard/page.js",
   "app/(workspace)/invoices/page.js",
-  "app/(workspace)/properties/page.js"
+  "app/(workspace)/properties/page.js",
+  "app/(workspace)/reports/workspace.js"
 ];
-for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "app/globals.css", "app/styles/progress.css", ...progressPages, "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
+function sourceFiles(directory) {
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const child = path.join(directory, entry.name);
+    if (entry.isDirectory()) return sourceFiles(child);
+    return entry.isFile() && /\.(js|jsx)$/.test(entry.name) ? [child] : [];
+  });
+}
+for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "app/globals.css", "app/styles/progress.css", "app/styles/readability.css", ...progressPages, "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: missing`);
 }
 if (fs.existsSync("docker-compose.yml")) failures.push("docker-compose.yml: obsolete duplicate must be removed");
@@ -32,8 +42,9 @@ if (!failures.length) {
   }
   for (const needle of [
     "NIVASA_DB_PATH", "NIVASA_UPLOAD_DIR", "NIVASA_BACKUP_DIR", "nivasa_data", "nivasa_uploads", "nivasa_backups",
-    "healthcheck", "${NIVASA_PORT:-3000}:3000", "local-compose-install-token-32-characters"
+    "healthcheck", '"127.0.0.1:${NIVASA_PORT:-3000}:3000"', "local-compose-install-token-32-characters"
   ]) if (!local.includes(needle)) failures.push(`compose.yml: missing ${needle}`);
+  if (local.includes('      - "${NIVASA_PORT:-3000}:3000"')) failures.push("compose.yml: local application port must bind only to loopback");
   for (const needle of ["env_file", ".env.production", "expose:", "caddy:2.11.4-alpine", "condition: service_healthy", '"80:80"', '"443:443"', 'NIVASA_TRUST_PROXY_HEADERS: "1"']) {
     if (!production.includes(needle)) failures.push(`compose.production.yml: missing ${needle}`);
   }
@@ -75,6 +86,7 @@ if (!failures.length) {
   if (!rootLayout.includes("await headers()")) failures.push("app/layout.js: nonce-based CSP requires dynamic rendering");
 
   if (!globalStyles.includes('@import "./styles/progress.css";')) failures.push("app/globals.css: CSP-safe progress styles are not imported");
+  if (!globalStyles.includes('@import "./styles/readability.css";')) failures.push("app/globals.css: readability styles are not imported");
   for (const needle of ["progress.native-progress", "::-webkit-progress-bar", "::-webkit-progress-value", "::-moz-progress-bar", "appearance: none", "background: var(--accent)"]) {
     if (!progressStyles.includes(needle)) failures.push(`app/styles/progress.css: missing ${needle}`);
   }
@@ -83,6 +95,11 @@ if (!failures.length) {
     if (!source.includes('<progress className="progress native-progress')) failures.push(`${file}: dynamic progress must use the native CSP-safe control`);
     if (!source.includes('max="100"') || !source.includes("value={")) failures.push(`${file}: native progress is missing its bounded dynamic value`);
     if (source.includes("style={{ width:")) failures.push(`${file}: inline progress width remains incompatible with the strict CSP`);
+  }
+  for (const file of [...sourceFiles("app"), ...sourceFiles("components")]) {
+    const source = read(file);
+    if (source.includes("style={{ width:")) failures.push(`${file}: inline dynamic width is incompatible with the strict production CSP`);
+    if (source.includes("<style jsx global>")) failures.push(`${file}: runtime global styles must live in the static stylesheet cascade`);
   }
 
   for (const source of productionDocs) {
@@ -107,4 +124,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical Compose topology, exact security-header values, nonce-restricted scripts and styles, CSP-safe native progress controls, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");
+console.log("Canonical Compose topology, exact security-header values, nonce-restricted scripts and styles, repository-wide CSP-safe dynamic widths, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");

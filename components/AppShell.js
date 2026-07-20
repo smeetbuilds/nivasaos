@@ -25,7 +25,7 @@ function buildNavigation(capabilities, modules) {
       ["/operations","modules","Module operations","verticals.manage|requests.review"],
       ...(has("spaceInventory") ? [["/housekeeping","maintenance","Housekeeping","housekeeping.manage"]] : []),
       ...(hasModule("hostel") ? [["/reservations","hostel","Reservations","reservations.manage"]] : []),
-      ["/tenant-portal","portal","Tenant portal","portal.manage&payments.manage&deposits.manage"],["/handover","handover","Handover","handover.manage"],
+      ["/tenant-portal","portal","Tenant portal","portal.manage|payments.manage|deposits.manage"],["/handover","handover","Handover","handover.manage"],
       ...(has("visitorRegister") ? [["/visitors","visitors","Visitors","visitors.manage"]] : []),
       ...(has("commercialProfiles") ? [["/commercial","commercial","Commercial","verticals.manage"]] : []),
       ["/maintenance","maintenance","Maintenance","maintenance.manage"],["/reports","report","Reports","reports.view"]
@@ -76,7 +76,6 @@ export default function AppShell({ user, company, branding, modules = [], capabi
   }, [drawerOpen]);
 
   return <div className="app-shell">
-    <style jsx global>{`@media (max-width: 720px) {.panel:has(> .table-wrap) { overflow: hidden; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow-xs), 0 9px 26px rgba(35, 46, 74, .045); }.table-wrap { overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }.table-wrap table { min-width: 780px; display: table; }}`}</style>
     <aside className="sidebar"><Brand branding={branding}/><div className="sidebar-context"><small>Workspace</small><strong>{company}</strong><span>{modules.length} operating model{modules.length === 1 ? "" : "s"} enabled</span></div><ModuleStrip modules={modules}/><Navigation sections={sections} pathname={pathname}/><div className="sidebar-bottom"><UserCard user={user}/><form action={logoutAction}><button className="logout-button" aria-label="Sign out"><Icon name="logout" size={18}/></button></form></div></aside>
     <button className={`drawer-scrim${drawerOpen ? " is-open" : ""}`} type="button" aria-label="Close navigation" aria-hidden={!drawerOpen} tabIndex={drawerOpen ? 0 : -1} onClick={() => setDrawerOpen(false)}/>
     <aside ref={drawerRef} id="mobile-navigation-drawer" className={`mobile-drawer${drawerOpen ? " is-open" : ""}`} role="dialog" aria-modal="true" aria-hidden={!drawerOpen} inert={!drawerOpen} aria-label="Navigation drawer"><div className="drawer-head"><Brand branding={branding} compact/><button ref={drawerCloseRef} type="button" className="icon-button drawer-close" onClick={() => setDrawerOpen(false)} aria-label="Close navigation"><Icon name="close" size={21}/></button></div><div className="drawer-company"><span className="live-dot"/><span><small>Current workspace</small><strong>{company}</strong></span><ModuleStrip modules={modules}/></div><Navigation sections={sections} pathname={pathname} onNavigate={() => setDrawerOpen(false)} mobile/><div className="drawer-footer"><UserCard user={user} mobile/><form action={logoutAction}><button className="button secondary drawer-logout"><Icon name="logout" size={17}/>Sign out</button></form></div></aside>

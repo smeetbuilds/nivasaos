@@ -4,5 +4,5 @@ import { renderPermissionScopedPage } from "@/lib/permission-page";
 export { metadata } from "./workspace";
 
 export default function Page(props) {
-  return renderPermissionScopedPage({ allOf: ["portal.manage", "payments.manage", "deposits.manage"] }, WorkspacePage, props);
+  return renderPermissionScopedPage({ anyOf: ["portal.manage", "payments.manage", "deposits.manage"] }, WorkspacePage, props);
 }
