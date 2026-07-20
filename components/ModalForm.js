@@ -2,6 +2,7 @@
 
 import Icon from "@/components/Icon";
 import SubmitButton from "@/components/SubmitButton";
+import { ActionStateMessage } from "@/components/StatefulForm";
 
 const pendingVerbs = Object.freeze({
   Save: "Saving…", Create: "Creating…", Issue: "Issuing…", Record: "Recording…", Generate: "Generating…",
@@ -29,6 +30,7 @@ export default function ModalForm({ id, title, description, children, submitLabe
       <div><h2 id={`${id}-title`}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div>
       <button type="button" className="icon-button modal-close" onClick={close} aria-label="Close"><Icon name="close" size={20}/></button>
     </div>
+    <ActionStateMessage/>
     {children}
     <div className="modal-actions">
       <button type="button" className="button secondary" onClick={close}>Cancel</button>

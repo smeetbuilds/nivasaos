@@ -1,0 +1,37 @@
+/* Structured server-action validation and value-preserving form feedback. */
+.action-state-message {
+  display: grid;
+  gap: 3px;
+  margin: 0 18px 14px;
+  padding: 11px 12px;
+  border: 1px solid #efb8c1;
+  border-radius: 8px;
+  background: #fff5f6;
+  color: #8f1834;
+  outline: none;
+}
+.action-state-message strong { font-size: 12px; }
+.action-state-message span { font-size: 11px; line-height: 1.5; }
+.action-state-message small { color: #9d5364; font-size: 9px; }
+.field-error {
+  display: block;
+  margin-top: 5px;
+  color: #a41434;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+[data-stateful-form] :is(input,select,textarea)[aria-invalid="true"] {
+  border-color: #c83250;
+  box-shadow: 0 0 0 1px rgba(200,50,80,.08);
+}
+[data-stateful-form] :is(input,select,textarea)[aria-invalid="true"]:focus {
+  outline: 2px solid rgba(200,50,80,.24);
+  outline-offset: 1px;
+}
+@media (max-width: 720px) {
+  .action-state-message { margin-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-stateful-form] :is(input,select,textarea) { transition: none !important; }
+}

@@ -17,6 +17,7 @@ import * as services from "@/lib/actions/services";
 import * as visitors from "@/lib/actions/visitors";
 import * as commercial from "@/lib/actions/commercial";
 import * as verticals from "@/lib/actions/verticals";
+import { runStructuredAction } from "@/lib/action-state";
 import {
   authorizeEntityAction,
   authorizeGlobalAction,
@@ -27,34 +28,58 @@ export async function installAction(formData) { return auth.installAction(formDa
 export async function loginAction(formData) { return auth.loginAction(formData); }
 export async function logoutAction(formData) { return auth.logoutAction(formData); }
 
-export async function createPropertyAction(formData) {
-  await authorizeGlobalAction("properties.manage");
-  return properties.createPropertyAction(formData);
+export async function createPropertyAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeGlobalAction("properties.manage");
+    return properties.createPropertyAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
-export async function updatePropertyAction(formData) {
-  await authorizeGlobalAction("properties.manage");
-  await authorizePropertyAction(formData, "portfolio.view");
-  return propertyRelease.updatePropertyReleaseAction(formData);
+export async function updatePropertyAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeGlobalAction("properties.manage");
+    await authorizePropertyAction(formData, "portfolio.view");
+    return propertyRelease.updatePropertyReleaseAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
-export async function createUnitAction(formData) {
-  await authorizePropertyAction(formData, "inventory.manage");
-  return properties.createUnitAction(formData);
+export async function createUnitAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizePropertyAction(formData, "inventory.manage");
+    return properties.createUnitAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
-export async function updateUnitAction(formData) {
-  await authorizeEntityAction(formData, "inventory.manage", "unit");
-  return properties.updateUnitAction(formData);
+export async function updateUnitAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeEntityAction(formData, "inventory.manage", "unit");
+    return properties.updateUnitAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
-export async function createTenantAction(formData) { return properties.createTenantAction(formData); }
-export async function updateTenantAction(formData) { return properties.updateTenantAction(formData); }
-export async function createLeaseAction(formData) { return leases.createLeaseAction(formData); }
+export async function createTenantAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => properties.createTenantAction(formData), previousStateOrFormData, maybeFormData);
+}
+export async function updateTenantAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => properties.updateTenantAction(formData), previousStateOrFormData, maybeFormData);
+}
+export async function createLeaseAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => leases.createLeaseAction(formData), previousStateOrFormData, maybeFormData);
+}
 export async function endLeaseAction(formData) { return leases.endLeaseAction(formData); }
-export async function createInvoiceAction(formData) { return finance.createInvoiceAction(formData); }
-export async function createRentRunAction(formData) { return finance.createRentRunAction(formData); }
-export async function recordPaymentAction(formData) { return finance.recordPaymentAction(formData); }
-export async function createLateFeeRunAction(formData) { return finance.createLateFeeRunAction(formData); }
+export async function createInvoiceAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => finance.createInvoiceAction(formData), previousStateOrFormData, maybeFormData);
+}
+export async function createRentRunAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => finance.createRentRunAction(formData), previousStateOrFormData, maybeFormData);
+}
+export async function recordPaymentAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => finance.recordPaymentAction(formData), previousStateOrFormData, maybeFormData);
+}
+export async function createLateFeeRunAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => finance.createLateFeeRunAction(formData), previousStateOrFormData, maybeFormData);
+}
 export async function voidInvoiceAction(formData) { return finance.voidInvoiceAction(formData); }
 export async function logReminderAction(formData) { return finance.logReminderAction(formData); }
-export async function createMaintenanceAction(formData) { return maintenance.createMaintenanceAction(formData); }
+export async function createMaintenanceAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => maintenance.createMaintenanceAction(formData), previousStateOrFormData, maybeFormData);
+}
 export async function updateMaintenanceAction(formData) { return maintenance.updateMaintenanceAction(formData); }
 export async function createTeamMemberAction(formData) { return team.createTeamMemberAction(formData); }
 export async function updateTeamMemberAction(formData) { return team.updateTeamMemberAction(formData); }
@@ -88,7 +113,9 @@ export async function recordDepositTransactionAction(formData) {
 }
 export async function createTenantMaintenanceAction(formData) { return portal.createTenantMaintenanceAction(formData); }
 export async function addTenantMaintenanceCommentAction(formData) { return portal.addTenantMaintenanceCommentAction(formData); }
-export async function addStaffMaintenanceCommentAction(formData) { return portal.addStaffMaintenanceCommentAction(formData); }
+export async function addStaffMaintenanceCommentAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => portal.addStaffMaintenanceCommentAction(formData), previousStateOrFormData, maybeFormData);
+}
 
 export async function createInspectionAction(formData) {
   await authorizeEntityAction(formData, "handover.manage", "lease");

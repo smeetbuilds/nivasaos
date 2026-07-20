@@ -95,7 +95,9 @@ Releases still require deployment-specific manual browser and assistive-technolo
 
 ## User-facing validation
 
-Some Server Action failures still fall through to the shared error boundary rather than returning field-specific validation state. Users may need to re-enter a form after a rejected request. Converting every form to structured action state is a separate UI compatibility project.
+High-use property, person, agreement, invoice, rent-run, late-fee, payment and maintenance modals now return structured server-action errors, preserve non-sensitive submitted values, keep the dialog open, mark invalid controls and focus the first actionable error.
+
+Browser security prevents file inputs from being repopulated. A rejected payment form therefore preserves its other values but requires the operator to reselect the proof file. Small status-transition, confirmation and lower-frequency administration forms still use the established redirect or shared-error-boundary behavior until migrated individually.
 
 ## Responsive data density
 
