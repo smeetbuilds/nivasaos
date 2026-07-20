@@ -1,4 +1,3 @@
-import { Buffer } from "node:buffer";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import {
@@ -8,10 +7,12 @@ import {
   reviewPaymentSubmissionAction
 } from "@/app/actions";
 import { requireUser, propertyScopeSql } from "@/lib/auth";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
 import { dateLabel, dateTimeLabel, money, today } from "@/lib/format";
 import { extensions } from "@/lib/extensions";
 import { configuredPublicUrl } from "@/lib/runtime-config";
+import { hashPortalToken } from "@/lib/tenant-auth";
+import { PORTAL_HANDOFF_COOKIE, readPortalInviteHandoff } from "@/lib/portal-handoff";
 import PageHeader from "@/components/PageHeader";
 import OpenModalButton from "@/components/OpenModalButton";
 import ModalForm from "@/components/ModalForm";
@@ -22,24 +23,9 @@ import CopyPortalLink from "@/components/CopyPortalLink";
 import Icon from "@/components/Icon";
 
 export const metadata = { title: "Tenant portal" };
-const PORTAL_HANDOFF_COOKIE = "nivasa_portal_invite_handoff";
 
 function heldSign(type) {
   return ["received", "credit"].includes(type) ? 1 : -1;
-}
-
-function readInviteHandoff(value) {
-  try {
-    const parsed = JSON.parse(Buffer.from(String(value || ""), "base64url").toString("utf8"));
-    const tenantId = Number(parsed.tenantId);
-    const createdAt = Number(parsed.createdAt);
-    if (!Number.isInteger(tenantId) || tenantId <= 0) return null;
-    if (!/^[A-Za-z0-9_-]{40,}$/.test(String(parsed.token || ""))) return null;
-    if (!Number.isFinite(createdAt) || createdAt > Date.now() + 30000 || Date.now() - createdAt > 5 * 60 * 1000) return null;
-    return { tenantId, token: parsed.token };
-  } catch {
-    return null;
-  }
 }
 
 export default async function TenantPortalAdminPage({ searchParams }) {
@@ -47,7 +33,14 @@ export default async function TenantPortalAdminPage({ searchParams }) {
   const scope = propertyScopeSql(user, "p");
   const query = await searchParams;
   const handoffStore = await cookies();
-  const inviteHandoff = readInviteHandoff(handoffStore.get(PORTAL_HANDOFF_COOKIE)?.value);
+  const parsedHandoff = readPortalInviteHandoff(handoffStore.get(PORTAL_HANDOFF_COOKIE)?.value);
+  const inviteHandoff = parsedHandoff && get(
+    `SELECT 1 FROM tenant_invites ti
+     JOIN tenant_accounts ta ON ta.id=ti.account_id
+     WHERE ta.tenant_id=$tenantId AND ta.status!='disabled' AND ti.token_hash=$tokenHash
+       AND ti.consumed_at IS NULL AND ti.expires_at>CURRENT_TIMESTAMP`,
+    { tenantId: parsedHandoff.tenantId, tokenHash: hashPortalToken(parsedHandoff.token) }
+  ) ? parsedHandoff : null;
   const canManageAccess = true;
   const selectedTenantId = Number(query?.tenant || inviteHandoff?.tenantId || 0);
   const tenants = all(
@@ -99,7 +92,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
   const depositMetric = depositGroups.length === 0 ? money(0) : depositGroups.length === 1 ? money(depositGroups[0][1], depositGroups[0][0]) : `${depositGroups.length} currencies`;
   const invitedTenant = inviteHandoff ? tenants.find((item) => Number(item.id) === inviteHandoff.tenantId) : null;
   const appUrl = configuredPublicUrl() || "http://localhost:3000";
-  const inviteUrl = invitedTenant ? `${appUrl}/portal/activate/${inviteHandoff.token}` : null;
+  const inviteUrl = invitedTenant && inviteHandoff ? `${appUrl}/portal/activate/${inviteHandoff.token}` : null;
   const phone = invitedTenant?.phone?.replace(/\D/g, "");
   const shareText = invitedTenant && inviteUrl ? `Hello ${invitedTenant.full_name}, your secure ${invitedTenant.property_name} resident portal is ready. Use this one-time link within 7 days to set your password: ${inviteUrl}` : "";
   const whatsappUrl = phone && shareText ? `https://wa.me/${phone}?text=${encodeURIComponent(shareText)}` : null;
@@ -110,7 +103,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
     <PageHeader eyebrow="Resident self-service" title="Tenant portal" description="Invite residents securely, review payment proofs, maintain deposit ledgers, and give tenants a trustworthy view of their home and account." actions={<><Link href="/tenants" className="button secondary"><Icon name="tenant" size={17}/>Tenant profiles</Link><OpenModalButton target="deposit-modal" icon="deposit">Record deposit</OpenModalButton></>}/>
 
     {inviteUrl && invitedTenant && <section className="portal-share-banner panel">
-      <div><span className="eyebrow">One-time link · expires in 7 days</span><h2>Share portal access with {invitedTenant.full_name}</h2><p>The raw token is shown through a five-minute HTTP-only handoff and is stored in the database only as a hash. Once the tenant sets a password, this link cannot be used again.</p><code>{inviteUrl}</code></div>
+      <div><span className="eyebrow">One-time link · expires in 7 days</span><h2>Share portal access with {invitedTenant.full_name}</h2><p>The raw token is shown through a five-minute HTTP-only handoff and is stored in the database only as a hash. Replaced, disabled, consumed, or expired links are never displayed.</p><code>{inviteUrl}</code></div>
       <CopyPortalLink url={inviteUrl} whatsappUrl={whatsappUrl}/>
     </section>}
 
