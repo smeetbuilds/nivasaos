@@ -4,25 +4,17 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { schema, applyMigrations } from "../lib/schema.js";
-import { applySecurityMigrations } from "../lib/schema/security-migrations.js";
-import { applyReleaseMigrations } from "../lib/schema/release-migrations.js";
-import { applyLocalizationMigrations } from "../lib/schema/localization-migrations.js";
-import { applyMoneyMigrations } from "../lib/schema/money-migrations.js";
+import { migrateDatabase } from "../lib/schema/migrate.js";
 
 const assert = (value, message) => { if (!value) throw new Error(message); };
 const tokenHash = (token) => createHash("sha256").update(token).digest("hex");
 const tokens = { owner: randomBytes(32).toString("base64url"), staff: randomBytes(32).toString("base64url"), tenant: randomBytes(32).toString("base64url") };
+const MOBILE_RECORD_ROUTES = ["/units", "/payments", "/audit", "/reports"];
 
 function seed(filename) {
   const db = new Database(filename, { create: true, strict: true });
   try {
-    db.exec(schema);
-    applySecurityMigrations(db);
-    applyMigrations(db);
-    applyReleaseMigrations(db);
-    applyLocalizationMigrations(db);
-    applyMoneyMigrations(db);
+    migrateDatabase(db, { applicationVersion: "cross-browser-gate" });
     const ownerId = Number(db.query("INSERT INTO users(name,email,password_hash,role,status) VALUES('Browser Owner','owner.matrix@example.test','session-only','owner','active')").run().lastInsertRowid);
     const staffId = Number(db.query("INSERT INTO users(name,email,password_hash,role,status) VALUES('Scoped Staff','staff.matrix@example.test','session-only','staff','active')").run().lastInsertRowid);
     for (const [key, value] of Object.entries({ installation_state: `complete:${ownerId}`, company_name: "Browser Matrix Workspace", default_country: "Test Country", default_currency: "USD", timezone: "UTC", primary_module: "residential" })) db.query("INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES($key,$value,CURRENT_TIMESTAMP)").run({ key, value });
@@ -32,7 +24,9 @@ function seed(filename) {
     const tenantId = Number(db.query("INSERT INTO tenants(property_id,full_name,email,phone,identity_number,emergency_contact,status) VALUES($propertyId,'Matrix Resident','resident.matrix@example.test','15550002001','MATRIX-ID','Support · 15550002002','active')").run({ propertyId }).lastInsertRowid);
     const leaseId = Number(db.query("INSERT INTO leases(property_id,unit_id,reference,start_date,end_date,monthly_rent,deposit,billing_day,status) VALUES($propertyId,$unitId,'LEASE-MATRIX','2026-07-01','2027-06-30',1250,1250,1,'active')").run({ propertyId, unitId }).lastInsertRowid);
     db.query("INSERT INTO lease_tenants(lease_id,tenant_id,is_primary) VALUES($leaseId,$tenantId,1)").run({ leaseId, tenantId });
-    db.query("INSERT INTO invoices(property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,amount_paid,rent_period,charge_type,status) VALUES($propertyId,$leaseId,$tenantId,'INV-MATRIX','Monthly rent','2026-07-01','2026-07-05',1250,250,'2026-07','rent','part_paid')").run({ propertyId, leaseId, tenantId });
+    const invoiceId = Number(db.query("INSERT INTO invoices(property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,amount_paid,rent_period,charge_type,status) VALUES($propertyId,$leaseId,$tenantId,'INV-MATRIX','Monthly rent','2026-07-01','2026-07-05',1250,250,'2026-07','rent','part_paid')").run({ propertyId, leaseId, tenantId }).lastInsertRowid);
+    db.query("INSERT INTO payments(property_id,invoice_id,tenant_id,reference,amount,method,paid_at,recorded_by) VALUES($propertyId,$invoiceId,$tenantId,'PAY-MATRIX',250,'bank_transfer','2026-07-02',$ownerId)").run({ propertyId, invoiceId, tenantId, ownerId });
+    db.query("INSERT INTO audit_log(actor_user_id,property_id,action,entity_type,entity_id,summary,metadata) VALUES($ownerId,$propertyId,'create','payment',1,'Recorded browser matrix payment','{\"source\":\"cross-browser\"}')").run({ ownerId, propertyId });
     db.query("INSERT INTO user_properties(user_id,property_id) VALUES($staffId,$propertyId)").run({ staffId, propertyId });
     for (const permission of ["portfolio.view", "people.manage", "maintenance.manage"]) db.query("INSERT INTO permission_grants(user_id,property_id,permission,allowed,granted_by) VALUES($staffId,$propertyId,$permission,1,$ownerId)").run({ staffId, propertyId, permission, ownerId });
     const accountId = Number(db.query("INSERT INTO tenant_accounts(tenant_id,email,status,password_hash,invited_at,activated_at) VALUES($tenantId,'resident.matrix@example.test','active','session-only',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)").run({ tenantId }).lastInsertRowid);
@@ -72,6 +66,22 @@ async function assertPage(page, route) {
   assert(await page.locator("h1").count() === 1, `${route}: expected one h1`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   assert(overflow <= 1, `${route}: horizontal overflow ${overflow}px`);
+}
+
+async function assertMobileRecordRoute(page, baseUrl, route, engineName, artifacts) {
+  await assertPage(page, `${baseUrl}${route}`);
+  const table = page.locator("table[data-mobile-cards]").first();
+  assert(await table.count() === 1, `${route}: mobile record table is missing`);
+  const row = table.locator("tbody tr").first();
+  assert(await row.count() === 1, `${route}: seeded mobile record row is missing`);
+  const layout = await row.evaluate((node) => ({ display: getComputedStyle(node).display, overflow: node.closest(".table-wrap")?.scrollWidth - node.closest(".table-wrap")?.clientWidth }));
+  assert(layout.display === "grid", `${route}: mobile record row did not render as a grid`);
+  assert(Number(layout.overflow || 0) <= 1, `${route}: mobile table container overflows by ${layout.overflow}px`);
+  const labels = await row.locator("td[data-label]").count();
+  assert(labels > 0, `${route}: mobile record cells have no explicit labels`);
+  const filename = `${engineName}-${route.slice(1)}-mobile.png`;
+  await page.screenshot({ path: path.join(artifacts, filename), fullPage: true });
+  return filename;
 }
 
 async function structuredValidationAndFocus(page, baseUrl) {
@@ -162,8 +172,8 @@ try {
       owner.on("console", (message) => { if (["error", "assert"].includes(message.type())) runtimeErrors.push(`owner:console.${message.type()}:${message.text()}`); });
       await structuredValidationAndFocus(owner, baseUrl);
       await owner.setViewportSize({ width: 390, height: 844 });
-      await assertPage(owner, `${baseUrl}/invoices`);
-      await owner.screenshot({ path: path.join(artifacts, `${engineName}-invoices-mobile.png`), fullPage: true });
+      const screenshots = [];
+      for (const route of MOBILE_RECORD_ROUTES) screenshots.push(await assertMobileRecordRoute(owner, baseUrl, route, engineName, artifacts));
       await ownerContext.close();
 
       const staffContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -178,14 +188,16 @@ try {
       const tenant = await tenantContext.newPage();
       tenant.on("pageerror", (error) => runtimeErrors.push(`tenant:${error.message}`));
       await tenantWorkflow(tenant, baseUrl, databasePath);
-      await tenant.screenshot({ path: path.join(artifacts, `${engineName}-tenant-portal-mobile.png`), fullPage: true });
+      const tenantScreenshot = `${engineName}-tenant-portal-mobile.png`;
+      await tenant.screenshot({ path: path.join(artifacts, tenantScreenshot), fullPage: true });
+      screenshots.push(tenantScreenshot);
       await tenantContext.close();
       assert(runtimeErrors.length === 0, `${engineName}: ${runtimeErrors.join(" | ")}`);
-      report.engines.push({ engine: engineName, status: "passed", screenshots: [`${engineName}-invoices-mobile.png`, `${engineName}-tenant-portal-mobile.png`] });
+      report.engines.push({ engine: engineName, status: "passed", screenshots });
     } finally { await browser.close(); }
   }
   await fsp.writeFile(path.join(artifacts, "cross-browser-report.json"), JSON.stringify(report, null, 2), { mode: 0o600 });
-  console.log("Firefox and WebKit owner, delegated-staff, tenant-workflow, keyboard-focus, structured-validation, and mobile screenshot checks passed.");
+  console.log("Firefox and WebKit owner, delegated-staff, tenant-workflow, keyboard-focus, structured-validation, lower-frequency mobile records, and screenshot checks passed.");
 } catch (error) {
   report.failure = error instanceof Error ? error.message : String(error);
   await fsp.mkdir(artifacts, { recursive: true }).catch(() => {});

@@ -1,8 +1,8 @@
 .git
-.github
 .githooks
 .next
 node_modules
+artifacts
 .env
 .env.*
 !.env.example

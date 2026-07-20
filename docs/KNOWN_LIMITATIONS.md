@@ -10,7 +10,7 @@ The existence of a gate or CI configuration is not evidence that a particular co
 - `bun run gate`;
 - `bun run gate:browser` with retained Chrome evidence;
 - `bun run gate:cross-browser` with retained Firefox and WebKit evidence;
-- `bun run gate:container`;
+- `bun run gate:container` with the measured runtime-image size;
 - completed screen-reader and physical-device evidence validated by `bun run certify:device`;
 - deployment-specific permission and recovery acceptance checks.
 
@@ -53,9 +53,18 @@ Do not:
 
 - run multiple application replicas against one SQLite file;
 - place the SQLite database on an unsupported shared network filesystem;
+- run concurrent upgrade processes against one database;
 - treat the current architecture as a multi-region SaaS control plane.
 
 Multi-instance or very high-volume deployments require a planned PostgreSQL and durable-worker evolution.
+
+## Migration ownership and rollback
+
+Application startup and `bun run migrate` share one ordered migration registry and durable `schema_migrations` ledger. Browser and schema tests may invoke migration implementation modules directly, but they do not own production migration order.
+
+A migration is recorded only after its apply function succeeds. This is not the same as a universally transactional SQLite rollback: some DDL or compatibility work may complete before an interruption. Migration modules are therefore required to remain idempotent, and operators must stop the application, create a verified backup, migrate once, run acceptance checks, and restore the backup if the release fails.
+
+The registry is not a distributed migration lock. It relies on the documented single-instance maintenance window.
 
 ## Local file storage
 
@@ -89,9 +98,15 @@ Bulk operations are designed for the current single-instance scale boundary. The
 
 Long-running integrations should be implemented as optional workers rather than blocking web requests.
 
+## Runtime-image boundary
+
+The Dockerfile now uses Next.js standalone output and a pinned Bun Alpine runtime, and the container gate rejects development-source leakage and images above the configured size ceiling. This source contract does not establish the actual image size for an untested commit.
+
+Image size varies by architecture, base-image revision, Docker version and layer accounting. Production approval requires a successful `bun run gate:container` result for the exact commit, including the reported image ID and byte size.
+
 ## Verification boundary
 
-`bun run gate` provides repository-owned static, schema, authorization, integration, build, runtime and recovery verification. `bun run gate:browser` adds Chrome accessibility-tree and rendered-route checks. `bun run gate:cross-browser` adds Firefox and WebKit coverage for structured rejection, modal keyboard focus, property-scoped staff access, forbidden-route denial, tenant invoice visibility, tenant profile persistence, mobile overflow and screenshots.
+`bun run gate` provides repository-owned static, schema, migration, authorization, integration, build, runtime and recovery verification. `bun run gate:browser` adds Chrome accessibility-tree and rendered-route checks. `bun run gate:cross-browser` adds Firefox and WebKit coverage for structured rejection, modal keyboard focus, property-scoped staff access, forbidden-route denial, tenant invoice visibility, tenant profile persistence, mobile overflow and screenshots.
 
 These automated jobs are not physical-device or manual screen-reader certification. They do not prove production fonts and white-label assets, every permission combination, every locale, mobile browser chrome, virtual keyboards, safe-area insets, touch behavior, VoiceOver or TalkBack output. Those claims require completed evidence for the exact commit through the documented certification workflow.
 

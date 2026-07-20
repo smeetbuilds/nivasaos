@@ -36,6 +36,10 @@ if (!failures.length) {
     '["webkit", playwright.webkit]',
     '"portfolio.view", "people.manage", "maintenance.manage"',
     'nivasa_tenant_session',
+    'migrateDatabase(db, { applicationVersion: "cross-browser-gate" })',
+    'const MOBILE_RECORD_ROUTES = ["/units", "/payments", "/audit", "/reports"]',
+    'assertMobileRecordRoute',
+    'table[data-mobile-cards]',
     'structuredValidationAndFocus',
     'delegatedStaff',
     'tenantWorkflow',
@@ -59,4 +63,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Pinned Firefox/WebKit automation, delegated and tenant workflows, modal focus ownership, manual screen-reader matrix, and physical-device evidence contracts are verified.");
+console.log("Pinned Firefox/WebKit automation, centralized fixture migrations, delegated and tenant workflows, lower-frequency mobile screenshots, modal focus ownership, manual screen-reader matrix, and physical-device evidence contracts are verified.");
