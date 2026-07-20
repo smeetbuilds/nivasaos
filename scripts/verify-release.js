@@ -34,41 +34,43 @@ if (!/"lockfileVersion"\s*:\s*1/.test(lockfile) || !/"next"\s*:\s*"16\.2\.10"/.t
 const privateRegistryMarkers = ["applied-" + "caas", "internal.api." + "openai.org"];
 if (privateRegistryMarkers.some((marker) => lockfile.includes(marker))) failures.push("bun.lock: contains environment-specific registry URLs");
 
-const requiredScripts = [
-  "setup:token", "audit:dependencies", "verify:secrets", "verify:source", "verify:schema", "verify:auth", "verify:operations", "verify:ui",
+const expectedVerifyScripts = [
+  "verify:secrets", "verify:source", "verify:schema", "verify:auth", "verify:operations", "verify:ui",
   "verify:authorization", "verify:portal", "verify:handover", "verify:modules", "verify:verticals", "verify:integration",
-  "verify:compose", "verify:hardening", "verify:release", "gate", "gate:container"
+  "verify:compose", "verify:hardening", "verify:release"
 ];
+const requiredScripts = ["setup:token", "audit:dependencies", ...expectedVerifyScripts, "gate", "gate:container"];
 for (const script of requiredScripts) if (!packageJson.scripts?.[script]) failures.push(`package.json: missing ${script}`);
-const mandatoryVerifySteps = requiredScripts.filter((script) => script.startsWith("verify:") && script !== "verify:release");
-for (const script of mandatoryVerifySteps) {
-  if (!packageJson.scripts.verify.includes(`bun run ${script}`)) failures.push(`package.json: repository verify chain omits ${script}`);
+const expectedVerifyChain = expectedVerifyScripts.map((script) => `bun run ${script}`);
+const actualVerifySource = String(packageJson.scripts.verify || "").trim();
+const actualVerifyChain = actualVerifySource ? actualVerifySource.split(/\s*&&\s*/).map((step) => step.trim()) : [];
+if (JSON.stringify(actualVerifyChain) !== JSON.stringify(expectedVerifyChain)) {
+  failures.push(`package.json: verify chain must exactly equal ${expectedVerifyChain.join(" && ")}`);
 }
-if (!packageJson.scripts.verify.startsWith("bun run verify:secrets")) failures.push("package.json: secret verification must run first");
-if (!packageJson.scripts.verify.endsWith("bun run verify:release")) failures.push("package.json: release verification must run last");
+if (/[|;]|\btrue\b|\bexit\s+0\b/.test(actualVerifySource)) failures.push("package.json: verify chain contains an unsafe shell bypass or extra operator");
 if (packageJson.scripts["audit:dependencies"] !== "bun audit --prod --audit-level=high") failures.push("package.json: dependency audit contract changed");
 if (packageJson.scripts.build !== "bun --bun next build --webpack") failures.push("package.json: production build contract changed");
 
 const contracts = {
   "app/api/lease-documents/[id]/route.js": ["canDeliverLeaseDocument", "hasPermission", "archived_at IS NULL"],
   "lib/document-authorization.js": ["handover.manage", "authorize(permission", "propertyId"],
-  "app/(workspace)/tenant-portal/workspace.js": ["PORTAL_HANDOFF_COOKIE", "hashPortalToken(parsedHandoff.token)", "ti.consumed_at IS NULL", "portal/activate"],
-  "lib/portal-handoff.js": ["nivasa_portal_invite_handoff", "httpOnly: true", "sameSite: \"strict\"", "PORTAL_HANDOFF_MAX_AGE_SECONDS"],
+  "app/(workspace)/tenant-portal/workspace.js": ["PORTAL_HANDOFF_COOKIE", "hashPortalToken(parsedHandoff.token)", "ti.consumed_at IS NULL", "ti.expires_at>$now", "portal/activate"],
+  "lib/portal-handoff.js": ["createHmac", "timingSafeEqual", "portal_handoff_secret", "httpOnly: true", "sameSite: \"strict\""],
   "lib/actions/auth.js": ["loginThrottleContext", "verifyPasswordOrDummy", "retryAfter === 0 && !legacyLocked ?", "passwordInput", "legacyLocked", "assertTimeZone", "installation_state"],
   "lib/actions/portal-accounts.js": ["PORTAL_HANDOFF_COOKIE", "encodePortalInviteHandoff", "retryAfter === 0 && !legacyLocked ?", "passwordInput", "legacyLocked"],
   "lib/actions/finance-payments.js": ["moneyInput", "toMinorUnits", "currentPaid"],
-  "lib/actions/portal-payments.js": ["moneyInput", "toMinorUnits", "status='pending'"],
-  "lib/actions/portal-deposits.js": ["moneyInput", "CAST(ROUND(amount*100) AS INTEGER)"],
+  "lib/actions/portal-payments.js": ["SUM(CAST(ROUND(amount * 100) AS INTEGER))", "MAX_MONEY_MINOR", "status='pending'"],
+  "lib/actions/portal-deposits.js": ["MAX_MONEY_MINOR", "heldMinor < 0", "CAST(ROUND(amount*100) AS INTEGER)"],
   "lib/actions/verticals.js": ["validDate(zoned[1]", "sameStatus", "currentStatus", "created.length", "(0[1-9]|1[0-2])"],
   "lib/actions/settings.js": ["invalidateWorkspaceLocalizationCache"],
   "lib/db.js": ["applySecurityMigrations(database)", "applyReleaseMigrations(database)", "applyLocalizationMigrations(database)", "applyMoneyMigrations(database)"],
   "lib/schema/core-schema.js": ["CREATE TABLE IF NOT EXISTS auth_rate_limits"],
   "lib/schema/localization-migrations.js": ["SELECT 'timezone','UTC'"],
-  "lib/schema/money-migrations.js": ["MONEY_COLUMNS", "assertHistoricalScale", "money_scale_contract", "two decimal places"],
-  "lib/auth-rate-limit.js": ["auth_rate_limits", "dimension: \"account\"", "dimension: \"network\"", "expiredLock"],
+  "lib/schema/money-migrations.js": ["MONEY_SCALE_CONTRACT_VERSION", "MONEY_SCALE_TOLERANCE", "currentContract !== MONEY_SCALE_CONTRACT_VERSION", "assertHistoricalScale"],
+  "lib/auth-rate-limit.js": ["auth_rate_limits", "dimension: \"account\"", "dimension: \"network\"", "windowStarted <= nowMs - item.windowMs"],
   "lib/money.js": ["MAX_MONEY_MINOR", "NUMERIC_NOISE_TOLERANCE", "BigInt", "supported monetary range"],
-  "lib/workspace-localization.js": ["zonedDateTimeToIso", "invalidateWorkspaceLocalizationCache"],
-  "lib/format.js": ["normalizedTimestamp", "workspaceTimeZone"],
+  "lib/workspace-localization.js": ["zonedDateTimeToIso", "setUTCFullYear", "invalidateWorkspaceLocalizationCache"],
+  "lib/format.js": ["normalizedTimestamp", "catch { return \"\"; }", "workspaceTimeZone"],
   "scripts/verify-integration.js": ["applyLocalizationMigrations", "applyMoneyMigrations", "historical sub-cent values", "PRAGMA integrity_check"],
   "scripts/verify-audit-hardening.js": ["canDeliverLeaseDocument", "Large adjacent cent values", "Money helper rejected ordinary SQLite REAL aggregate noise", "'nonce-${nonce}'"],
   "scripts/verify-compose.js": ["caddy:2.11.4-alpine", "request nonce CSP", "exact security-header values"],
@@ -98,4 +100,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, complete repository gate, registry hygiene, behavioral authorization, throttled authentication, exact money precision, localization migrations, workflow integrity, nonce CSP, container, dependency, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, registry hygiene, authenticated handoff, throttled authentication, bounded money migrations, scale-safe aggregates, localization, workflow integrity, nonce CSP, container, dependency, governance, and release contracts are intact.");
