@@ -25,6 +25,7 @@ if (canDeliverLeaseDocument(null, () => true)) failures.push("Lease document aut
 requireText("app/api/lease-documents/[id]/route.js", "canDeliverLeaseDocument", "Lease document route does not invoke the tested authorization contract");
 requireText("app/api/lease-documents/[id]/route.js", "archived_at IS NULL", "Archived lease documents remain downloadable by staff");
 requireText("lib/actions/verticals.js", "validDate(zoned[1]", "Offset timestamps do not validate their calendar-date prefix");
+requireText("lib/actions/verticals.js", "return zonedDateTimeToIso(date)", "Browser workflow date-times are not stored as UTC ISO values");
 requireText("lib/actions/verticals.js", "sameStatus", "Housekeeping note-only updates are not supported safely");
 requireText("lib/actions/verticals.js", "AND status=$currentStatus", "Vertical state transitions are not conditional");
 requireText("lib/actions/verticals.js", "(0[1-9]|1[0-2])", "Monthly billing periods do not validate month range");
@@ -92,4 +93,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Behavioral authorization, authenticated handoff, retained throttling, scale-safe aggregates, versioned money migration, resilient time rendering, nonce CSP, Compose loading, and repository cleanup are verified.");
+console.log("Behavioral authorization, authenticated handoff, retained throttling, scale-safe aggregates, versioned money migration, UTC workflow storage, resilient time rendering, nonce CSP, Compose loading, and repository cleanup are verified.");
