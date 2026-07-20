@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import { schema, applyMigrations } from "../lib/schema.js";
 import { applySecurityMigrations } from "../lib/schema/security-migrations.js";
 import { applyReleaseMigrations } from "../lib/schema/release-migrations.js";
+import { applyLocalizationMigrations } from "../lib/schema/localization-migrations.js";
 import { applyMoneyMigrations } from "../lib/schema/money-migrations.js";
 
 const filename = path.join(tmpdir(), `nivasaos-integration-${randomBytes(8).toString("hex")}.sqlite`);
@@ -22,7 +23,9 @@ try {
   applySecurityMigrations(db);
   applyMigrations(db);
   applyReleaseMigrations(db);
+  applyLocalizationMigrations(db);
   applyMoneyMigrations(db);
+  assert(db.query("SELECT value FROM settings WHERE key='timezone'").get()?.value === "UTC", "Legacy workspace did not receive an explicit UTC timezone");
 
   const ownerId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Owner','owner@example.com','test','owner')").run().lastInsertRowid);
   const staffId = Number(db.query("INSERT INTO users (name,email,password_hash,role) VALUES ('Finance Staff','staff@example.com','test','staff')").run().lastInsertRowid);
@@ -43,6 +46,10 @@ try {
     () => db.query("UPDATE units SET monthly_rate=1000.001 WHERE id=$unitId").run({ unitId }),
     "Database accepted a money value with more than two decimals"
   );
+  expectFailure(
+    () => db.query("UPDATE units SET monthly_rate=0.000000001 WHERE id=$unitId").run({ unitId }),
+    "Database accepted a tiny sub-cent money value"
+  );
   const tenantId = Number(db.query("INSERT INTO tenants (property_id,full_name,email,phone,status) VALUES ($propertyId,'Resident','resident@example.com','1000000000','active')").run({ propertyId }).lastInsertRowid);
   const leaseId = Number(db.query("INSERT INTO leases (property_id,unit_id,reference,start_date,monthly_rent,deposit,billing_day,status) VALUES ($propertyId,$unitId,'LEASE-INTEGRATION','2026-07-01',1000,800,1,'active')").run({ propertyId, unitId }).lastInsertRowid);
   db.query("INSERT INTO lease_tenants (lease_id,tenant_id,is_primary) VALUES ($leaseId,$tenantId,1)").run({ leaseId, tenantId });
@@ -58,10 +65,10 @@ try {
   })();
   assert(db.query("SELECT status FROM invoices WHERE id=$invoiceId").get({ invoiceId }).status === "part_paid", "Payment approval did not update invoice state");
 
-  db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-RECEIVED','received',800,'bank_transfer','2026-07-01',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
-  db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-REFUND','refund',100,'bank_transfer','2026-07-20',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
-  const held = Number(db.query("SELECT SUM(CASE transaction_type WHEN 'received' THEN amount WHEN 'credit' THEN amount ELSE -amount END) held FROM deposit_transactions WHERE lease_id=$leaseId").get({ leaseId }).held);
-  assert(held === 700, "Deposit ledger did not preserve the held balance");
+  db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-RECEIVED','received',800.01,'bank_transfer','2026-07-01',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
+  db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-REFUND','refund',100.01,'bank_transfer','2026-07-20',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
+  const heldMinor = Number(db.query(`SELECT SUM(CASE transaction_type WHEN 'received' THEN CAST(ROUND(amount*100) AS INTEGER) WHEN 'credit' THEN CAST(ROUND(amount*100) AS INTEGER) ELSE -CAST(ROUND(amount*100) AS INTEGER) END) held FROM deposit_transactions WHERE lease_id=$leaseId`).get({ leaseId }).held);
+  assert(heldMinor === 70000, "Deposit ledger did not preserve its integer-minor-unit balance");
 
   const serviceId = Number(db.query("INSERT INTO service_catalog (property_id,name,category,billing_frequency,amount,created_by) VALUES ($propertyId,'Parking','parking','monthly',50,$ownerId)").run({ propertyId, ownerId }).lastInsertRowid);
   const subscriptionId = Number(db.query("INSERT INTO lease_services (property_id,lease_id,tenant_id,service_id,start_date,created_by) VALUES ($propertyId,$leaseId,$tenantId,$serviceId,'2026-07-01',$ownerId)").run({ propertyId, leaseId, tenantId, serviceId, ownerId }).lastInsertRowid);
@@ -99,7 +106,19 @@ try {
   assert(Number(permittedInvoices.total) === 2, "Permission-scoped financial read did not isolate the assigned property");
   assert(db.query("PRAGMA integrity_check").get().integrity_check === "ok", "SQLite integrity check failed");
 
-  console.log("End-to-end SQLite workflow verified: scoped staff access, exact money scale, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
+  const invalidHistory = new Database(":memory:", { strict: true });
+  invalidHistory.exec(schema);
+  applySecurityMigrations(invalidHistory);
+  applyMigrations(invalidHistory);
+  applyReleaseMigrations(invalidHistory);
+  applyLocalizationMigrations(invalidHistory);
+  const invalidProperty = Number(invalidHistory.query("INSERT INTO properties (name,type,module_id,address,currency) VALUES ('Invalid Money','apartment','residential','1 Invalid Road','USD')").run().lastInsertRowid);
+  invalidHistory.query("INSERT INTO units (property_id,name,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'Invalid Unit',1,10.001,0,'available')").run({ propertyId: invalidProperty });
+  expectFailure(() => applyMoneyMigrations(invalidHistory), "Money migration accepted historical sub-cent values");
+  assert(!invalidHistory.query("SELECT 1 FROM settings WHERE key='money_scale_contract'").get(), "Blocked money migration still recorded the precision contract");
+  invalidHistory.close(true);
+
+  console.log("End-to-end SQLite workflow verified: explicit timezone migration, scoped staff access, exact money scale and preflight, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
 } finally {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
