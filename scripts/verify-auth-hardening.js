@@ -32,16 +32,20 @@ for (const source of [authAction, portalAction]) {
   if (!source.includes("recordAuthFailure")) failures.push("A login surface does not persist failed abuse attempts");
   if (!source.includes("verifyPasswordOrDummy")) failures.push("A login surface does not equalize unknown-account password verification");
   if (!source.includes("legacyLocked")) failures.push("A login surface ignores an outstanding legacy account lock");
+  if (!source.includes("retryAfter === 0 && !legacyLocked ? verifyPasswordOrDummy")) failures.push("A blocked login surface still performs password hashing");
 }
 for (const contract of [
   "dimension: \"account\"", "dimension: \"network\"", "createHash(\"sha256\")", "isIP", "NIVASA_TRUST_PROXY_HEADERS",
-  "x-nivasa-client-ip", "clearAccountThrottle", "expiredLock"
+  "x-nivasa-client-ip", "clearAccountThrottle", "windowStarted <= nowMs - item.windowMs"
 ]) if (!throttle.includes(contract)) failures.push(`Auth rate limiter is missing ${contract}`);
+if (throttle.includes("resetWindow = expiredLock")) failures.push("Auth rate limiter resets counters when only the lock interval expires");
 for (const spoofable of ["x-forwarded-for", "x-real-ip"]) if (throttle.includes(spoofable)) failures.push(`Auth rate limiter trusts spoofable ${spoofable}`);
 if (!caddy.includes("header_up X-Nivasa-Client-IP {remote_host}")) failures.push("Caddy does not overwrite the trusted client-address header");
 if (!production.includes('NIVASA_TRUST_PROXY_HEADERS: "1"')) failures.push("Production app does not explicitly enable trusted proxy metadata");
 if (portalAction.includes("&invite=${encodeURIComponent(token)}") || portalAction.includes("?invite=${encodeURIComponent(token)}")) failures.push("Portal token is still placed in a redirect query string");
-if (!handoff.includes("httpOnly: true") || !handoff.includes("sameSite: \"strict\"")) failures.push("Portal token handoff cookie is not HTTP-only and SameSite=Strict");
+for (const contract of ["createHmac", "timingSafeEqual", "portal_handoff_secret", "httpOnly: true", "sameSite: \"strict\""]) {
+  if (!handoff.includes(contract)) failures.push(`Portal handoff is missing ${contract}`);
+}
 
 const legacy = new Database(":memory:", { strict: true });
 legacy.exec(`
@@ -71,4 +75,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Timing-equalized login, shared password parsing, trusted-proxy throttling, legacy lock preservation, secure portal handoff, single-source schema, and atomic installation are verified.");
+console.log("Timing-equalized login, retained throttle counters, shared password parsing, trusted-proxy throttling, legacy lock preservation, authenticated portal handoff, single-source schema, and atomic installation are verified.");
