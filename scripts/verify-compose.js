@@ -60,10 +60,10 @@ if (!failures.length) {
   for (const needle of exactNextHeaders) if (!nextConfig.includes(needle)) failures.push(`next.config.mjs: missing secure contract ${needle}`);
   if (nextConfig.includes("Content-Security-Policy")) failures.push("next.config.mjs: static headers must not override the nonce CSP");
 
-  for (const needle of ["randomUUID", "requestHeaders.set(\"x-nonce\", nonce)", "'nonce-${nonce}'", "'strict-dynamic'", "default-src 'self'", "frame-ancestors 'none'", "object-src 'none'", "upgrade-insecure-requests"]) {
+  for (const needle of ["randomUUID", "requestHeaders.set(\"x-nonce\", nonce)", "'nonce-${nonce}'", "'strict-dynamic'", "default-src 'self'", "style-src-attr 'unsafe-inline'", "frame-ancestors 'none'", "object-src 'none'", "upgrade-insecure-requests"]) {
     if (!proxy.includes(needle)) failures.push(`proxy.js: missing nonce CSP contract ${needle}`);
   }
-  if (proxy.includes("default-src *") || proxy.includes("script-src *")) failures.push("proxy.js: wildcard executable/content sources are not allowed");
+  if (proxy.includes("default-src *") || proxy.includes("script-src *") || proxy.includes("style-src *")) failures.push("proxy.js: wildcard executable/content sources are not allowed");
   if (!rootLayout.includes("await headers()")) failures.push("app/layout.js: nonce-based CSP requires dynamic rendering");
 
   for (const source of productionDocs) {
@@ -88,4 +88,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical Compose topology, exact security-header values, request nonce CSP, dynamic rendering, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");
+console.log("Canonical Compose topology, exact security-header values, nonce-restricted scripts and style elements, scoped dynamic style attributes, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");

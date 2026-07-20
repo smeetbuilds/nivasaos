@@ -65,6 +65,12 @@ try {
   })();
   assert(db.query("SELECT status FROM invoices WHERE id=$invoiceId").get({ invoiceId }).status === "part_paid", "Payment approval did not update invoice state");
 
+  const pendingNoiseInvoiceId = Number(db.query("INSERT INTO invoices (property_id,lease_id,tenant_id,number,description,issue_date,due_date,amount,charge_type,status) VALUES ($propertyId,$leaseId,$tenantId,'INV-PENDING-NOISE','Pending cent aggregation','2026-07-01','2026-07-05',1,'manual','issued')").run({ propertyId, leaseId, tenantId }).lastInsertRowid);
+  db.query("INSERT INTO payment_submissions (property_id,tenant_id,invoice_id,amount,method,paid_at,proof_path) VALUES ($propertyId,$tenantId,$invoiceId,0.10,'bank_transfer','2026-07-02','proof-a.png')").run({ propertyId, tenantId, invoiceId: pendingNoiseInvoiceId });
+  db.query("INSERT INTO payment_submissions (property_id,tenant_id,invoice_id,amount,method,paid_at,proof_path) VALUES ($propertyId,$tenantId,$invoiceId,0.20,'bank_transfer','2026-07-02','proof-b.png')").run({ propertyId, tenantId, invoiceId: pendingNoiseInvoiceId });
+  const pendingNoiseMinor = Number(db.query("SELECT COALESCE(SUM(CAST(ROUND(amount * 100) AS INTEGER)),0) total FROM payment_submissions WHERE invoice_id=$invoiceId AND status='pending'").get({ invoiceId: pendingNoiseInvoiceId }).total);
+  assert(pendingNoiseMinor === 30, "Pending payment submissions did not aggregate 0.10 and 0.20 as exactly 30 cents");
+
   db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-RECEIVED','received',800.01,'bank_transfer','2026-07-01',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
   db.query("INSERT INTO deposit_transactions (property_id,lease_id,tenant_id,reference,transaction_type,amount,method,transacted_at,recorded_by) VALUES ($propertyId,$leaseId,$tenantId,'DEP-REFUND','refund',100.01,'bank_transfer','2026-07-20',$ownerId)").run({ propertyId, leaseId, tenantId, ownerId });
   const heldMinor = Number(db.query(`SELECT SUM(CASE transaction_type WHEN 'received' THEN CAST(ROUND(amount*100) AS INTEGER) WHEN 'credit' THEN CAST(ROUND(amount*100) AS INTEGER) ELSE -CAST(ROUND(amount*100) AS INTEGER) END) held FROM deposit_transactions WHERE lease_id=$leaseId`).get({ leaseId }).held);
@@ -87,7 +93,7 @@ try {
 
   db.query("INSERT INTO audit_log (actor_user_id,property_id,action,entity_type,entity_id,summary) VALUES ($ownerId,$propertyId,'record','payment',$invoiceId,'Approved integration payment')").run({ ownerId, propertyId, invoiceId });
   const permittedInvoices = db.query(`SELECT COUNT(*) total FROM invoices i WHERE i.property_id IN (SELECT up.property_id FROM user_properties up JOIN permission_grants pg ON pg.user_id=up.user_id AND pg.property_id=up.property_id WHERE up.user_id=$staffId AND pg.permission='payments.manage' AND pg.allowed=1)`).get({ staffId });
-  assert(Number(permittedInvoices.total) === 2, "Permission-scoped financial read did not isolate the assigned property");
+  assert(Number(permittedInvoices.total) === 3, "Permission-scoped financial read did not isolate the assigned property");
   assert(db.query("PRAGMA integrity_check").get().integrity_check === "ok", "SQLite integrity check failed");
 
   const residueHistory = new Database(":memory:", { strict: true });
@@ -107,7 +113,7 @@ try {
   assert(!invalidHistory.query("SELECT 1 FROM settings WHERE key='money_scale_contract'").get(), "Blocked money migration still recorded the precision contract");
   invalidHistory.close(true);
 
-  console.log("End-to-end SQLite workflow verified: explicit timezone migration, versioned tolerant money preflight, scoped staff access, exact scale triggers, lease billing, payment approval, deposits, services, visitors, reservations, audit, and integrity constraints.");
+  console.log("End-to-end SQLite workflow verified: explicit timezone migration, versioned tolerant money preflight, scoped staff access, exact pending-payment and deposit minor-unit aggregation, scale triggers, lease billing, payment approval, services, visitors, reservations, audit, and integrity constraints.");
 } finally {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
