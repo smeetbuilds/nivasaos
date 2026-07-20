@@ -26,14 +26,16 @@ Operators must reconcile and approve payments. A payment-gateway extension may a
 
 Primary financial inputs and reconciliations use integer minor-unit calculations. Database triggers reject protected values with more than two decimal places or outside the supported range, and every protected legacy decimal column has an integer minor-unit mirror that is backfilled and synchronized by migration triggers.
 
-For backward compatibility, NivasaOS 1.1 still retains historical SQLite `REAL` monetary columns beside each exact minor-unit mirror. The mirror materially improves integrity and provides a migration path, but reports and extensions are not yet universally switched to the integer representation. Binary floating-point can therefore remain visible to direct database tools and code that explicitly reads the legacy decimal column.
+Occupancy-value, arrears and collection reports and their CSV export now aggregate and serialize only the integer mirrors. The export includes both an exact two-decimal string and the raw minor-unit integer for reconciliation.
+
+For backward compatibility, NivasaOS 1.1 still retains historical SQLite `REAL` monetary columns beside each exact minor-unit mirror. Operational reports no longer depend on those decimal columns, but some non-reporting screens, extension code and direct database integrations may still explicitly read them. Binary floating-point can therefore remain visible outside the certified reporting/export path.
 
 Before NivasaOS is positioned as a high-assurance accounting ledger, the remaining staged migration must:
 
-1. reconcile the new minor-unit mirrors with operator-reviewed variance reports;
-2. switch every report, extension and export to the integer representation;
+1. reconcile the minor-unit mirrors with operator-reviewed variance reports;
+2. switch every remaining non-reporting screen and extension contract to the integer representation;
 3. introduce currency-scale metadata for currencies that do not use two decimal places;
-4. remove legacy `REAL` columns only after backup, restore and reporting certification.
+4. remove legacy `REAL` columns only after backup, restore, integration and reporting certification.
 
 Until then, use NivasaOS as an operational ledger with independent bank/accounting reconciliation, not as the sole statutory accounting record.
 
@@ -95,15 +97,15 @@ These automated jobs are not physical-device or manual screen-reader certificati
 
 ## User-facing validation
 
-High-use property, person, agreement, invoice, rent-run, late-fee, payment and maintenance modals now return structured server-action errors, preserve non-sensitive submitted values, keep the dialog open, mark invalid controls and focus the first actionable error.
+High-use property, unit, person, agreement, invoice, rent-run, late-fee, payment and maintenance modals now return structured server-action errors, preserve non-sensitive submitted values, keep the dialog open, mark invalid controls and focus the first actionable error.
 
 Browser security prevents file inputs from being repopulated. A rejected payment form therefore preserves its other values but requires the operator to reselect the proof file. Small status-transition, confirmation and lower-frequency administration forms still use the established redirect or shared-error-boundary behavior until migrated individually.
 
 ## Responsive data density
 
-The people, agreement and invoice registers use purpose-built labeled record cards at mobile widths and are checked for horizontal overflow by the browser gates.
+People, agreements, invoices, units, payments, visitor movements, audit history and report arrears use purpose-built labeled record cards at mobile widths. The generic record-card contract keeps table headings available to assistive technology while presenting each cell with an explicit visual label.
 
-Other wide operational tables may still use horizontal scrolling on small screens. Those lower-frequency registers should be converted incrementally with the same rendered mobile and accessibility certification.
+Some remaining specialist administration and handover tables may still use horizontal scrolling on small screens. Those lowest-frequency registers should be converted incrementally with rendered mobile and accessibility certification rather than through a blanket CSS transformation.
 
 ## Transitional CSS architecture
 
