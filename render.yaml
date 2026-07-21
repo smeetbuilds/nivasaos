@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: nivasaos
+    runtime: docker
+    plan: starter
+    numInstances: 1
+    autoDeployTrigger: "off"
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: HOSTNAME
+        value: "0.0.0.0"
+      - key: NIVASA_DB_PATH
+        value: /app/storage/nivasaos.sqlite
+      - key: NIVASA_UPLOAD_DIR
+        value: /app/storage/uploads
+      - key: NIVASA_BACKUP_DIR
+        value: /app/storage/backups
+      - key: NIVASA_INSTALL_TOKEN
+        sync: false
+    disk:
+      name: nivasaos-data
+      mountPath: /app/storage
+      sizeGB: 1
