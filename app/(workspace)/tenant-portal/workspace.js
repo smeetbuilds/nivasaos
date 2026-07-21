@@ -1,29 +1,22 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
-import {
-  createTenantInviteAction,
-  disableTenantPortalAction,
-  recordDepositTransactionAction,
-  reviewPaymentSubmissionAction
-} from "@/app/actions";
 import { requireUser } from "@/lib/auth";
 import { all, get } from "@/lib/db";
-import { dateLabel, dateTimeLabel, money, today } from "@/lib/format";
+import { money } from "@/lib/format";
 import { extensions } from "@/lib/extensions";
 import { configuredPublicUrl } from "@/lib/runtime-config";
 import { hashPortalToken } from "@/lib/tenant-auth";
 import { PORTAL_HANDOFF_COOKIE, readPortalInviteHandoff } from "@/lib/portal-handoff";
 import { hasPortfolioPermission } from "@/lib/permission-core";
-import { hasPermission, permissionScopeSql } from "@/lib/permissions";
+import { permissionScopeSql } from "@/lib/permissions";
 import { fromMinorUnits, toMinorUnits } from "@/lib/money";
 import PageHeader from "@/components/PageHeader";
 import OpenModalButton from "@/components/OpenModalButton";
-import ModalForm from "@/components/ModalForm";
 import Flash from "@/components/Flash";
-import Badge from "@/components/Badge";
-import Empty from "@/components/Empty";
-import CopyPortalLink from "@/components/CopyPortalLink";
 import Icon from "@/components/Icon";
+import PortalAccessSection from "./PortalAccessSection";
+import PortalPaymentSection from "./PortalPaymentSection";
+import PortalDepositSection from "./PortalDepositSection";
 
 export const metadata = { title: "Tenant portal" };
 
@@ -137,61 +130,22 @@ export default async function TenantPortalAdminPage({ searchParams }) {
         {canManageDeposits && <OpenModalButton target="deposit-modal" icon="deposit">Record deposit</OpenModalButton>}
       </>}
     />
-
-    {inviteUrl && invitedTenant && <section className="portal-share-banner panel">
-      <div><span className="eyebrow">One-time link · expires in 7 days</span><h2>Share portal access with {invitedTenant.full_name}</h2><p>The raw token is shown through a five-minute authenticated HTTP-only handoff and is stored in the database only as a hash. Replaced, disabled, consumed, or expired links are never displayed.</p><code>{inviteUrl}</code></div>
-      <CopyPortalLink url={inviteUrl} whatsappUrl={whatsappUrl}/>
-    </section>}
-
-    <section className="metric-grid portal-admin-metrics">
-      {canManageAccess && <article className="metric-card"><span>Active portal accounts</span><strong>{activeAccounts}</strong><small>Residents who have set a password</small></article>}
-      {canManageAccess && <article className="metric-card"><span>Invitations pending</span><strong>{invitedAccounts}</strong><small>Activation links not completed</small></article>}
-      {canReviewPayments && <article className="metric-card risk"><span>Payments awaiting review</span><strong>{pending.length}</strong><small>Proof submissions do not alter balances until approved</small></article>}
-      {canManageDeposits && <article className="metric-card"><span>Deposit ledger balance</span><strong>{depositMetric}</strong><small>Received and credits minus refunds and debits</small></article>}
-    </section>
-
-    {canManageAccess && <section className="panel">
-      <div className="panel-head"><div><span className="eyebrow">Access control</span><h2>Resident accounts</h2></div><span className="muted">{portalTenants.length} tenant profiles</span></div>
-      {portalTenants.length ? <div className="table-wrap"><table><thead><tr><th>Tenant</th><th>Home</th><th>Portal status</th><th>Last access</th><th>Actions</th></tr></thead><tbody>{portalTenants.map((tenant) => {
-        const canManageTenant = hasPermission(user, "portal.manage", tenant.property_id);
-        return <tr key={tenant.id} className={Number(tenant.id) === selectedTenantId ? "is-highlighted" : ""}>
-          <td><div className="person-cell"><span className="avatar">{tenant.full_name[0]}</span><span><strong>{tenant.full_name}</strong><small>{tenant.email || "Email required for portal"}</small></span></div></td>
-          <td>{tenant.property_name}<small>{tenant.unit_name || "No active lease"}</small></td>
-          <td><Badge tone={tenant.portal_status === "invited" && !tenant.invite_active ? "overdue" : tenant.portal_status || "inactive"}>{tenant.portal_status === "invited" && !tenant.invite_active ? "Invite expired" : tenant.portal_status || "Not enabled"}</Badge></td>
-          <td>{tenant.last_login_at ? dateTimeLabel(tenant.last_login_at) : "Never"}<small>{tenant.activated_at ? `Activated ${dateLabel(tenant.activated_at.slice(0, 10))}` : tenant.invited_at ? `Invited ${dateLabel(tenant.invited_at.slice(0, 10))}` : "—"}</small></td>
-          <td><div className="table-actions">
-            {canManageTenant && tenant.email ? <form action={createTenantInviteAction}><input type="hidden" name="tenantId" value={tenant.id}/><button className="text-button"><Icon name="portal" size={16}/>{tenant.portal_status === "active" ? "Reset link" : "Create invite"}</button></form> : <span className="muted">{tenant.email ? "No access" : "Add email first"}</span>}
-            {canManageTenant && tenant.account_id && tenant.portal_status !== "disabled" && <form action={disableTenantPortalAction}><input type="hidden" name="tenantId" value={tenant.id}/><button className="text-button danger-text">Disable</button></form>}
-          </div></td>
-        </tr>;
-      })}</tbody></table></div> : <Empty icon="tenant" title="No tenant profiles" text="No resident profiles are available within your portal-management scope."/>}
-    </section>}
-
-    {canReviewPayments && <section className="panel portal-review-panel">
-      <div className="panel-head"><div><span className="eyebrow">Controlled reconciliation</span><h2>Tenant payment submissions</h2></div><Badge tone={pending.length ? "overdue" : "paid"}>{pending.length ? `${pending.length} pending` : "Queue clear"}</Badge></div>
-      {submissions.length ? <div className="table-wrap"><table><thead><tr><th>Submitted</th><th>Tenant / invoice</th><th>Amount</th><th>Payment details</th><th>Status</th><th>Review</th></tr></thead><tbody>{submissions.map((item) => <tr key={item.id}>
-        <td>{dateTimeLabel(item.created_at)}<small>Paid {dateLabel(item.paid_at)}</small></td>
-        <td><strong>{item.tenant_name}</strong><small>{item.invoice_number || "No invoice"} · {item.property_name}</small></td>
-        <td><strong>{money(item.amount, item.currency)}</strong><small>{item.invoice_number ? `${money(item.invoice_balance, item.currency)} current balance` : ""}</small></td>
-        <td>{item.method.replaceAll("_", " ")}<small>{item.external_reference || "No external reference"}</small><a href={`/api/payment-submissions/${item.id}/proof`} className="text-link" target="_blank">View proof</a></td>
-        <td><Badge tone={item.status}>{item.status}</Badge>{item.review_note && <small>{item.review_note}</small>}</td>
-        <td>{item.status === "pending" ? <div className="table-actions"><form action={reviewPaymentSubmissionAction}><input type="hidden" name="submissionId" value={item.id}/><input type="hidden" name="decision" value="approved"/><button className="text-button">Approve</button></form><OpenModalButton target={`reject-submission-${item.id}`} className="text-button danger-text">Reject</OpenModalButton></div> : item.payment_id ? <Link className="text-link" href={`/api/proofs/${item.payment_id}`} target="_blank">Approved proof</Link> : <span className="muted">Reviewed</span>}</td>
-      </tr>)}</tbody></table></div> : <Empty icon="payment" title="No tenant payment submissions" text="No submitted proofs are available within your payment-review scope."/>}
-    </section>}
-
-    {canManageDeposits && <section className="panel">
-      <div className="panel-head"><div><span className="eyebrow">Refundable money</span><h2>Deposit transactions</h2></div><OpenModalButton target="deposit-modal" icon="plus" className="button secondary">Add transaction</OpenModalButton></div>
-      {deposits.length ? <div className="table-wrap"><table><thead><tr><th>Reference</th><th>Tenant / lease</th><th>Property / unit</th><th>Date</th><th>Type</th><th>Amount</th><th>Proof</th></tr></thead><tbody>{deposits.map((item) => <tr key={item.id}><td><strong>{item.reference}</strong></td><td>{item.tenant_name || "Lease-level"}<small>{item.lease_reference}</small></td><td>{item.property_name}<small>{item.unit_name}</small></td><td>{dateLabel(item.transacted_at)}</td><td><Badge tone={["received", "credit"].includes(item.transaction_type) ? "paid" : "overdue"}>{item.transaction_type}</Badge></td><td><strong>{heldSign(item.transaction_type) > 0 ? "+" : " "}{money(item.amount, item.currency)}</strong></td><td>{item.proof_path ? <a className="text-link" href={`/api/deposit-proofs/${item.id}`} target="_blank">View proof</a> : <span className="muted">None</span>}</td></tr>)}</tbody></table></div> : <Empty icon="deposit" title="No deposit activity" text="No deposit transactions are available within your deposit-management scope."/>}
-    </section>}
-
-    {canManageDeposits && <form action={recordDepositTransactionAction}><ModalForm id="deposit-modal" title="Record deposit transaction" description="Deposit records are separate from rent payments and remain visible to every tenant on the lease." submitLabel="Record transaction" pendingLabel="Recording…"><div className="modal-body">
-      <label><span>Active lease</span><select name="leaseId" required><option value="">Select lease</option>{leases.map((lease) => <option key={lease.id} value={lease.id}>{lease.property_name} · {lease.unit_name} · {lease.reference} · held {money(fromMinorUnits(Number(lease.held_minor || 0)), lease.currency)}</option>)}</select></label>
-      <label><span>Tenant attribution (optional)</span><select name="tenantId"><option value="">Lease-level transaction</option>{depositTenants.filter((tenant) => tenant.active_lease_id).map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} · {tenant.property_name} · {tenant.unit_name}</option)}</select><small>The server verifies the tenant belongs to the selected lease.</small></label>
-      <div className="field-grid two"><label><span>Transaction type</span><select name="transactionType"><option value="received">Deposit received</option><option value="refund">Deposit refund</option><option value="credit">Credit adjustment</option><option value="debit">Debit adjustment</option></select></label><label><span>Amount</span><input name="amount" type="number" min="0.01" step="0.01" required/></label></div>
-      <div className="field-grid two"><label><span>Method</span><select name="method">{methods.map((method) => <option key={method.id} value={method.id}>{method.label}</option>)}</select></label><label><span>Transaction date</span><input name="transactedAt" type="date" defaultValue={today()} required/></label></div>
-      <label><span>Proof (optional)</span><input type="file" name="proof" accept="image/jpeg,image/png,image/webp,application/pdf"/><small>JPG, PNG, WebP, or PDF up to 5 MB.</small></label><label><span>Notes</span><textarea name="notes" rows="3" placeholder="Refund reason, bank reference, deduction explanation, or handover note"/></label>
-    </div></ModalForm></form>}
-
-    {canReviewPayments && pending.map((item) => <form action={reviewPaymentSubmissionAction} key={`reject-${item.id}`}><ModalForm id={`reject-submission-${item.id}`} title={`Reject ${item.tenant_name}'s submission`} description="The proof remains in history, but no payment is created and the invoice balance is unchanged." submitLabel="Reject submission" pendingLabel="Rejecting…"><div className="modal-body"><input type="hidden" name="submissionId" value={item.id}/><input type="hidden" name="decision" value="rejected"/><div className="summary-box"><span>Submission</span><strong>{money(item.amount, item.currency)} · {item.invoice_number}</strong><small>{item.external_reference || "No external reference"}</small></div><label><span>Reason visible to tenant</span><textarea name="reviewNote" rows="4" required placeholder="Example: The transfer reference could not be matched. Please upload a clearer proof."/></label></div></ModalForm></form>)}
+    <PortalAccessSection
+      user={user}
+      canManageAccess={canManageAccess}
+      canReviewPayments={canReviewPayments}
+      canManageDeposits={canManageDeposits}
+      inviteUrl={inviteUrl}
+      invitedTenant={invitedTenant}
+      whatsappUrl={whatsappUrl}
+      activeAccounts={activeAccounts}
+      invitedAccounts={invitedAccounts}
+      pendingCount={pending.length}
+      depositMetric={depositMetric}
+      portalTenants={portalTenants}
+      selectedTenantId={selectedTenantId}
+    />
+    <PortalPaymentSection canReviewPayments={canReviewPayments} pending={pending} submissions={submissions}/>
+    <PortalDepositSection canManageDeposits={canManageDeposits} deposits={deposits} leases={leases} depositTenants={depositTenants} methods={methods}/>
   </>;
 }
