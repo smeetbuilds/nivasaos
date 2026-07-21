@@ -6,6 +6,8 @@ NivasaOS 1.1 lets one installation operate residential rentals, PG and co-living
 
 Built by [Aahav Labs](https://aahavlabs.in) and released under the MIT License.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fsmeetbuilds%2Fnivasaos)
+
 ## Project status
 
 The current `main` branch is a **technical preview** until its exact commit has passed the repository gate, production dependency audit, container gate, and deployment-specific browser acceptance checks. Do not use an uncertified commit as the sole system of record for real financial, identity, deposit, or legal-document data.
@@ -76,6 +78,16 @@ Portfolio-wide governance permissions include property creation, team management
 - Local authenticated file storage
 - Custom responsive CSS
 
+## Deployment options
+
+The supported production targets are:
+
+- **Render Blueprint** — Docker web service with one paid persistent disk and one instance.
+- **Self-hosted Docker Compose** — NivasaOS behind Caddy with automatic HTTPS.
+- **Existing reverse proxy** — one private NivasaOS container behind an operator-controlled HTTPS proxy.
+
+Read the complete [Render and self-hosted deployment guide](docs/DEPLOYMENT.md). The current SQLite architecture does not support Vercel-style ephemeral serverless filesystems, PHP-only shared hosting, or multiple application replicas.
+
 ## Fastest local evaluation
 
 Docker is the recommended path because it avoids installing Bun directly:
@@ -127,8 +139,8 @@ The included production Compose stack runs NivasaOS behind Caddy with automatic 
 git clone https://github.com/smeetbuilds/nivasaos.git
 cd nivasaos
 cp .env.production.example .env.production
-bun run setup:token
-# Copy the generated NIVASA_INSTALL_TOKEN line into .env.production,
+openssl rand -hex 32
+# Copy the generated token into .env.production,
 # then set NIVASA_DOMAIN and NIVASA_PUBLIC_URL.
 docker compose --env-file .env.production -f compose.production.yml up -d --build
 ```
@@ -139,7 +151,7 @@ Open the configured HTTPS URL and enter the installer token when creating the fi
 
 The application container is not exposed directly in the production Compose file. Only Caddy publishes ports 80 and 443.
 
-Read [Production release and deployment](docs/PRODUCTION_RELEASE.md) before launching a real portfolio.
+Read [Deployment](docs/DEPLOYMENT.md) and [Production release and deployment](docs/PRODUCTION_RELEASE.md) before launching a real portfolio.
 
 ## Environment variables
 
@@ -160,7 +172,7 @@ NIVASA_PUBLIC_URL=https://property.example.com
 NIVASA_INSTALL_TOKEN=<generated locally>
 ```
 
-`NIVASA_INSTALL_TOKEN` is required only while a production database has no owner account. `NIVASA_PUBLIC_URL` must be HTTPS and must not contain credentials, a path, query string, or fragment.
+`NIVASA_INSTALL_TOKEN` is required only while a production database has no owner account. `NIVASA_PUBLIC_URL` must be HTTPS and must not contain credentials, a path, query string, or fragment. On Render, NivasaOS uses the platform-provided `RENDER_EXTERNAL_URL` when `NIVASA_PUBLIC_URL` is not set; configure `NIVASA_PUBLIC_URL` explicitly when using a custom domain.
 
 The workspace timezone must be a valid IANA timezone such as `Asia/Kolkata` or `Europe/London`. Business dates and displayed timestamps use the configured workspace timezone.
 
@@ -190,7 +202,7 @@ Dependency advisory checks require registry access and are deliberately separate
 bun run audit:dependencies
 ```
 
-For Docker and Compose changes, also run:
+For Docker, Compose, or Render Blueprint changes, also run:
 
 ```bash
 bun run gate:container
