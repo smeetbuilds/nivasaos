@@ -117,7 +117,7 @@ async function runGate() {
     const database = new Database(databasePath, { strict: true });
     database.query("INSERT OR REPLACE INTO settings (key,value,updated_at) VALUES ('gate_restore_marker','before-backup',CURRENT_TIMESTAMP)").run();
     database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-    database.close(true);
+    database.close(false);
     await fsp.writeFile(proofPath, "before-backup", { mode: 0o600 });
 
     await command([bun, "run", "backup", "--", "--output", archivePath], env);
@@ -128,13 +128,13 @@ async function runGate() {
     const mutated = new Database(databasePath, { strict: true });
     mutated.query("UPDATE settings SET value='mutated' WHERE key='gate_restore_marker'").run();
     mutated.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-    mutated.close(true);
+    mutated.close(false);
     await fsp.writeFile(proofPath, "mutated", { mode: 0o600 });
 
     await command([bun, "run", "restore", "--", archivePath, "--force"], env);
     const restored = new Database(databasePath, { readonly: true, strict: true });
     const marker = restored.query("SELECT value FROM settings WHERE key='gate_restore_marker'").get();
-    restored.close(true);
+    restored.close(false);
     if (marker?.value !== "before-backup") throw new Error("Database backup/restore did not recover the original marker");
     if ((await fsp.readFile(proofPath, "utf8")) !== "before-backup") throw new Error("Upload backup/restore did not recover the original file");
     console.log("Production database and upload restore checks passed.");
