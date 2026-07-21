@@ -17,7 +17,7 @@ function sourceFiles(directory) {
     return entry.isFile() && /\.(js|jsx)$/.test(entry.name) ? [child] : [];
   });
 }
-for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "render.yaml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "app/globals.css", "app/styles/progress.css", "app/styles/readability.css", "lib/runtime-config.js", ...progressPages, "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/DEPLOYMENT.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
+for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "render.yaml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "app/globals.css", "app/styles/progress.css", "app/styles/readability.css", "lib/runtime-config.js", ...progressPages, "scripts/start-container.js", "scripts/container-gate.js", ".circleci/config.yml", "README.md", "DEPLOYMENT.md", "docs/DEPLOYMENT.md", "docs/RENDER.md", "docs/SELF_HOSTING.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: missing`);
 }
 if (fs.existsSync("docker-compose.yml")) failures.push("docker-compose.yml: obsolete duplicate must be removed");
@@ -30,6 +30,7 @@ if (!failures.length) {
   const caddy = read("Caddyfile");
   const nextConfig = read("next.config.mjs");
   const runtimeConfig = read("lib/runtime-config.js");
+  const startContainer = read("scripts/start-container.js");
   const proxy = read("proxy.js");
   const rootLayout = read("app/layout.js");
   const globalStyles = read("app/globals.css");
@@ -38,10 +39,13 @@ if (!failures.length) {
   const containerGate = read("scripts/container-gate.js");
   const circleci = read(".circleci/config.yml");
   const readme = read("README.md");
+  const rootDeployment = read("DEPLOYMENT.md");
   const deploymentDocs = read("docs/DEPLOYMENT.md");
-  const productionDocs = [readme, deploymentDocs, read("docs/PRODUCTION_RELEASE.md"), read("docs/BACKUPS.md")];
+  const renderDocs = read("docs/RENDER.md");
+  const selfHostingDocs = read("docs/SELF_HOSTING.md");
+  const productionDocs = [readme, deploymentDocs, selfHostingDocs, read("docs/PRODUCTION_RELEASE.md"), read("docs/BACKUPS.md")];
 
-  for (const needle of ["FROM oven/bun:1.3.0", "bun install --frozen-lockfile", "bun run verify", "USER bun", 'CMD ["bun", "run", "start"]', "process.env.PORT"]) {
+  for (const needle of ["FROM oven/bun:1.3.0", "bun install --frozen-lockfile", "bun run verify", "ARG RENDER_EXTERNAL_HOSTNAME", "ARG NIVASA_PUBLIC_URL", "/app/scripts/start-container.js", "USER bun", 'CMD ["bun", "run", "start"]', "process.env.PORT"]) {
     if (!dockerfile.includes(needle)) failures.push(`Dockerfile: missing ${needle}`);
   }
   for (const needle of [
@@ -71,6 +75,9 @@ if (!failures.length) {
   if (!runtimeConfig.includes("RENDER_EXTERNAL_URL")) failures.push("lib/runtime-config.js: Render external URL fallback is missing");
   if (!runtimeConfig.includes("database?.close(false)")) failures.push("lib/runtime-config.js: installation probe must close cached SQLite statements safely");
   if (!nextConfig.includes("RENDER_EXTERNAL_HOSTNAME") || !nextConfig.includes("managedPlatformOrigins")) failures.push("next.config.mjs: managed Server Action origins are missing");
+  for (const needle of ["assertRuntimeEnvironment", "normalizedRuntimeEnvironment", 'bun, "run", "scripts/migrate.js"', 'bun, "server.js"']) {
+    if (!startContainer.includes(needle)) failures.push(`scripts/start-container.js: missing ${needle}`);
+  }
 
   const exactCaddyHeaders = [
     'Strict-Transport-Security "max-age=31536000; includeSubDomains"',
@@ -127,7 +134,10 @@ if (!failures.length) {
   for (const needle of ["Deploy to Render", "persistent disk", "NIVASA_INSTALL_TOKEN", "RENDER_EXTERNAL_URL", "Do not scale", "off-platform backup"]) {
     if (!deploymentDocs.includes(needle)) failures.push(`docs/DEPLOYMENT.md: missing ${needle}`);
   }
-  if (!readme.includes("render.com/deploy?repo=") || !readme.includes("docs/DEPLOYMENT.md")) failures.push("README.md: Render deployment button or deployment guide link is missing");
+  for (const needle of ["Deploy to Render", "docs/RENDER.md", "docs/SELF_HOSTING.md", "Render Free without persistent storage"]) if (!rootDeployment.includes(needle)) failures.push(`DEPLOYMENT.md: missing ${needle}`);
+  for (const needle of ["paid Render web-service instance", "exactly one service instance", "RENDER_EXTERNAL_URL", "pre-deploy migration command", "off-platform backups"]) if (!renderDocs.includes(needle)) failures.push(`docs/RENDER.md: missing ${needle}`);
+  for (const needle of ["compose.production.yml", "Caddy", "openssl rand -hex 32", "--env-file .env.production", "Stop the application before restoring", "Store encrypted backups off-host"]) if (!selfHostingDocs.includes(needle)) failures.push(`docs/SELF_HOSTING.md: missing ${needle}`);
+  if (!readme.includes("render.com/deploy?repo=") || (!readme.includes("docs/DEPLOYMENT.md") && !readme.includes("DEPLOYMENT.md"))) failures.push("README.md: Render deployment button or deployment guide link is missing");
 
   for (const needle of [".env", ".env.*", "!.env.example", "!.env.production.example"]) {
     if (!dockerignore.includes(needle)) failures.push(`.dockerignore: missing ${needle}`);
@@ -148,4 +158,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical self-hosted Compose and Render Blueprint topology, persistent single-instance storage, managed origin handling, exact security headers, nonce-restricted scripts and styles, CSP-safe dynamic widths, env interpolation, pinned runtimes, non-root certification, and deployment documentation are verified.");
+console.log("Canonical self-hosted Compose and Render Blueprint topology, validated startup migration, persistent single-instance storage, managed build/runtime origin handling, exact security headers, nonce-restricted scripts and styles, CSP-safe dynamic widths, env interpolation, pinned runtimes, non-root certification, and deployment documentation are verified.");
