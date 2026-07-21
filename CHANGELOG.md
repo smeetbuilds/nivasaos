@@ -35,6 +35,9 @@ All notable changes to NivasaOS will be documented here.
 - Added `.editorconfig`, CODEOWNERS, Dependabot configuration and a project Code of Conduct.
 - Removed the obsolete `docker-compose.yml` duplicate and non-diffable brand ZIP.
 - Clarified technical-preview, audit-history, money-schema and verification boundaries.
+- Added a Render Blueprint for a one-instance Docker service with persistent SQLite, upload, and backup storage.
+- Added a complete Render, Docker Compose, reverse-proxy, update, rollback, and off-host-backup deployment guide.
+- Added repository verification for Render storage, health, runtime URL, Server Action origin, and single-instance deployment contracts.
 
 ## 1.1.0 - 2026-07-18
 
