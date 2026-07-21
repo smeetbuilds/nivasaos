@@ -35,7 +35,7 @@ function seed(filename) {
     db.query("INSERT INTO tenant_sessions(account_id,token_hash,expires_at) VALUES($accountId,$hash,'2099-01-01T00:00:00.000Z')").run({ accountId, hash: tokenHash(tokens.tenant) });
     db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     return { propertyId, tenantId };
-  } finally { db.close(true); }
+  } finally { db.close(false); }
 }
 
 async function waitHealth(url, child) {
@@ -133,7 +133,7 @@ async function tenantWorkflow(page, baseUrl, databasePath) {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const db = new Database(databasePath, { readonly: true, strict: true });
     const value = db.query("SELECT phone FROM tenants WHERE email='resident.matrix@example.test'").get()?.phone;
-    db.close(true);
+    db.close(false);
     if (value === "15550002999") return;
     await Bun.sleep(100);
   }
