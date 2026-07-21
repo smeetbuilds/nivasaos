@@ -87,7 +87,12 @@ if (!failures.length) {
   for (const needle of ["bun run gate:browser", "Chrome DevTools Protocol", "accessibility tree", "artifacts/browser", "CircleCI"]) {
     if (!docs.includes(needle)) failures.push(`docs/BROWSER_TESTING.md: missing ${needle}`);
   }
-  for (const needle of ["bun run gate:browser", "purpose-built labeled record cards", "not a complete cross-browser suite"]) {
+  for (const needle of [
+    "bun run gate:browser",
+    "bun run gate:cross-browser",
+    "purpose-built labeled record cards",
+    "not physical-device or manual screen-reader certification"
+  ]) {
     if (!limitations.includes(needle)) failures.push(`docs/KNOWN_LIMITATIONS.md: missing ${needle}`);
   }
 }
@@ -96,4 +101,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Pinned authenticated browser execution, centralized fixture migrations, accessibility-tree inspection, runtime-error capture, mobile record-card behavior, evidence storage, and CircleCI wiring are verified.");
+console.log("Pinned authenticated Chrome execution, centralized fixture migrations, Firefox/WebKit boundary documentation, accessibility-tree inspection, runtime-error capture, mobile record-card behavior, evidence storage, and CircleCI wiring are verified.");
