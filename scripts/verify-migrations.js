@@ -7,6 +7,15 @@ import { MIGRATION_PLAN, migrateDatabase, migrationStatus } from "../lib/schema/
 
 const failures = [];
 const root = await fsp.mkdtemp(path.join(tmpdir(), "nivasaos-migrations-"));
+
+function closeVerifierDatabase(database) {
+  // Bun caches statements created through Database.query(). The verifier has
+  // already completed every assertion here, so allow cached statements to
+  // finish/finalize during connection shutdown instead of treating them as a
+  // migration lock failure.
+  database.close(false);
+}
+
 try {
   const filename = path.join(root, "database.sqlite");
   const database = new Database(filename, { create: true, strict: true });
@@ -23,7 +32,7 @@ try {
   if (!unitColumns.has("monthly_rate_minor") || !unitColumns.has("deposit_minor")) failures.push("Registry did not execute the money mirror migration");
   const quickCheck = database.query("PRAGMA quick_check").get();
   if (!quickCheck || Object.values(quickCheck)[0] !== "ok") failures.push("Migrated database failed SQLite quick_check");
-  database.close(true);
+  closeVerifierDatabase(database);
 
   const failureDatabase = new Database(path.join(root, "failure.sqlite"), { create: true, strict: true });
   let failed = false;
@@ -32,13 +41,13 @@ try {
   } catch { failed = true; }
   if (!failed) failures.push("Migration registry accepted an intentionally failing migration");
   if (Number(failureDatabase.query("SELECT COUNT(*) count FROM schema_migrations").get()?.count || 0) !== 0) failures.push("Failed migration was incorrectly recorded as applied");
-  failureDatabase.close(true);
+  closeVerifierDatabase(failureDatabase);
 
   const duplicateDatabase = new Database(path.join(root, "duplicate.sqlite"), { create: true, strict: true });
   let duplicateRejected = false;
   try { migrateDatabase(duplicateDatabase, { plan: [{ id: "900-duplicate-v1", apply() {} }, { id: "900-duplicate-v1", apply() {} }] }); } catch { duplicateRejected = true; }
   if (!duplicateRejected) failures.push("Duplicate migration ids were accepted");
-  duplicateDatabase.close(true);
+  closeVerifierDatabase(duplicateDatabase);
 
   const dbSource = fs.readFileSync("lib/db.js", "utf8");
   if (!dbSource.includes('import { migrateDatabase } from "@/lib/schema/migrate"')) failures.push("lib/db.js does not use the central migration registry");
