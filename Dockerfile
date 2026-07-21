@@ -15,7 +15,7 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000
 WORKDIR /app
-RUN mkdir -p /app/data /app/storage/uploads /app/backups /app/scripts/lib /app/lib/schema && chown -R bun:bun /app
+RUN mkdir -p /app/data /app/storage/uploads /app/storage/backups /app/backups /app/scripts/lib /app/lib/schema && chown -R bun:bun /app
 
 COPY --from=builder --chown=bun:bun /app/.next/standalone ./
 COPY --from=builder --chown=bun:bun /app/.next/static ./.next/static
@@ -31,5 +31,5 @@ USER bun
 EXPOSE 3000
 VOLUME ["/app/data", "/app/storage/uploads", "/app/backups"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD ["bun", "-e", "const r=await fetch('http://127.0.0.1:3000/api/health'); if(!r.ok) process.exit(1)"]
+  CMD ["bun", "-e", "const port=process.env.PORT||'3000'; const r=await fetch(`http://127.0.0.1:${port}/api/health`); if(!r.ok) process.exit(1)"]
 CMD ["bun", "run", "start"]
