@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { installAction } from "@/app/actions";
 import { DEFAULT_MODULE_ID, MODULE_CATALOG } from "@/lib/modules/catalog";
 import { verticalContract, requestLabel } from "@/lib/verticals";
@@ -24,18 +24,28 @@ function inputType(field) {
 }
 
 function detectedTimezone() {
-  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; }
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    return timezone === "Asia/Calcutta" ? "Asia/Kolkata" : timezone;
+  } catch {
+    return "UTC";
+  }
 }
 
 export default function InstallWizard({ installationProtection = { required: false, configured: true } }) {
   const [step, setStep] = useState(0);
   const [modules, setModules] = useState([DEFAULT_MODULE_ID]);
   const [primaryModule, setPrimaryModule] = useState(DEFAULT_MODULE_ID);
-  const [workspace, setWorkspace] = useState({ company: "", country: "", currency: "", timezone: detectedTimezone(), demo: false });
+  const [workspace, setWorkspace] = useState({ company: "", country: "", currency: "", timezone: "UTC", demo: false });
   const [owner, setOwner] = useState({ name: "", email: "", password: "" });
   const [installToken, setInstallToken] = useState("");
   const [moduleConfig, setModuleConfig] = useState({});
   const selectedModules = useMemo(() => MODULE_CATALOG.filter((module) => modules.includes(module.id)), [modules]);
+
+  useEffect(() => {
+    const timezone = detectedTimezone();
+    setWorkspace((current) => current.timezone === "UTC" && timezone !== "UTC" ? { ...current, timezone } : current);
+  }, []);
 
   function toggleModule(id) {
     setModules((current) => {

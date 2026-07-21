@@ -7,12 +7,19 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }
 ];
 
+const codespacesForwardingDomain = String(process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || "").trim();
+const codespacesOrigins = process.env.CODESPACES === "true" && codespacesForwardingDomain
+  ? [`*.${codespacesForwardingDomain}`]
+  : [];
+
 const nextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  allowedDevOrigins: codespacesOrigins,
   experimental: {
     serverActions: {
-      bodySizeLimit: "8mb"
+      bodySizeLimit: "8mb",
+      allowedOrigins: codespacesOrigins
     }
   },
   async headers() {
