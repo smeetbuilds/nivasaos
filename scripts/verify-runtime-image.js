@@ -18,8 +18,11 @@ for (const needle of [
   "/app/scripts/backup.js",
   "/app/scripts/restore.js",
   "/app/scripts/migrate.js",
+  "/app/scripts/start-container.js",
   "/app/scripts/create-install-token.js",
+  "/app/lib/runtime-config.js",
   "/app/lib/schema ./lib/schema",
+  "process.env.PORT||'3000'",
   "USER bun",
   'CMD ["bun", "run", "start"]'
 ]) if (!dockerfile.includes(needle)) failures.push(`Dockerfile: missing ${needle}`);
@@ -27,7 +30,7 @@ for (const needle of [
 for (const forbidden of ["COPY --from=deps /app/node_modules ./node_modules", "COPY . .", "/app/app ./app", "/app/components ./components", "/app/scripts/verify-source.js"]) {
   if (runtime.includes(forbidden)) failures.push(`Docker runtime stage contains development payload: ${forbidden}`);
 }
-if (!runtime.includes("p.scripts={start:'bun server.js'")) failures.push("Docker runtime package is not reduced to standalone and operator commands");
+if (!runtime.includes("p.scripts={start:'bun run scripts/start-container.js'")) failures.push("Docker runtime package does not use the validated standalone startup wrapper");
 if (packageJson.scripts?.migrate !== "bun run scripts/migrate.js") failures.push("package.json: migrate command is missing");
 if (/^\.github\/?$/m.test(dockerignore)) failures.push(".dockerignore excludes governance files required by the builder release verifier");
 for (const requiredIgnore of [".git", "node_modules", "artifacts", "storage/*.sqlite"]) if (!dockerignore.split(/\r?\n/).includes(requiredIgnore)) failures.push(`.dockerignore: missing ${requiredIgnore}`);
@@ -40,6 +43,8 @@ for (const needle of [
   'bun", "run", "migrate"',
   'bun", "run", "backup"',
   "/app/server.js",
+  "/app/scripts/start-container.js",
+  "/app/lib/runtime-config.js",
   "/app/scripts/verify-source.js",
   "Runtime image is",
   "Migration ledger is incomplete"
@@ -49,4 +54,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Standalone Next output, pinned Alpine Bun build/runtime, production-only copy boundaries, governance-aware build context, image-size ceiling, operator commands, migration ledger, and non-root container contract are verified.");
+console.log("Standalone Next output, validated startup migration, Render-compatible dynamic health port, pinned Alpine Bun build/runtime, production-only copy boundaries, governance-aware build context, image-size ceiling, operator commands, migration ledger, and non-root container contract are verified.");
