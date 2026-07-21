@@ -70,7 +70,7 @@ const contracts = {
   "lib/actions/verticals.js": ["validDate(zoned[1]", "sameStatus", "currentStatus", "created.length", "(0[1-9]|1[0-2])"],
   "lib/actions/settings.js": ["invalidateWorkspaceLocalizationCache"],
   "lib/action-state.js": ["runStructuredAction", "SENSITIVE_FIELD", "NEXT_REDIRECT", "serializedValues"],
-  "lib/db.js": ["migrateDatabase(database)", "database.close(true)"],
+  "lib/db.js": ["migrateDatabase(database)", "database.close(false)"],
   "lib/schema/migrate.js": ["MIGRATION_PLAN", "schema_migrations", "migrationStatus", "migrateDatabase", "050-money-contract-v4"],
   "lib/schema/core-schema.js": ["CREATE TABLE IF NOT EXISTS auth_rate_limits"],
   "lib/schema/localization-migrations.js": ["SELECT 'timezone','UTC'"],
@@ -80,6 +80,7 @@ const contracts = {
   "lib/workspace-localization.js": ["zonedDateTimeToIso", "setUTCFullYear", "invalidateWorkspaceLocalizationCache"],
   "lib/format.js": ["normalizedTimestamp", "moneyMinor", "fromMinorUnits", "workspaceTimeZone"],
   "lib/data.js": ["monthly_rate_minor", "amount_minor", "amount_paid_minor", "pay.amount_minor", "balance_minor", "total_minor"],
+  "scripts/migrate.js": ["migrateDatabase(database)", "database.close(false)"],
   "scripts/verify-integration.js": ["applyLocalizationMigrations", "applyMoneyMigrations", "historical sub-cent values", "PRAGMA integrity_check"],
   "scripts/verify-migrations.js": ["MIGRATION_PLAN", "Second migration run was not idempotent", "Failed migration was incorrectly recorded", "PRAGMA quick_check"],
   "scripts/verify-money-storage.js": ["money_minor_mirror_contract", "monthly_rate_minor", "Direct minor-unit mismatch", "Out-of-range money value"],
@@ -113,6 +114,14 @@ const contracts = {
 };
 for (const [file, values] of Object.entries(contracts)) requireText(file, values);
 
+for (const file of [
+  "lib/db.js", "scripts/migrate.js", "scripts/verify-auth-hardening.js", "scripts/verify-migrations.js",
+  "scripts/verify-money-storage.js", "scripts/verify-operations.js", "scripts/verify-integration.js",
+  "scripts/browser-gate.js", "scripts/cross-browser-gate.js", "scripts/local-gate.js", "scripts/lib/operations.js"
+]) {
+  if (read(file).includes(".close(true)")) failures.push(`${file}: strict Bun SQLite close can mask completed assertions or the original runtime error`);
+}
+
 if (read("Caddyfile").includes("Content-Security-Policy")) failures.push("Caddyfile: must not override the per-request nonce CSP");
 if (read("next.config.mjs").includes("Content-Security-Policy")) failures.push("next.config.mjs: static headers must not override the per-request nonce CSP");
 const responsive = read("app/styles/part-12.css");
@@ -124,4 +133,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, exact repository gate, centralized migration ownership, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, centralized migration ownership, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
