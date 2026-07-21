@@ -17,7 +17,7 @@ function sourceFiles(directory) {
     return entry.isFile() && /\.(js|jsx)$/.test(entry.name) ? [child] : [];
   });
 }
-for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "app/globals.css", "app/styles/progress.css", "app/styles/readability.css", ...progressPages, "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
+for (const file of ["Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "render.yaml", "Caddyfile", "next.config.mjs", "proxy.js", "app/layout.js", "app/globals.css", "app/styles/progress.css", "app/styles/readability.css", "lib/runtime-config.js", ...progressPages, "scripts/container-gate.js", ".circleci/config.yml", "README.md", "docs/DEPLOYMENT.md", "docs/PRODUCTION_RELEASE.md", "docs/BACKUPS.md"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: missing`);
 }
 if (fs.existsSync("docker-compose.yml")) failures.push("docker-compose.yml: obsolete duplicate must be removed");
@@ -26,8 +26,10 @@ if (!failures.length) {
   const dockerfile = read("Dockerfile");
   const local = read("compose.yml");
   const production = read("compose.production.yml");
+  const render = read("render.yaml");
   const caddy = read("Caddyfile");
   const nextConfig = read("next.config.mjs");
+  const runtimeConfig = read("lib/runtime-config.js");
   const proxy = read("proxy.js");
   const rootLayout = read("app/layout.js");
   const globalStyles = read("app/globals.css");
@@ -35,9 +37,11 @@ if (!failures.length) {
   const dockerignore = read(".dockerignore");
   const containerGate = read("scripts/container-gate.js");
   const circleci = read(".circleci/config.yml");
-  const productionDocs = [read("README.md"), read("docs/PRODUCTION_RELEASE.md"), read("docs/BACKUPS.md")];
+  const readme = read("README.md");
+  const deploymentDocs = read("docs/DEPLOYMENT.md");
+  const productionDocs = [readme, deploymentDocs, read("docs/PRODUCTION_RELEASE.md"), read("docs/BACKUPS.md")];
 
-  for (const needle of ["FROM oven/bun:1.3.0", "bun install --frozen-lockfile", "bun run verify", "USER bun", 'CMD ["bun", "run", "start"]']) {
+  for (const needle of ["FROM oven/bun:1.3.0", "bun install --frozen-lockfile", "bun run verify", "USER bun", 'CMD ["bun", "run", "start"]', "process.env.PORT"]) {
     if (!dockerfile.includes(needle)) failures.push(`Dockerfile: missing ${needle}`);
   }
   for (const needle of [
@@ -54,6 +58,19 @@ if (!failures.length) {
   if (/\n\s+ports:/.test(appBlock)) failures.push("compose.production.yml: application service must not publish a host port");
   if (/\n\s+env_file:/.test(caddyBlock)) failures.push("compose.production.yml: Caddy must not receive the application environment file");
   if (!caddyBlock.includes("NIVASA_DOMAIN:")) failures.push("compose.production.yml: Caddy must receive only its domain variable");
+
+  for (const needle of [
+    "type: web", "runtime: docker", "plan: starter", "numInstances: 1", 'autoDeployTrigger: "off"',
+    "healthCheckPath: /api/health", "dockerfilePath: ./Dockerfile", "dockerContext: .",
+    "NIVASA_DB_PATH", "/app/storage/nivasaos.sqlite", "NIVASA_UPLOAD_DIR", "/app/storage/uploads",
+    "NIVASA_BACKUP_DIR", "/app/storage/backups", "NIVASA_INSTALL_TOKEN", "sync: false",
+    "mountPath: /app/storage", "sizeGB: 1"
+  ]) if (!render.includes(needle)) failures.push(`render.yaml: missing ${needle}`);
+  if (render.includes("NIVASA_TRUST_PROXY_HEADERS")) failures.push("render.yaml: must not trust a client-supplied proxy header");
+  if (render.includes("preDeployCommand")) failures.push("render.yaml: disk migrations must not run in a pre-deploy instance without disk access");
+  if (!runtimeConfig.includes("RENDER_EXTERNAL_URL")) failures.push("lib/runtime-config.js: Render external URL fallback is missing");
+  if (!runtimeConfig.includes("database?.close(false)")) failures.push("lib/runtime-config.js: installation probe must close cached SQLite statements safely");
+  if (!nextConfig.includes("RENDER_EXTERNAL_HOSTNAME") || !nextConfig.includes("managedPlatformOrigins")) failures.push("next.config.mjs: managed Server Action origins are missing");
 
   const exactCaddyHeaders = [
     'Strict-Transport-Security "max-age=31536000; includeSubDomains"',
@@ -103,8 +120,15 @@ if (!failures.length) {
   }
 
   for (const source of productionDocs) {
-    if (!source.includes("docker compose --env-file .env.production -f compose.production.yml")) failures.push("Production documentation must load .env.production for Compose interpolation");
+    if (!source.includes("docker compose --env-file .env.production -f compose.production.yml") && !source.includes("--env-file .env.production")) {
+      failures.push("Production documentation must load .env.production for Compose interpolation");
+    }
   }
+  for (const needle of ["Deploy to Render", "persistent disk", "NIVASA_INSTALL_TOKEN", "RENDER_EXTERNAL_URL", "Do not scale", "off-platform backup"]) {
+    if (!deploymentDocs.includes(needle)) failures.push(`docs/DEPLOYMENT.md: missing ${needle}`);
+  }
+  if (!readme.includes("render.com/deploy?repo=") || !readme.includes("docs/DEPLOYMENT.md")) failures.push("README.md: Render deployment button or deployment guide link is missing");
+
   for (const needle of [".env", ".env.*", "!.env.example", "!.env.production.example"]) {
     if (!dockerignore.includes(needle)) failures.push(`.dockerignore: missing ${needle}`);
   }
@@ -124,4 +148,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Canonical Compose topology, exact security-header values, nonce-restricted scripts and styles, repository-wide CSP-safe dynamic widths, env-file interpolation, pinned runtimes, trusted proxy metadata, persistent volumes, non-root certification, and private application networking are verified.");
+console.log("Canonical self-hosted Compose and Render Blueprint topology, persistent single-instance storage, managed origin handling, exact security headers, nonce-restricted scripts and styles, CSP-safe dynamic widths, env interpolation, pinned runtimes, non-root certification, and deployment documentation are verified.");
