@@ -62,6 +62,6 @@ try {
 
   console.log("Versioned money migration, exact minor-unit backfill, dual-write synchronization, mismatch rejection, precision rejection, range rejection, and idempotency verified.");
 } finally {
-  db.close(true);
+  db.close(false);
   for (const suffix of ["", "-wal", "-shm"]) { try { fs.unlinkSync(filename + suffix); } catch {} }
 }
