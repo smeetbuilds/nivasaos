@@ -79,14 +79,14 @@ try {
     import fs from "node:fs";
     import path from "node:path";
     if (process.getuid?.() === 0) throw new Error("Application container must not run as root");
-    for (const required of ["/app/server.js","/app/scripts/backup.js","/app/scripts/restore.js","/app/scripts/migrate.js","/app/scripts/create-install-token.js"]) {
+    for (const required of ["/app/server.js","/app/scripts/start-container.js","/app/scripts/backup.js","/app/scripts/restore.js","/app/scripts/migrate.js","/app/scripts/create-install-token.js","/app/lib/runtime-config.js"]) {
       if (!fs.existsSync(required)) throw new Error(\`Required runtime operation is missing: \${required}\`);
     }
     for (const forbidden of ["/app/.git","/app/app","/app/components","/app/scripts/verify-source.js","/app/node_modules/.cache"]) {
       if (fs.existsSync(forbidden)) throw new Error(\`Development content leaked into runtime image: \${forbidden}\`);
     }
     const runtimePackage = JSON.parse(await Bun.file("/app/package.json").text());
-    if (runtimePackage.scripts?.start !== "bun server.js") throw new Error("Runtime package does not start the standalone server");
+    if (runtimePackage.scripts?.start !== "bun run scripts/start-container.js") throw new Error("Runtime package does not use the validated startup wrapper");
     const databasePath = process.env.NIVASA_DB_PATH;
     const uploadDirectory = process.env.NIVASA_UPLOAD_DIR;
     if (!databasePath || !uploadDirectory) throw new Error("Persistent container paths are not configured");
@@ -95,7 +95,7 @@ try {
     if (migrations < 6) throw new Error("Migration ledger is incomplete inside the runtime container");
     database.query("INSERT OR REPLACE INTO settings (key,value,updated_at) VALUES ($key,$value,CURRENT_TIMESTAMP)").run({ key: ${JSON.stringify(markerKey)}, value: ${JSON.stringify(markerValue)} });
     database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-    database.close();
+    database.close(false);
     await Bun.write(path.join(uploadDirectory, ${JSON.stringify(proofName)}), ${JSON.stringify(markerValue)});
   `);
   await compose(["exec", "-T", "nivasaos", "bun", "run", "migrate"]);
@@ -112,7 +112,7 @@ try {
     const database = new Database(process.env.NIVASA_DB_PATH, { readonly: true, strict: true });
     const marker = database.query("SELECT value FROM settings WHERE key=$key").get({ key: ${JSON.stringify(markerKey)} });
     const migrations = Number(database.query("SELECT COUNT(*) count FROM schema_migrations").get()?.count || 0);
-    database.close();
+    database.close(false);
     if (marker?.value !== ${JSON.stringify(markerValue)}) throw new Error("SQLite named volume did not persist across restart");
     if (migrations < 6) throw new Error("Migration ledger did not persist across restart");
     const proof = await Bun.file(path.join(process.env.NIVASA_UPLOAD_DIR, ${JSON.stringify(proofName)})).text();
@@ -120,7 +120,7 @@ try {
   `);
 
   await compose(["ps"]);
-  console.log(`Standalone Alpine image, size ceiling, operator commands, migration ledger, non-root runtime, health, and named-volume persistence passed (${imageBytes} bytes; ${firstHealth.latencyMs}ms / ${restartedHealth.latencyMs}ms).`);
+  console.log(`Standalone Alpine image, validated startup migration, size ceiling, operator commands, migration ledger, non-root runtime, health, and named-volume persistence passed (${imageBytes} bytes; ${firstHealth.latencyMs}ms / ${restartedHealth.latencyMs}ms).`);
 } catch (error) {
   await compose(["logs", "--no-color"], true);
   console.error(error instanceof Error ? error.message : String(error));
