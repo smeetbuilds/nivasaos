@@ -15,17 +15,19 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000
 WORKDIR /app
-RUN mkdir -p /app/data /app/storage/uploads /app/storage/backups /app/backups /app/scripts/lib /app/lib/schema && chown -R bun:bun /app
+RUN mkdir -p /app/data /app/storage/uploads /app/storage/backups /app/backups /app/scripts/lib /app/lib/schema /home/bun/.ssh \
+    && chmod 0700 /home/bun/.ssh \
+    && chown -R bun:bun /app /home/bun/.ssh
 
 COPY --from=builder --chown=bun:bun /app/.next/standalone ./
 COPY --from=builder --chown=bun:bun /app/.next/static ./.next/static
 COPY --from=builder --chown=bun:bun /app/public ./public
 COPY --from=builder --chown=bun:bun /app/package.json /app/jsconfig.json ./
-COPY --from=builder --chown=bun:bun /app/scripts/backup.js /app/scripts/restore.js /app/scripts/create-install-token.js /app/scripts/migrate.js ./scripts/
+COPY --from=builder --chown=bun:bun /app/scripts/backup.js /app/scripts/restore.js /app/scripts/create-install-token.js /app/scripts/migrate.js /app/scripts/start-container.js ./scripts/
 COPY --from=builder --chown=bun:bun /app/scripts/lib ./scripts/lib
-COPY --from=builder --chown=bun:bun /app/lib/runtime-paths.js /app/lib/schema.js ./lib/
+COPY --from=builder --chown=bun:bun /app/lib/runtime-paths.js /app/lib/runtime-config.js /app/lib/schema.js ./lib/
 COPY --from=builder --chown=bun:bun /app/lib/schema ./lib/schema
-RUN bun -e "const p=await Bun.file('package.json').json(); p.scripts={start:'bun server.js','setup:token':'bun run scripts/create-install-token.js',migrate:'bun run scripts/migrate.js',backup:'bun run scripts/backup.js',restore:'bun run scripts/restore.js'}; await Bun.write('package.json',JSON.stringify(p,null,2)+'\\n')"
+RUN bun -e "const p=await Bun.file('package.json').json(); p.scripts={start:'bun run scripts/start-container.js','setup:token':'bun run scripts/create-install-token.js',migrate:'bun run scripts/migrate.js',backup:'bun run scripts/backup.js',restore:'bun run scripts/restore.js'}; await Bun.write('package.json',JSON.stringify(p,null,2)+'\\n')"
 
 USER bun
 EXPOSE 3000
