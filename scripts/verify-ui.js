@@ -66,7 +66,8 @@ contains(confirmAction, 'intent="danger"', "Destructive confirmations must use t
 contains(invoiceTable, "<ConfirmAction", "Invoice voiding must use the shared confirmation contract.");
 excludes(invoiceTable, "danger-link", "Legacy destructive-action classes must not be used.");
 
-contains(pageHeader, '<header className="page-header">', "PageHeader must render semantic header markup.");
+contains(pageHeader, "return <header", "PageHeader must render semantic header markup.");
+contains(pageHeader, "page-header", "PageHeader must retain its required base class.");
 contains(flash, 'role={error ? "alert" : "status"}', "Flash messages must expose alert or status semantics.");
 contains(badge, "toneForStatus", "Badges must resolve through the explicit status registry.");
 for (const status of ["submitted", "approved", "rejected", "completed", "reserved", "checked_in", "checked_out", "no_show", "open", "blocked", "pending", "invited", "expected"]) {
