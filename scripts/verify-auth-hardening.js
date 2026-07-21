@@ -12,6 +12,7 @@ const throttle = fs.readFileSync("lib/auth-rate-limit.js", "utf8");
 const handoff = fs.readFileSync("lib/portal-handoff.js", "utf8");
 const schema = fs.readFileSync("lib/schema/core-schema.js", "utf8");
 const securityMigration = fs.readFileSync("lib/schema/security-migrations.js", "utf8");
+const migrationRegistry = fs.readFileSync("lib/schema/migrate.js", "utf8");
 const dbSource = fs.readFileSync("lib/db.js", "utf8");
 const caddy = fs.readFileSync("Caddyfile", "utf8");
 const production = fs.readFileSync("compose.production.yml", "utf8");
@@ -23,7 +24,8 @@ if (!schema.includes("CREATE TABLE IF NOT EXISTS auth_rate_limits")) failures.pu
 if (securityMigration.includes("CREATE TABLE IF NOT EXISTS auth_rate_limits")) failures.push("Security migration duplicates the auth_rate_limits schema");
 if (!authAction.includes("installation_state")) failures.push("Installation does not use a transactional installation marker");
 if (!authAction.includes("Installation is already complete or another installer is running")) failures.push("Concurrent installation failure is not normalized");
-if (!dbSource.includes("applySecurityMigrations(database)")) failures.push("Security migrations are not wired into database startup");
+if (!dbSource.includes("migrateDatabase(database)")) failures.push("Database startup does not delegate to the central migration registry");
+if (!migrationRegistry.includes("applySecurityMigrations")) failures.push("Central migration registry does not include security migrations");
 if (!authLibrary.includes("verifyPasswordOrDummy")) failures.push("Unknown accounts do not use a timing-equalized password check");
 if (!sharedAction.includes("export function passwordInput")) failures.push("Password input validation is not shared");
 for (const source of [authAction, portalAction]) {
@@ -77,10 +79,10 @@ legacy.query("INSERT INTO settings (key,value) VALUES ('installation_state','ins
 let duplicateRejected = false;
 try { legacy.query("INSERT INTO settings (key,value) VALUES ('installation_state','installing')").run(); } catch { duplicateRejected = true; }
 if (!duplicateRejected) failures.push("Installation marker is not unique");
-legacy.close(true);
+legacy.close(false);
 
 if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Timing-equalized login, retained throttle counters, shared password parsing, trusted-proxy throttling, explicit legacy-schema migration, authenticated portal handoff, single-source schema, and atomic installation are verified.");
+console.log("Timing-equalized login, retained throttle counters, shared password parsing, trusted-proxy throttling, explicit legacy-schema migration, authenticated portal handoff, centralized migration ownership, single-source schema, and atomic installation are verified.");
