@@ -4,6 +4,7 @@ const failures = [];
 const dockerfile = fs.readFileSync("Dockerfile", "utf8");
 const dockerignore = fs.readFileSync(".dockerignore", "utf8");
 const nextConfig = fs.readFileSync("next.config.mjs", "utf8");
+const containerStart = fs.readFileSync("scripts/start-container.js", "utf8");
 const containerGate = fs.readFileSync("scripts/container-gate.js", "utf8");
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const runtime = dockerfile.slice(dockerfile.indexOf("FROM oven/bun:1.3.0-alpine AS runner"));
@@ -12,6 +13,8 @@ if (!nextConfig.includes('output: "standalone"')) failures.push("next.config.mjs
 for (const needle of [
   "FROM oven/bun:1.3.0-alpine AS base",
   "FROM oven/bun:1.3.0-alpine AS runner",
+  "ARG RENDER_EXTERNAL_HOSTNAME",
+  "ARG NIVASA_PUBLIC_URL",
   "/app/.next/standalone ./",
   "/app/.next/static ./.next/static",
   "/app/public ./public",
@@ -31,6 +34,9 @@ for (const forbidden of ["COPY --from=deps /app/node_modules ./node_modules", "C
   if (runtime.includes(forbidden)) failures.push(`Docker runtime stage contains development payload: ${forbidden}`);
 }
 if (!runtime.includes("p.scripts={start:'bun run scripts/start-container.js'")) failures.push("Docker runtime package does not use the validated standalone startup wrapper");
+for (const needle of ["assertRuntimeEnvironment", "installationExists", "normalizedRuntimeEnvironment", 'bun, "run", "scripts/migrate.js"', 'bun, "server.js"']) {
+  if (!containerStart.includes(needle)) failures.push(`scripts/start-container.js: missing ${needle}`);
+}
 if (packageJson.scripts?.migrate !== "bun run scripts/migrate.js") failures.push("package.json: migrate command is missing");
 if (/^\.github\/?$/m.test(dockerignore)) failures.push(".dockerignore excludes governance files required by the builder release verifier");
 for (const requiredIgnore of [".git", "node_modules", "artifacts", "storage/*.sqlite"]) if (!dockerignore.split(/\r?\n/).includes(requiredIgnore)) failures.push(`.dockerignore: missing ${requiredIgnore}`);
@@ -54,4 +60,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Standalone Next output, validated startup migration, Render-compatible dynamic health port, pinned Alpine Bun build/runtime, production-only copy boundaries, governance-aware build context, image-size ceiling, operator commands, migration ledger, and non-root container contract are verified.");
+console.log("Standalone Next output, validated startup migration, build-time managed origins, Render-compatible dynamic health port, pinned Alpine Bun build/runtime, production-only copy boundaries, governance-aware build context, image-size ceiling, operator commands, migration ledger, and non-root container contract are verified.");
