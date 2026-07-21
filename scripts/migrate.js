@@ -18,6 +18,6 @@ try {
   console.error(`Migration failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;
 } finally {
-  database.close(true);
+  database.close(false);
 }
 process.exit(process.exitCode || 0);
