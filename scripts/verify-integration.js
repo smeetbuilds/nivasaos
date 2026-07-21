@@ -103,7 +103,7 @@ try {
   applyMoneyMigrations(residueHistory);
   applyMoneyMigrations(residueHistory);
   assert(residueHistory.query("SELECT value FROM settings WHERE key='money_scale_contract'").get()?.value === MONEY_SCALE_CONTRACT_VERSION, "Tolerant money migration did not persist its version marker");
-  residueHistory.close(true);
+  residueHistory.close(false);
 
   const invalidHistory = new Database(":memory:", { strict: true });
   prepareLegacy(invalidHistory);
@@ -111,7 +111,7 @@ try {
   invalidHistory.query("INSERT INTO units (property_id,name,capacity,monthly_rate,deposit,status) VALUES ($propertyId,'Invalid Unit',1,10.001,0,'available')").run({ propertyId: invalidProperty });
   expectFailure(() => applyMoneyMigrations(invalidHistory), "Money migration accepted historical sub-cent values");
   assert(!invalidHistory.query("SELECT 1 FROM settings WHERE key='money_scale_contract'").get(), "Blocked money migration still recorded the precision contract");
-  invalidHistory.close(true);
+  invalidHistory.close(false);
 
   console.log("End-to-end SQLite workflow verified: explicit timezone migration, versioned tolerant money preflight, scoped staff access, exact pending-payment and deposit minor-unit aggregation, scale triggers, lease billing, payment approval, services, visitors, reservations, audit, and integrity constraints.");
 } finally {
