@@ -5,10 +5,12 @@ const failures = [];
 const read = (file) => fs.readFileSync(file, "utf8");
 const requiredFiles = [
   "render.yaml",
-  "DEPLOYMENT.md",
-  "docs/RENDER.md",
-  "docs/SELF_HOSTING.md",
+  "README.md",
+  "docs/DEPLOYMENT.md",
+  "docs/BACKUPS.md",
+  ".env.production.example",
   "Dockerfile",
+  "next.config.mjs",
   "scripts/start-container.js",
   "lib/runtime-config.js"
 ];
@@ -16,19 +18,23 @@ for (const file of requiredFiles) if (!fs.existsSync(file)) failures.push(`${fil
 
 if (!failures.length) {
   const render = read("render.yaml");
+  const readme = read("README.md");
+  const deploymentDocs = read("docs/DEPLOYMENT.md");
+  const backupDocs = read("docs/BACKUPS.md");
+  const productionEnv = read(".env.production.example");
   const dockerfile = read("Dockerfile");
+  const nextConfig = read("next.config.mjs");
   const start = read("scripts/start-container.js");
-  const renderDocs = read("docs/RENDER.md");
-  const selfHostDocs = read("docs/SELF_HOSTING.md");
-  const deployment = read("DEPLOYMENT.md");
 
   for (const needle of [
+    "type: web",
     "runtime: docker",
     "plan: starter",
     "numInstances: 1",
-    "autoDeployTrigger:",
-    "off",
+    'autoDeployTrigger: "off"',
     "healthCheckPath: /api/health",
+    "dockerfilePath: ./Dockerfile",
+    "dockerContext: .",
     "mountPath: /app/storage",
     "sizeGB: 1",
     "value: /app/storage/nivasaos.sqlite",
@@ -38,6 +44,7 @@ if (!failures.length) {
   ]) if (!render.includes(needle)) failures.push(`render.yaml: missing ${needle}`);
   if (render.includes("plan: free")) failures.push("render.yaml: SQLite deployment must not use Render Free");
   if (render.includes("NIVASA_TRUST_PROXY_HEADERS")) failures.push("render.yaml: must not trust proxy client headers that Render does not overwrite into the NivasaOS header contract");
+  if (render.includes("preDeployCommand")) failures.push("render.yaml: disk migrations must not run in a pre-deploy instance without disk access");
 
   for (const needle of [
     "/app/scripts/start-container.js",
@@ -54,6 +61,10 @@ if (!failures.length) {
     'Bun.spawn([bun, "run", "scripts/migrate.js"]',
     'Bun.spawn([bun, "server.js"]'
   ]) if (!start.includes(needle)) failures.push(`scripts/start-container.js: missing ${needle}`);
+
+  for (const needle of ["RENDER_EXTERNAL_HOSTNAME", "managedPlatformOrigins", "allowedOrigins: serverActionOrigins"]) {
+    if (!nextConfig.includes(needle)) failures.push(`next.config.mjs: missing ${needle}`);
+  }
 
   const renderEnv = normalizedRuntimeEnvironment({
     RENDER: "true",
@@ -77,27 +88,29 @@ if (!failures.length) {
   if (customDomain.NIVASA_PUBLIC_URL !== "https://property.example.com") failures.push("Explicit custom domain does not override Render's default URL");
 
   for (const needle of [
-    "Free web-service plan does not support persistent disks",
-    "exactly one service instance",
-    "autoDeployTrigger: off",
-    "pre-deploy instances cannot access the attached persistent disk",
+    "Render Blueprint deployment",
+    "persistent disk requires a paid Render web-service instance",
+    "Run exactly **one** NivasaOS application instance",
+    "automatic deployment to `off`",
+    "cannot be accessed by build or pre-deploy instances",
     "NIVASA_PUBLIC_URL=https://property.example.com",
     "bun run backup",
-    "bun run restore"
-  ]) if (!renderDocs.includes(needle)) failures.push(`docs/RENDER.md: missing ${needle}`);
-
-  for (const needle of [
-    "compose.production.yml",
+    "Self-hosted Docker Compose",
     "openssl rand -hex 32",
-    "docker compose --env-file .env.production -f compose.production.yml",
+    "--env-file .env.production",
     "remove `NIVASA_INSTALL_TOKEN`",
-    "bun run backup",
-    "bun run restore",
-    "PHP/cPanel shared hosting is not sufficient"
-  ]) if (!selfHostDocs.includes(needle)) failures.push(`docs/SELF_HOSTING.md: missing ${needle}`);
+    "PHP-only shared hosting",
+    "Unsupported deployment patterns"
+  ]) if (!deploymentDocs.includes(needle)) failures.push(`docs/DEPLOYMENT.md: missing ${needle}`);
 
-  for (const needle of ["render.com/deploy?repo=https://github.com/smeetbuilds/nivasaos", "docs/RENDER.md", "docs/SELF_HOSTING.md", "Vercel", "PHP-only shared hosting"]) {
-    if (!deployment.includes(needle)) failures.push(`DEPLOYMENT.md: missing ${needle}`);
+  for (const needle of ["bun run restore", "off-host", "encrypted", "restore"]) {
+    if (!backupDocs.includes(needle)) failures.push(`docs/BACKUPS.md: missing ${needle}`);
+  }
+  for (const needle of ["openssl rand -hex 32", "NIVASA_DOMAIN", "NIVASA_PUBLIC_URL", "NIVASA_INSTALL_TOKEN"]) {
+    if (!productionEnv.includes(needle)) failures.push(`.env.production.example: missing ${needle}`);
+  }
+  for (const needle of ["render.com/deploy?repo=", "docs/DEPLOYMENT.md", "paid persistent disk", "PHP-only shared hosting"]) {
+    if (!readme.includes(needle)) failures.push(`README.md: missing ${needle}`);
   }
 }
 
@@ -105,4 +118,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Render Blueprint, persistent storage, runtime URL/path normalization, startup migration, one-instance safety, self-hosting, update, backup, and restore deployment contracts are verified.");
+console.log("Render Blueprint, persistent storage, managed Server Action origins, runtime URL/path normalization, startup migration, one-instance safety, self-hosting, update, backup, and restore deployment contracts are verified.");
