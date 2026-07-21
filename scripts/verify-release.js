@@ -14,9 +14,9 @@ for (const file of [
   ".editorconfig", ".env.production.example", ".circleci/config.yml", ".github/CODEOWNERS", ".github/dependabot.yml",
   ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/ISSUE_TEMPLATE/config.yml",
   "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "README.md", "SECURITY.md", "CHANGELOG.md", "LICENSE",
-  "Caddyfile", "Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "next.config.mjs", "proxy.js", "app/layout.js",
+  "Caddyfile", "Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "render.yaml", "next.config.mjs", "proxy.js", "app/layout.js",
   "app/api/reports/export/route.js", "app/styles/forms.css", "app/styles/records.css",
-  "docs/ACCESSIBILITY_CERTIFICATION.md", "docs/BACKUPS.md", "docs/BROWSER_TESTING.md", "docs/KNOWN_LIMITATIONS.md",
+  "docs/ACCESSIBILITY_CERTIFICATION.md", "docs/BACKUPS.md", "docs/BROWSER_TESTING.md", "docs/DEPLOYMENT.md", "docs/KNOWN_LIMITATIONS.md",
   "docs/MIGRATIONS.md", "docs/PRODUCTION_RELEASE.md", "docs/REPORTING_EXPORTS.md", "docs/RUNTIME_IMAGE.md", "docs/WHITE_LABEL.md",
   "lib/action-state.js", "lib/auth-rate-limit.js", "lib/document-authorization.js", "lib/money.js", "lib/portal-handoff.js",
   "lib/workspace-localization.js", "lib/runtime-config.js", "lib/schema/core-schema.js", "lib/schema/migrate.js",
@@ -71,6 +71,7 @@ const contracts = {
   "lib/actions/settings.js": ["invalidateWorkspaceLocalizationCache"],
   "lib/action-state.js": ["runStructuredAction", "SENSITIVE_FIELD", "NEXT_REDIRECT", "serializedValues"],
   "lib/db.js": ["migrateDatabase(database)", "database.close(false)"],
+  "lib/runtime-config.js": ["RENDER_EXTERNAL_URL", "database?.close(false)", "normalized.NIVASA_PUBLIC_URL"],
   "lib/schema/migrate.js": ["MIGRATION_PLAN", "schema_migrations", "migrationStatus", "migrateDatabase", "050-money-contract-v4"],
   "lib/schema/core-schema.js": ["CREATE TABLE IF NOT EXISTS auth_rate_limits"],
   "lib/schema/localization-migrations.js": ["SELECT 'timezone','UTC'"],
@@ -93,19 +94,21 @@ const contracts = {
   "scripts/lib/tar-archive.js": ["createGzip", "createGunzip", "maxExpandedBytes", "maxEntryBytes", "maxEntries", "safeDestination"],
   "scripts/lib/operations.js": ["VACUUM INTO", "formatVersion: FORMAT_VERSION", "upload checksum", "databaseInstalled", "uploadsInstalled"],
   "scripts/verify-audit-hardening.js": ["canDeliverLeaseDocument", "Large adjacent cent values", "Money helper rejected ordinary SQLite REAL aggregate noise", "'nonce-${nonce}'"],
-  "scripts/verify-compose.js": ["caddy:2.11.4-alpine", "requestHeaders.set", "x-nonce", "nonce CSP contract", "exact security-header values"],
+  "scripts/verify-compose.js": ["render.yaml", "RENDER_EXTERNAL_URL", "persistent single-instance storage", "exact security headers"],
   "scripts/verify-runtime-image.js": ["standalone", "1.3.0-alpine", "NIVASA_MAX_IMAGE_BYTES", "schema_migrations"],
   "scripts/container-gate.js": ["NIVASA_MAX_IMAGE_BYTES", "image", "inspect", "schema_migrations", "bun\", \"run\", \"migrate", "Runtime image is"],
   ".circleci/config.yml": ["oven/bun:1.3.0", "playwright:v1.61.1-noble", "bun run audit:dependencies", "bun run gate", "bun run gate:cross-browser", "bun run gate:container"],
-  "Dockerfile": ["oven/bun:1.3.0-alpine", ".next/standalone", "bun server.js", "scripts/migrate.js", "USER bun"],
+  "Dockerfile": ["oven/bun:1.3.0-alpine", ".next/standalone", "process.env.PORT", "bun server.js", "scripts/migrate.js", "USER bun"],
+  "render.yaml": ["runtime: docker", "plan: starter", "numInstances: 1", "autoDeployTrigger: \"off\"", "healthCheckPath: /api/health", "mountPath: /app/storage", "sync: false"],
   "compose.production.yml": ["caddy:2.11.4-alpine", "NIVASA_DOMAIN:", "condition: service_healthy"],
   "Caddyfile": ["header_up X-Nivasa-Client-IP {remote_host}", "X-Frame-Options \"DENY\""],
-  "next.config.mjs": ["output: \"standalone\"", "X-Frame-Options", "DENY", "Permissions-Policy"],
+  "next.config.mjs": ["output: \"standalone\"", "RENDER_EXTERNAL_HOSTNAME", "managedPlatformOrigins", "X-Frame-Options", "DENY", "Permissions-Policy"],
   "proxy.js": ["randomUUID", "x-nonce", "'nonce-${nonce}'", "'strict-dynamic'", "default-src 'self'", "frame-ancestors 'none'"],
   "app/layout.js": ["await headers()"],
-  "README.md": ["NivasaOS 1.1", "technical preview", "application append-only", "gate:container"],
+  "README.md": ["NivasaOS 1.1", "technical preview", "application append-only", "Deploy to Render", "docs/DEPLOYMENT.md", "gate:container"],
   "SECURITY.md": ["network throttling", "minor-unit", "file-delivery"],
   "CHANGELOG.md": ["## Unreleased", "streamed", "minor-unit mirror", "## 1.1.0 - 2026-07-18", "## 0.1.0 - 2026-07-16"],
+  "docs/DEPLOYMENT.md": ["Render Blueprint deployment", "Self-hosted Docker Compose", "RENDER_EXTERNAL_URL", "off-platform backup", "Unsupported deployment patterns"],
   "docs/KNOWN_LIMITATIONS.md": ["minor-unit mirror", "Migration ownership and rollback", "Runtime-image boundary", "Verification boundary"],
   "docs/MIGRATIONS.md": ["schema_migrations", "single-instance", "bun run migrate", "idempotent"],
   "docs/RUNTIME_IMAGE.md": ["standalone", "oven/bun:1.3.0-alpine", "NIVASA_MAX_IMAGE_BYTES", "operator commands"],
@@ -115,7 +118,7 @@ const contracts = {
 for (const [file, values] of Object.entries(contracts)) requireText(file, values);
 
 for (const file of [
-  "lib/db.js", "scripts/migrate.js", "scripts/verify-auth-hardening.js", "scripts/verify-migrations.js",
+  "lib/db.js", "lib/runtime-config.js", "scripts/migrate.js", "scripts/verify-auth-hardening.js", "scripts/verify-migrations.js",
   "scripts/verify-money-storage.js", "scripts/verify-operations.js", "scripts/verify-integration.js",
   "scripts/browser-gate.js", "scripts/cross-browser-gate.js", "scripts/local-gate.js", "scripts/lib/operations.js"
 ]) {
@@ -124,6 +127,7 @@ for (const file of [
 
 if (read("Caddyfile").includes("Content-Security-Policy")) failures.push("Caddyfile: must not override the per-request nonce CSP");
 if (read("next.config.mjs").includes("Content-Security-Policy")) failures.push("next.config.mjs: static headers must not override the per-request nonce CSP");
+if (read("render.yaml").includes("NIVASA_TRUST_PROXY_HEADERS")) failures.push("render.yaml: must not trust public proxy metadata without an operator-controlled header rewrite");
 const responsive = read("app/styles/part-12.css");
 for (const value of ["@media (max-width: 820px)", "env(safe-area-inset-bottom)", ":focus-visible", "prefers-reduced-motion"]) {
   if (!responsive.includes(value)) failures.push(`responsive QA contract missing: ${value}`);
@@ -133,4 +137,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, exact repository gate, centralized migration ownership, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, self-hosted and Render deployment contracts, centralized migration ownership, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
