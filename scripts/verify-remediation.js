@@ -45,15 +45,21 @@ for (const file of ["lib/data.js", "lib/billing.js"]) {
 
 const portalPage = "app/(workspace)/tenant-portal/page.js";
 const portalWorkspace = "app/(workspace)/tenant-portal/workspace.js";
+const portalAccess = "app/(workspace)/tenant-portal/PortalAccessSection.js";
+const portalPayments = "app/(workspace)/tenant-portal/PortalPaymentSection.js";
+const portalDeposits = "app/(workspace)/tenant-portal/PortalDepositSection.js";
 const shell = "components/AppShell.js";
 requireText(portalPage, 'anyOf: ["portal.manage", "payments.manage", "deposits.manage"]', "Tenant portal route still requires every portal-related permission");
 rejectText(portalPage, 'allOf: ["portal.manage", "payments.manage", "deposits.manage"]', "Tenant portal route still blocks independent delegation");
 for (const permission of ["portal.manage", "payments.manage", "deposits.manage"]) {
   requireText(portalWorkspace, `permissionScopeSql(user, \"${permission}\", \"p\")`, `Tenant portal does not independently scope ${permission}`);
 }
-requireText(portalWorkspace, "canManageAccess && <section", "Portal account controls are not conditionally rendered by portal.manage");
-requireText(portalWorkspace, "canReviewPayments && <section", "Payment review is not conditionally rendered by payments.manage");
-requireText(portalWorkspace, "canManageDeposits && <section", "Deposit management is not conditionally rendered by deposits.manage");
+requireText(portalWorkspace, "<PortalAccessSection", "Tenant portal does not render the extracted access section");
+requireText(portalWorkspace, "<PortalPaymentSection", "Tenant portal does not render the extracted payment section");
+requireText(portalWorkspace, "<PortalDepositSection", "Tenant portal does not render the extracted deposit section");
+requireText(portalAccess, "{canManageAccess && <section", "Portal account controls are not conditionally rendered by portal.manage");
+requireText(portalPayments, "if (!canReviewPayments) return null", "Payment review is not conditionally rendered by payments.manage");
+requireText(portalDeposits, "if (!canManageDeposits) return null", "Deposit management is not conditionally rendered by deposits.manage");
 requireText(shell, 'portal.manage|payments.manage|deposits.manage', "Navigation still requires every tenant-portal permission");
 rejectText(shell, 'portal.manage&payments.manage&deposits.manage', "Navigation still uses the all-permission portal contract");
 rejectText(shell, "<style jsx global>", "AppShell still injects runtime styles under the strict CSP");
