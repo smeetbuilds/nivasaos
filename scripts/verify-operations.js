@@ -44,11 +44,11 @@ try {
   } finally {
     await inspected.cleanup();
   }
-  database.close(true);
+  database.close(false);
 
   const mutated = new Database(databasePath, { strict: true });
   mutated.exec("UPDATE marker SET value='after-backup'");
-  mutated.close(true);
+  mutated.close(false);
   await Bun.write(path.join(uploadsPath, "proof.txt"), "mutated-proof");
 
   await expectFailure(
@@ -64,7 +64,7 @@ try {
   );
   const untouched = new Database(databasePath, { readonly: true, strict: true });
   assert(untouched.query("SELECT value FROM marker").get()?.value === "after-backup", "A pre-activation restore failure modified the live database");
-  untouched.close(true);
+  untouched.close(false);
   assert(await Bun.file(path.join(uploadsPath, "proof.txt")).text() === "mutated-proof", "A pre-activation restore failure modified live uploads");
 
   const restored = await restoreBackup(backup.outputPath, {
@@ -78,7 +78,7 @@ try {
 
   const verified = new Database(databasePath, { readonly: true, strict: true });
   const marker = verified.query("SELECT value FROM marker").get();
-  verified.close(true);
+  verified.close(false);
   assert(marker.value === "before-backup", "Restored database content does not match the backup");
   assert(await Bun.file(path.join(uploadsPath, "proof.txt")).text() === "original-proof", "Restored upload content does not match the backup");
 
