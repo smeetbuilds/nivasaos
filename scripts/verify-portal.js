@@ -8,7 +8,10 @@ const required = {
   "app/portal/(account)/maintenance/page.js": ["Report a maintenance issue", "addTenantMaintenanceCommentAction"],
   "app/portal/(account)/receipts/[id]/page.js": ["Payment receipt", "requireTenant"],
   "app/(workspace)/tenant-portal/page.js": ["renderPermissionScopedPage", "portal.manage", "payments.manage", "deposits.manage", "WorkspacePage"],
-  "app/(workspace)/tenant-portal/workspace.js": ["Tenant payment submissions", "Record deposit", "reviewPaymentSubmissionAction", "recordDepositTransactionAction"]
+  "app/(workspace)/tenant-portal/workspace.js": ["PortalAccessSection", "PortalPaymentSection", "PortalDepositSection", "permissionScopeSql"],
+  "app/(workspace)/tenant-portal/PortalAccessSection.js": ["createTenantInviteAction", "disableTenantPortalAction", "canManageAccess"],
+  "app/(workspace)/tenant-portal/PortalPaymentSection.js": ["Tenant payment submissions", "reviewPaymentSubmissionAction", "canReviewPayments"],
+  "app/(workspace)/tenant-portal/PortalDepositSection.js": ["Record deposit", "recordDepositTransactionAction", "canManageDeposits"]
 };
 
 const failures = [];
@@ -36,4 +39,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Tenant portal access, permission-scoped administration, financial review, deposit, receipt, and maintenance contracts verified.");
+console.log("Tenant portal access, extracted permission-scoped administration, financial review, deposit, receipt, and maintenance contracts verified.");
