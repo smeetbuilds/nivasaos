@@ -25,7 +25,7 @@ for (const file of [
   "scripts/verify-action-state.js", "scripts/verify-authorization.js", "scripts/verify-browser-gate.js", "scripts/verify-certification-contract.js",
   "scripts/verify-integration.js", "scripts/verify-migrations.js", "scripts/verify-mobile-records.js", "scripts/verify-money-storage.js",
   "scripts/verify-operations.js", "scripts/verify-reporting.js", "scripts/verify-runtime-image.js", "scripts/verify-verticals.js",
-  "scripts/verify-compose.js", "scripts/cross-browser-gate.js", "scripts/start-container.js", "scripts/verify-certification-evidence.js",
+  "scripts/verify-compose.js", "scripts/cross-browser-gate.js", "scripts/start-container.js", "scripts/verify-deployment.js", "scripts/verify-certification-evidence.js",
   "scripts/lib/tar-archive.js", "scripts/lib/operations.js", "scripts/container-gate.js", "scripts/local-gate.js", "bun.lock"
 ]) requireFile(file);
 
@@ -43,7 +43,7 @@ const expectedVerifyScripts = [
   "verify:secrets", "verify:source", "verify:schema", "verify:migrations", "verify:auth", "verify:operations", "verify:money",
   "verify:reporting", "verify:ui", "verify:mobile-records", "verify:action-state", "verify:browser-contract", "verify:certification",
   "verify:authorization", "verify:portal", "verify:handover", "verify:modules", "verify:verticals", "verify:integration",
-  "verify:compose", "verify:runtime-image", "verify:hardening", "verify:remediation", "verify:release"
+  "verify:compose", "verify:runtime-image", "verify:deployment", "verify:hardening", "verify:remediation", "verify:release"
 ];
 const requiredScripts = ["setup:token", "migrate", "audit:dependencies", ...expectedVerifyScripts, "gate", "gate:browser", "gate:cross-browser", "certify:device", "gate:container"];
 for (const script of requiredScripts) if (!packageJson.scripts?.[script]) failures.push(`package.json: missing ${script}`);
@@ -95,6 +95,7 @@ const contracts = {
   "scripts/lib/operations.js": ["VACUUM INTO", "formatVersion: FORMAT_VERSION", "upload checksum", "databaseInstalled", "uploadsInstalled"],
   "scripts/verify-audit-hardening.js": ["canDeliverLeaseDocument", "Large adjacent cent values", "Money helper rejected ordinary SQLite REAL aggregate noise", "'nonce-${nonce}'"],
   "scripts/start-container.js": ["assertRuntimeEnvironment", "normalizedRuntimeEnvironment", "scripts/migrate.js", "server.js"],
+  "scripts/verify-deployment.js": ["Render Blueprint", "persistent storage", "runtime URL/path normalization", "startup migration", "restore deployment contracts"],
   "scripts/verify-compose.js": ["render.yaml", "RENDER_EXTERNAL_URL", "persistent single-instance storage", "exact security headers"],
   "scripts/verify-runtime-image.js": ["standalone", "1.3.0-alpine", "NIVASA_MAX_IMAGE_BYTES", "schema_migrations"],
   "scripts/container-gate.js": ["NIVASA_MAX_IMAGE_BYTES", "image", "inspect", "schema_migrations", "bun\", \"run\", \"migrate", "Runtime image is"],
@@ -141,4 +142,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, exact repository gate, self-hosted and Render deployment contracts, validated startup migration, centralized migration ownership, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, self-hosted and Render deployment contracts, validated startup migration, dedicated deployment verification, centralized migration ownership, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
