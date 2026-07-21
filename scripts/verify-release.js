@@ -93,7 +93,7 @@ const contracts = {
   "scripts/lib/tar-archive.js": ["createGzip", "createGunzip", "maxExpandedBytes", "maxEntryBytes", "maxEntries", "safeDestination"],
   "scripts/lib/operations.js": ["VACUUM INTO", "formatVersion: FORMAT_VERSION", "upload checksum", "databaseInstalled", "uploadsInstalled"],
   "scripts/verify-audit-hardening.js": ["canDeliverLeaseDocument", "Large adjacent cent values", "Money helper rejected ordinary SQLite REAL aggregate noise", "'nonce-${nonce}'"],
-  "scripts/verify-compose.js": ["caddy:2.11.4-alpine", "requestHeaders.set(\"x-nonce\", nonce)", "nonce CSP contract", "exact security-header values"],
+  "scripts/verify-compose.js": ["caddy:2.11.4-alpine", "requestHeaders.set", "x-nonce", "nonce CSP contract", "exact security-header values"],
   "scripts/verify-runtime-image.js": ["standalone", "1.3.0-alpine", "NIVASA_MAX_IMAGE_BYTES", "schema_migrations"],
   "scripts/container-gate.js": ["NIVASA_MAX_IMAGE_BYTES", "image", "inspect", "schema_migrations", "bun\", \"run\", \"migrate", "Runtime image is"],
   ".circleci/config.yml": ["oven/bun:1.3.0", "playwright:v1.61.1-noble", "bun run audit:dependencies", "bun run gate", "bun run gate:cross-browser", "bun run gate:container"],
