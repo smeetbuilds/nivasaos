@@ -50,8 +50,9 @@ requireText("lib/actions/portal-payments.js", "pendingMinor > MAX_MONEY_MINOR", 
 requireText("lib/actions/portal-deposits.js", "CAST(ROUND(amount*100) AS INTEGER)", "Deposit balances are not aggregated in integer minor units");
 requireText("lib/actions/portal-deposits.js", "heldMinor < 0 || heldMinor > MAX_MONEY_MINOR", "Deposit aggregates are not range checked");
 requireText("lib/money.js", "NUMERIC_NOISE_TOLERANCE", "Computed REAL values do not use a bounded noise tolerance");
-requireText("lib/db.js", "applyLocalizationMigrations(database)", "Database startup does not migrate an explicit workspace timezone");
-requireText("lib/db.js", "applyMoneyMigrations(database)", "Database startup does not activate money scale guards");
+requireText("lib/db.js", "migrateDatabase(database)", "Database startup does not delegate to the central migration registry");
+requireText("lib/schema/migrate.js", "applyLocalizationMigrations", "Central migration registry does not include workspace timezone migration");
+requireText("lib/schema/migrate.js", "applyMoneyMigrations", "Central migration registry does not include money scale guards");
 requireText("lib/schema/money-migrations.js", "MONEY_SCALE_CONTRACT_VERSION", "Money migration is not versioned");
 requireText("lib/schema/money-migrations.js", "MONEY_SCALE_TOLERANCE", "Money migration does not tolerate bounded binary residue");
 requireText("lib/schema/money-migrations.js", "currentContract !== MONEY_SCALE_CONTRACT_VERSION", "Money migration rescans historical tables on every startup");
@@ -96,4 +97,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Behavioral authorization, authenticated handoff, retained throttling, normalized bulk billing, scale-safe aggregates, versioned money migration, UTC workflow storage, resilient time rendering, nonce CSP, Compose loading, and repository cleanup are verified.");
+console.log("Behavioral authorization, authenticated handoff, retained throttling, normalized bulk billing, scale-safe aggregates, centralized migration ownership, UTC workflow storage, resilient time rendering, nonce CSP, Compose loading, and repository cleanup are verified.");
