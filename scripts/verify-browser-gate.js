@@ -48,6 +48,7 @@ if (!failures.length) {
   ]) if (!circleci.includes(needle)) failures.push(`.circleci/config.yml: missing ${needle}`);
 
   for (const needle of [
+    'migrateDatabase(db, { applicationVersion: "browser-gate" })',
     'const DESKTOP_ROUTES = ["/dashboard", "/properties", "/tenants", "/leases", "/invoices", "/reports", "/tenant-portal"]',
     'const MOBILE_RECORD_ROUTES = ["/tenants", "/leases", "/invoices"]',
     'document.querySelectorAll(\'table.people-table, table.agreements-table, table.invoices-table\')',
@@ -61,6 +62,8 @@ if (!failures.length) {
     'NIVASA_BROWSER_BIN',
     'artifacts/browser'
   ]) if (!browserGate.includes(needle)) failures.push(`scripts/browser-gate.js: missing ${needle}`);
+
+  if (browserGate.includes("applySecurityMigrations(db)") || browserGate.includes("applyMoneyMigrations(db)")) failures.push("scripts/browser-gate.js: fixture migration order bypasses the central registry");
 
   for (const needle of [
     ".people-table tbody tr,.agreements-table tbody tr",
@@ -93,4 +96,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Pinned authenticated browser execution, accessibility-tree inspection, runtime-error capture, mobile record-card behavior, evidence storage, and CircleCI wiring are verified.");
+console.log("Pinned authenticated browser execution, centralized fixture migrations, accessibility-tree inspection, runtime-error capture, mobile record-card behavior, evidence storage, and CircleCI wiring are verified.");
