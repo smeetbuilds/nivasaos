@@ -43,7 +43,7 @@ function assertHealthyDatabase(filename) {
     const result = database.query("PRAGMA quick_check").get();
     if (!result || Object.values(result)[0] !== "ok") throw new Error("SQLite quick_check did not return ok");
   } finally {
-    database.close(true);
+    database.close(false);
   }
 }
 
@@ -67,7 +67,7 @@ async function createDatabaseSnapshot(databasePath, snapshotPath) {
     }
     database.exec(`VACUUM INTO ${sqliteLiteral(snapshotPath)}`);
   } finally {
-    database.close(true);
+    database.close(false);
   }
   await fsp.chmod(snapshotPath, 0o600);
   assertHealthyDatabase(snapshotPath);
