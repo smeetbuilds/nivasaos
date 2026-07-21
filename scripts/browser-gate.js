@@ -4,11 +4,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { schema, applyMigrations } from "../lib/schema.js";
-import { applySecurityMigrations } from "../lib/schema/security-migrations.js";
-import { applyReleaseMigrations } from "../lib/schema/release-migrations.js";
-import { applyLocalizationMigrations } from "../lib/schema/localization-migrations.js";
-import { applyMoneyMigrations } from "../lib/schema/money-migrations.js";
+import { migrateDatabase } from "../lib/schema/migrate.js";
 
 const SESSION_TOKEN = randomBytes(32).toString("base64url");
 const DESKTOP_ROUTES = ["/dashboard", "/properties", "/tenants", "/leases", "/invoices", "/reports", "/tenant-portal"];
@@ -19,12 +15,7 @@ const assert = (value, message) => { if (!value) throw new Error(message); };
 function seed(filename) {
   const db = new Database(filename, { create: true, strict: true });
   try {
-    db.exec(schema);
-    applySecurityMigrations(db);
-    applyMigrations(db);
-    applyReleaseMigrations(db);
-    applyLocalizationMigrations(db);
-    applyMoneyMigrations(db);
+    migrateDatabase(db, { applicationVersion: "browser-gate" });
     const ownerId = Number(db.query("INSERT INTO users(name,email,password_hash,role,status) VALUES('Browser Owner','owner.browser@example.test','browser-gate-session-only','owner','active')").run().lastInsertRowid);
     for (const [key, value] of Object.entries({ installation_state: `complete:${ownerId}`, company_name: "Browser Gate Workspace", default_country: "Test Country", default_currency: "USD", timezone: "UTC", primary_module: "residential" })) {
       db.query("INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES($key,$value,CURRENT_TIMESTAMP)").run({ key, value });
@@ -39,7 +30,7 @@ function seed(filename) {
     db.query("INSERT INTO tenant_accounts(tenant_id,email,status,password_hash,invited_at,activated_at) VALUES($tenantId,'resident.browser@example.test','active','browser-gate-session-only',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)").run({ tenantId });
     db.query("INSERT INTO sessions(user_id,token_hash,expires_at) VALUES($ownerId,$hash,'2099-01-01T00:00:00.000Z')").run({ ownerId, hash: createHash("sha256").update(SESSION_TOKEN).digest("hex") });
     db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-  } finally { db.close(true); }
+  } finally { db.close(false); }
 }
 
 class CDP {
