@@ -18,12 +18,12 @@ for (const file of [
   "app/api/reports/export/route.js", "app/styles/forms.css", "app/styles/records.css",
   "docs/ACCESSIBILITY_CERTIFICATION.md", "docs/BACKUPS.md", "docs/BROWSER_TESTING.md", "docs/DEPLOYMENT.md", "docs/KNOWN_LIMITATIONS.md",
   "docs/MIGRATIONS.md", "docs/PRODUCTION_RELEASE.md", "docs/REPORTING_EXPORTS.md", "docs/RUNTIME_IMAGE.md", "docs/WHITE_LABEL.md",
-  "lib/action-state.js", "lib/auth-rate-limit.js", "lib/document-authorization.js", "lib/money.js", "lib/portal-handoff.js",
+  "lib/action-state.js", "lib/auth-rate-limit.js", "lib/csv.js", "lib/document-authorization.js", "lib/money.js", "lib/navigation.js", "lib/portal-handoff.js",
   "lib/workspace-localization.js", "lib/runtime-config.js", "lib/schema/core-schema.js", "lib/schema/migrate.js",
-  "lib/schema/security-migrations.js", "lib/schema/release-migrations.js", "lib/schema/localization-migrations.js", "lib/schema/money-migrations.js",
+  "lib/schema/security-migrations.js", "lib/schema/release-migrations.js", "lib/schema/localization-migrations.js", "lib/schema/money-migrations.js", "lib/schema/flow-hardening-migrations.js",
   "scripts/migrate.js", "scripts/verify-secrets.js", "scripts/verify-auth-hardening.js", "scripts/verify-audit-hardening.js",
   "scripts/verify-action-state.js", "scripts/verify-authorization.js", "scripts/verify-browser-gate.js", "scripts/verify-certification-contract.js",
-  "scripts/verify-integration.js", "scripts/verify-migrations.js", "scripts/verify-mobile-records.js", "scripts/verify-money-storage.js",
+  "scripts/verify-flow-hardening.js", "scripts/verify-integration.js", "scripts/verify-migrations.js", "scripts/verify-mobile-records.js", "scripts/verify-money-storage.js",
   "scripts/verify-operations.js", "scripts/verify-reporting.js", "scripts/verify-runtime-image.js", "scripts/verify-verticals.js",
   "scripts/verify-compose.js", "scripts/cross-browser-gate.js", "scripts/start-container.js", "scripts/verify-deployment.js", "scripts/verify-certification-evidence.js",
   "scripts/lib/tar-archive.js", "scripts/lib/operations.js", "scripts/container-gate.js", "scripts/local-gate.js", "bun.lock"
@@ -43,7 +43,7 @@ const expectedVerifyScripts = [
   "verify:secrets", "verify:source", "verify:schema", "verify:migrations", "verify:auth", "verify:operations", "verify:money",
   "verify:reporting", "verify:ui", "verify:mobile-records", "verify:action-state", "verify:browser-contract", "verify:certification",
   "verify:authorization", "verify:portal", "verify:handover", "verify:modules", "verify:verticals", "verify:integration",
-  "verify:compose", "verify:runtime-image", "verify:deployment", "verify:hardening", "verify:remediation", "verify:release"
+  "verify:compose", "verify:runtime-image", "verify:deployment", "verify:hardening", "verify:remediation", "verify:flow-hardening", "verify:release"
 ];
 const requiredScripts = ["setup:token", "migrate", "audit:dependencies", ...expectedVerifyScripts, "gate", "gate:browser", "gate:cross-browser", "certify:device", "gate:container"];
 for (const script of requiredScripts) if (!packageJson.scripts?.[script]) failures.push(`package.json: missing ${script}`);
@@ -55,10 +55,17 @@ if (/[|;]|\btrue\b|\bexit\s+0\b/.test(actualVerifySource)) failures.push("packag
 if (packageJson.scripts["audit:dependencies"] !== "bun audit --prod --audit-level=high") failures.push("package.json: dependency audit contract changed");
 if (packageJson.scripts.build !== "bun --bun next build --webpack") failures.push("package.json: production build contract changed");
 if (packageJson.scripts.migrate !== "bun run scripts/migrate.js") failures.push("package.json: migration command changed");
+if (packageJson.scripts["verify:flow-hardening"] !== "bun run scripts/verify-flow-hardening.js") failures.push("package.json: flow-hardening verification is not a first-class gate");
+if (String(packageJson.scripts["verify:remediation"] || "").includes("verify-flow-hardening")) failures.push("package.json: flow hardening is hidden inside verify:remediation");
 
 const contracts = {
   "app/api/lease-documents/[id]/route.js": ["canDeliverLeaseDocument", "hasPermission", "archived_at IS NULL"],
-  "app/api/reports/export/route.js": ["hasPortfolioPermission", "hasPermission", "reportData", "minorDecimal", "amount_minor", "private, no-store"],
+  "app/api/reports/export/route.js": ["hasPortfolioPermission", "hasPermission", "reportData", "minorDecimal", "amount_minor", "csvRow", "private, no-store"],
+  "components/AppShell.js": ["mobileNavigationItems(flatNav)"],
+  "lib/actions/leases.js": ["const claimed = run(", "status='available'", "Number(claimed.changes) !== 1"],
+  "lib/actions/team.js": ["passwordInput(formData, \"password\")"],
+  "lib/csv.js": ["FORMULA_PREFIX", "csvCell", "csvRow", "typeof value === \"string\""],
+  "lib/navigation.js": ["DEFAULT_MOBILE_HREFS", "mobileNavigationItems", "for (const item of byHref.values())"],
   "lib/document-authorization.js": ["handover.manage", "authorize(permission", "propertyId"],
   "app/(workspace)/tenant-portal/workspace.js": ["PORTAL_HANDOFF_COOKIE", "hashPortalToken(parsedHandoff.token)", "ti.consumed_at IS NULL", "ti.expires_at>$now", "portal/activate"],
   "lib/portal-handoff.js": ["createHmac", "timingSafeEqual", "portal_handoff_secret", "httpOnly: true", "sameSite: \"strict\""],
@@ -72,7 +79,8 @@ const contracts = {
   "lib/action-state.js": ["runStructuredAction", "SENSITIVE_FIELD", "NEXT_REDIRECT", "serializedValues"],
   "lib/db.js": ["migrateDatabase(database)", "database.close(false)"],
   "lib/runtime-config.js": ["RENDER_EXTERNAL_URL", "database?.close(false)", "normalized.NIVASA_PUBLIC_URL"],
-  "lib/schema/migrate.js": ["MIGRATION_PLAN", "schema_migrations", "migrationStatus", "migrateDatabase", "050-money-contract-v4"],
+  "lib/schema/migrate.js": ["MIGRATION_PLAN", "schema_migrations", "migrationStatus", "migrateDatabase", "050-money-contract-v4", "060-flow-hardening-v1"],
+  "lib/schema/flow-hardening-migrations.js": ["trg_single_unit_active_lease_insert", "trg_active_lease_unit_status_insert", "trg_unit_active_lease_status", "NivasaOS flow-hardening migration blocked"],
   "lib/schema/core-schema.js": ["CREATE TABLE IF NOT EXISTS auth_rate_limits"],
   "lib/schema/localization-migrations.js": ["SELECT 'timezone','UTC'"],
   "lib/schema/money-migrations.js": ["MONEY_SCALE_CONTRACT_VERSION", "MONEY_MINOR_MIRROR_VERSION", "MONEY_MAX_MINOR", "ensureMinorMirror", "money_minor_mirror_contract"],
@@ -82,6 +90,7 @@ const contracts = {
   "lib/format.js": ["normalizedTimestamp", "moneyMinor", "fromMinorUnits", "workspaceTimeZone"],
   "lib/data.js": ["monthly_rate_minor", "amount_minor", "amount_paid_minor", "pay.amount_minor", "balance_minor", "total_minor"],
   "scripts/migrate.js": ["migrateDatabase(database)", "database.close(false)"],
+  "scripts/verify-flow-hardening.js": ["staleSecondPrecheck", "staleOverlapPrecheck", "csvCell(\"=2+2\")", "Delegated mobile navigation did not fill", "unit already has an active agreement"],
   "scripts/verify-integration.js": ["applyLocalizationMigrations", "applyMoneyMigrations", "historical sub-cent values", "PRAGMA integrity_check"],
   "scripts/verify-migrations.js": ["MIGRATION_PLAN", "Second migration run was not idempotent", "Failed migration was incorrectly recorded", "PRAGMA quick_check"],
   "scripts/verify-money-storage.js": ["money_minor_mirror_contract", "monthly_rate_minor", "Direct minor-unit mismatch", "Out-of-range money value"],
@@ -121,7 +130,7 @@ for (const [file, values] of Object.entries(contracts)) requireText(file, values
 
 for (const file of [
   "lib/db.js", "lib/runtime-config.js", "scripts/migrate.js", "scripts/verify-auth-hardening.js", "scripts/verify-migrations.js",
-  "scripts/verify-money-storage.js", "scripts/verify-operations.js", "scripts/verify-integration.js",
+  "scripts/verify-money-storage.js", "scripts/verify-operations.js", "scripts/verify-integration.js", "scripts/verify-flow-hardening.js",
   "scripts/browser-gate.js", "scripts/cross-browser-gate.js", "scripts/local-gate.js", "scripts/lib/operations.js"
 ]) {
   if (read(file).includes(".close(true)")) failures.push(`${file}: strict Bun SQLite close can mask completed assertions or the original runtime error`);
@@ -139,4 +148,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, exact repository gate, self-hosted and Render deployment contracts, validated startup migration, dedicated deployment verification, centralized migration ownership, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, self-hosted and Render deployment contracts, validated startup migration, dedicated deployment verification, centralized migration ownership, atomic occupancy and reservation flow hardening, formula-safe exports, bounded credential parsing, delegated mobile navigation, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
