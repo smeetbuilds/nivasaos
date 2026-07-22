@@ -2,17 +2,9 @@ import { currentUser } from "@/lib/auth";
 import { reportData } from "@/lib/data";
 import { hasPermission, hasPortfolioPermission } from "@/lib/permission-core";
 import { minorDecimal } from "@/lib/money";
+import { csvRow } from "@/lib/csv";
 
 export const dynamic = "force-dynamic";
-
-function csvCell(value) {
-  const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
-function row(values) {
-  return values.map(csvCell).join(",");
-}
 
 export async function GET(request) {
   const user = await currentUser();
@@ -24,17 +16,17 @@ export async function GET(request) {
   if (propertyId && !hasPermission(user, "reports.view", propertyId)) return new Response("Forbidden", { status: 403 });
   const data = reportData(user, propertyId);
   const lines = [
-    row(["record_type", "period_or_due_date", "reference", "person", "property", "currency", "amount_decimal", "amount_minor", "secondary_decimal", "secondary_minor", "notes"]),
-    ...data.occupancy.map((item) => row([
+    csvRow(["record_type", "period_or_due_date", "reference", "person", "property", "currency", "amount_decimal", "amount_minor", "secondary_decimal", "secondary_minor", "notes"]),
+    ...data.occupancy.map((item) => csvRow([
       "occupancy", data.businessToday, "", "", item.property_name, item.currency,
       minorDecimal(item.occupied_value_minor), item.occupied_value_minor, "", "",
       `${item.occupied || 0} occupied; ${item.available || 0} available; ${item.total_units || 0} total`
     ])),
-    ...data.collections.map((item) => row([
+    ...data.collections.map((item) => csvRow([
       "collection", item.month, "", "", item.property_name, item.currency,
       minorDecimal(item.total_minor), item.total_minor, "", "", "Exact monthly collection total"
     ])),
-    ...data.arrears.map((item) => row([
+    ...data.arrears.map((item) => csvRow([
       "arrears", item.due_date, item.number, item.tenant_name || "Unassigned", item.property_name, item.currency,
       minorDecimal(item.balance_minor), item.balance_minor,
       minorDecimal(item.amount_minor), item.amount_minor,

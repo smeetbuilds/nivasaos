@@ -34,7 +34,7 @@
     "verify:runtime-image": "bun run scripts/verify-runtime-image.js",
     "verify:deployment": "bun run scripts/verify-deployment.js",
     "verify:hardening": "bun run scripts/verify-audit-hardening.js",
-    "verify:remediation": "bun run scripts/verify-remediation.js",
+    "verify:remediation": "bun run scripts/verify-remediation.js && bun run scripts/verify-flow-hardening.js",
     "verify:release": "bun run scripts/verify-release.js",
     "verify": "bun run verify:secrets && bun run verify:source && bun run verify:schema && bun run verify:migrations && bun run verify:auth && bun run verify:operations && bun run verify:money && bun run verify:reporting && bun run verify:ui && bun run verify:mobile-records && bun run verify:action-state && bun run verify:browser-contract && bun run verify:certification && bun run verify:authorization && bun run verify:portal && bun run verify:handover && bun run verify:modules && bun run verify:verticals && bun run verify:integration && bun run verify:compose && bun run verify:runtime-image && bun run verify:deployment && bun run verify:hardening && bun run verify:remediation && bun run verify:release",
     "gate": "bun run scripts/local-gate.js",

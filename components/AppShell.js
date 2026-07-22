@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import BrandLogo from "@/components/BrandLogo";
 import Icon from "@/components/Icon";
+import { mobileNavigationItems } from "@/lib/navigation";
 
 function buildNavigation(capabilities, modules) {
   const has = (capability) => capabilities.includes(capability);
@@ -55,7 +56,7 @@ export default function AppShell({ user, company, branding, modules = [], capabi
   const sections = useMemo(() => buildNavigation(capabilities, modules).map((section) => ({ ...section, items: section.items.filter((item) => permissionAllowed(permissions, item[3])) })).filter((section) => section.items.length), [capabilities, modules, permissions]);
   const flatNav = useMemo(() => sections.flatMap((section) => section.items), [sections]);
   const current = flatNav.find(([href]) => routeIsActive(pathname, href)) || flatNav[0];
-  const mobilePrimary = ["/dashboard","/properties","/operations","/invoices","/maintenance"].map((href) => flatNav.find((item) => item[0] === href)).filter(Boolean).slice(0,4);
+  const mobilePrimary = useMemo(() => mobileNavigationItems(flatNav), [flatNav]);
 
   useEffect(() => setDrawerOpen(false), [pathname]);
   useEffect(() => {
