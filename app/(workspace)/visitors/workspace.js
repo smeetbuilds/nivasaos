@@ -3,6 +3,7 @@ import { propertyScopeSql, requireUser } from "@/lib/auth";
 import { all } from "@/lib/db";
 import { dateTimeLabel } from "@/lib/format";
 import { supportsCapability } from "@/lib/modules/catalog";
+import { hasPermission } from "@/lib/permissions";
 import ActionButton from "@/components/ActionButton";
 import Badge from "@/components/Badge";
 import ConfirmAction from "@/components/ConfirmAction";
@@ -19,7 +20,7 @@ export default async function VisitorsPage({ searchParams }) {
   const user = await requireUser();
   const scope = propertyScopeSql(user, "p");
   const allProperties = all(`SELECT p.* FROM properties p WHERE ${scope.clause} AND p.status='active' ORDER BY p.name`, scope.params);
-  const properties = allProperties.filter((property) => supportsCapability(property.module_id, "visitorRegister"));
+  const properties = allProperties.filter((property) => supportsCapability(property.module_id, "visitorRegister") && hasPermission(user, "visitors.manage", property.id));
   const propertyIds = properties.map((property) => Number(property.id));
   const entries = propertyIds.length ? all(
     `SELECT ve.*,p.name property_name,p.module_id,t.full_name tenant_name,l.reference lease_reference,u.name unit_name,
@@ -76,7 +77,7 @@ export default async function VisitorsPage({ searchParams }) {
           </div></td>
         </tr>)}</tbody>
       </table></div>
-    </section> : <Empty icon="visitors" title="No visitor activity" text={properties.length ? "Residents can pre-register through their portal, or staff can create the first visitor entry here." : "Enable a compatible accommodation module and create a property first."}/>} 
+    </section> : <Empty icon="visitors" title="No visitor activity" text={properties.length ? "Residents can pre-register through their portal, or staff can create the first visitor entry here." : "No visitor-enabled properties are available within your permission scope."}/>} 
 
     {properties.length > 0 && <form action={createVisitorEntryAction}><ModalForm id="visitor-create" title="Register a visitor" description="Staff may record an expected arrival or confirm an immediate check-in. Every property, resident, and agreement relationship is revalidated." submitLabel="Save visitor" pendingLabel="Saving…"><div className="modal-body">
       <label><span>Property</span><select name="propertyId" required>{properties.map((property) => <option value={property.id} key={property.id}>{property.name}</option>)}</select></label>
