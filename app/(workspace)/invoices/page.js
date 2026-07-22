@@ -19,6 +19,7 @@ export default async function InvoicesPage({ searchParams }) {
   const { rows, outstandingByCurrency, rentRunStatus, currentPeriod, lateFees, canManageBilling } = workspace;
   const outstandingLabel = outstandingByCurrency.length === 0 ? money(0) : outstandingByCurrency.length === 1 ? money(outstandingByCurrency[0].balance, outstandingByCurrency[0].currency) : `${outstandingByCurrency.length} currencies`;
   const outstandingDetail = outstandingByCurrency.length ? outstandingByCurrency.map((row) => money(row.balance, row.currency)).join(" · ") : "No open balance";
+  const hasOutstanding = outstandingByCurrency.some((row) => Number(row.balance) > 0);
   const rentPending = Math.max(0, Number(rentRunStatus.active || 0) - Number(rentRunStatus.invoiced || 0));
   const rentProgress = Number(rentRunStatus.active || 0) ? Math.round(Number(rentRunStatus.invoiced || 0) / Number(rentRunStatus.active || 0) * 100) : 0;
   const lateFeeDetail = lateFees.byCurrency.length ? lateFees.byCurrency.map((row) => money(row.amount, row.currency)).join(" · ") : "No eligible late fees";
@@ -30,8 +31,8 @@ export default async function InvoicesPage({ searchParams }) {
     <section className="metric-grid finance-summary-grid" aria-label="Receivables summary">
       <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="invoice"/></div><span>Invoices shown</span><strong>{rows.length}</strong><small>Current filters and permission scope</small></article>
       <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="report"/></div><span>Open invoices</span><strong>{workspace.openCount}</strong><small>Issued, part-paid, or draft</small></article>
-      <article className="metric-card compact-metric risk"><div className="metric-icon"><Icon name="billing"/></div><span>Overdue</span><strong>{workspace.overdueCount}</strong><small>Past due and not settled</small></article>
-      <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="payment"/></div><span>Outstanding</span><strong>{outstandingLabel}</strong><small>{outstandingDetail}</small></article>
+      <article className={`metric-card compact-metric${workspace.overdueCount ? " risk" : ""}`}><div className="metric-icon"><Icon name="billing"/></div><span>Overdue</span><strong>{workspace.overdueCount}</strong><small>Past due and not settled</small></article>
+      <article className={`metric-card compact-metric${hasOutstanding ? " risk" : ""}`}><div className="metric-icon"><Icon name="payment"/></div><span>Outstanding</span><strong>{outstandingLabel}</strong><small>{outstandingDetail}</small></article>
     </section>
 
     <section className="billing-strips finance-command-grid" aria-label="Billing operations">
@@ -43,7 +44,7 @@ export default async function InvoicesPage({ searchParams }) {
       {canManageBilling && <article className="late-fee-strip finance-command-card">
         <div className="finance-command-icon is-warning"><Icon name="billing" size={19}/></div>
         <div className="finance-command-copy"><span className="eyebrow">Late-fee preview</span><strong>{lateFees.count ? `${lateFees.count} rent invoice${lateFees.count === 1 ? " is" : "s are"} eligible` : "No late fees are eligible today"}</strong><p>{lateFeeDetail}</p></div>
-        <div className="strip-actions"><Link href="/billing" className="button secondary">Review rules</Link><OpenModalButton target="late-fee-run-modal" icon="billing" className="button secondary">Apply fees</OpenModalButton></div>
+        <div className="strip-actions"><Link href="/billing" className="button secondary">Review rules</Link>{lateFees.count > 0 && <OpenModalButton target="late-fee-run-modal" icon="billing" className="button secondary">Apply fees</OpenModalButton>}</div>
       </article>}
     </section>
 
