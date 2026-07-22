@@ -12,11 +12,15 @@ const portfolio = read("app/styles/portfolio.css");
 const finance = read("app/styles/finance.css");
 const operationsCss = read("app/styles/operations.css");
 const dashboardCss = read("app/styles/dashboard.css");
+const governanceCss = read("app/styles/governance.css");
 const polish = read("app/styles/polish.css");
 const shell = read("components/AppShell.js");
 const pageHeader = read("components/PageHeader.js");
+const moduleGovernanceForm = read("components/ModuleGovernanceForm.js");
 const dashboard = read("app/(workspace)/dashboard/page.js");
 const properties = read("app/(workspace)/properties/page.js");
+const modulesPage = read("app/(workspace)/modules/page.js");
+const team = read("app/(workspace)/team/page.js");
 const people = read("app/(workspace)/tenants/page.js");
 const agreements = read("app/(workspace)/leases/page.js");
 const invoices = read("app/(workspace)/invoices/page.js");
@@ -27,7 +31,7 @@ const reports = read("app/(workspace)/reports/workspace.js");
 const maintenance = read("app/(workspace)/maintenance/page.js");
 const reservations = read("app/(workspace)/reservations/page.js");
 
-for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css", "dashboard.css", "polish.css"]) {
+for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css", "dashboard.css", "governance.css", "polish.css"]) {
   contains(globals, `@import "./styles/${filename}";`, `Global CSS must load ${filename}.`);
 }
 contains(globals.trim(), '@import "./styles/polish.css";', "The visual-coherence stylesheet must remain the final CSS import.");
@@ -78,6 +82,32 @@ contains(dashboard, 'data-label="Invoice"', "Dashboard invoice rows need explici
 contains(dashboard, "dashboard-empty-state", "Dashboard panels need intentional empty states.");
 excludes(dashboard, 'className="panel span-2"', "Recent invoices must not force maintenance into an orphaned second row.");
 
+for (const contract of [
+  ".property-directory-results",
+  ".module-governance-summary",
+  ".module-governance-card.is-enabled",
+  ".module-primary-panel",
+  ".team-summary-grid",
+  ".team-directory-table",
+  "dialog[id^=\"permissions-\"]",
+  "@media (max-width: 720px)"
+]) contains(governanceCss, contract, `Governance polish contract missing: ${contract}`);
+excludes(governanceCss, "font-size: 8px", "Governance polish must not use unreadably small text.");
+contains(moduleGovernanceForm, '"use client"', "Module architecture must update selections without a full page round-trip.");
+contains(moduleGovernanceForm, "Keep at least one operating module enabled", "Module architecture must guard the final enabled model.");
+contains(moduleGovernanceForm, "selectedModules.map", "Primary-model options must track enabled selections live.");
+contains(moduleGovernanceForm, "module.propertyCount", "Modules used by properties must expose their locked state.");
+contains(moduleGovernanceForm, "Unsaved changes", "Module architecture needs visible save-state feedback.");
+contains(modulesPage, "ModuleGovernanceForm", "The modules page must use the live governance form.");
+contains(properties, 'aria-label="Property directory results"', "Property cards need an accessible results region.");
+contains(properties, "property-cover-model", "Property cards must expose their operating model at a glance.");
+contains(properties, 'className="button secondary small"', "Property-card actions need a visible consistent control.");
+contains(team, 'aria-label="Team access summary"', "Team governance needs decision-oriented summary metrics.");
+contains(team, 'data-mobile-cards="team"', "Team accounts must use shared mobile record cards.");
+contains(team, 'data-label="Effective permissions"', "Team mobile cards need explicit capability labels.");
+contains(team, "permissionDescriptions", "Permission matrices need human-readable capability descriptions.");
+contains(team, 'maxLength="256"', "Temporary-password UI must match bounded server parsing.");
+
 contains(shell, "sidebar-context", "Desktop navigation must expose the active workspace context.");
 contains(shell, '{current?.[2] || "Workspace"}', "Topbar must expose the current operational area.");
 contains(shell, "{user.role}", "User identity must expose role rather than an abstract permission count.");
@@ -121,4 +151,4 @@ contains(reservations, 'aria-label="Filter reservations"', "Reservations require
 contains(reservations, "<TransitionConfirmation", "Reservation destructive transitions must retain confirmation.");
 contains(reservations, "activeValueLabel", "Reservation value must remain currency-safe.");
 
-console.log("Enterprise shell, permission-aware dashboard composition, coherent design density, typography, responsive records, portfolio, finance, maintenance, and front-desk visual contracts verified.");
+console.log("Enterprise shell, permission-aware dashboard composition, live module governance, coherent property and team access surfaces, responsive records, portfolio, finance, maintenance, and front-desk visual contracts verified.");

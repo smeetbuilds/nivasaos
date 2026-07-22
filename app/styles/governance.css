@@ -1,0 +1,158 @@
+/* Properties, module architecture, and access-governance interaction layer. */
+
+/* Property directory */
+.property-directory-results { align-items: stretch; }
+.property-directory-results .property-card { min-width: 0; }
+.property-directory-results .property-cover {
+  height: 86px;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #17243b, #294797);
+}
+.property-cover-identity { min-width: 0; display: flex; align-items: center; gap: 11px; }
+.property-monogram { flex: none; font-size: 28px !important; }
+.property-cover-model {
+  overflow: hidden;
+  color: rgba(255,255,255,.72);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.property-directory-results .property-body { gap: 0; }
+.property-directory-results .property-card-heading h2 { line-height: 1.3; }
+.property-directory-results .property-address { min-height: 38px; }
+.property-directory-results .property-card-facts { margin-bottom: 12px; }
+.property-directory-results .property-card-facts > span { background: #f9fafb; }
+.property-directory-results .record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+.property-directory-results .record-actions .button { width: 100%; }
+
+/* Live operating-module governance */
+.module-governance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.module-governance-summary article {
+  min-width: 0;
+  padding: 16px 17px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+.module-governance-summary span,
+.module-governance-summary strong,
+.module-governance-summary small { display: block; }
+.module-governance-summary span { color: var(--muted); font-size: 11px; font-weight: 700; }
+.module-governance-summary strong { margin-top: 6px; overflow: hidden; color: var(--ink); font-size: 21px; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }
+.module-governance-summary small { margin-top: 4px; font-size: 11px; line-height: 1.45; }
+.module-governance-fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+.module-governance-grid { grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 12px; }
+.module-governance-card {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 17px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.module-governance-card::after { display: none; }
+.module-governance-card:hover { transform: none; border-color: #cfd5df; box-shadow: var(--shadow-sm); }
+.module-governance-card.is-enabled { border-color: color-mix(in srgb, var(--module-accent) 38%, #d8dde5); background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--module-soft) 42%, #fff)); }
+.module-governance-card.is-locked { cursor: default; }
+.module-card-top { min-height: 43px; gap: 12px; margin-bottom: 14px; padding-right: 0; }
+.module-card-state { display: flex; align-items: center; gap: 9px; }
+.module-toggle-control { width: 22px; height: 22px; display: grid; place-items: center; }
+.module-toggle-control input[type="checkbox"] { width: 19px; height: 19px; margin: 0; accent-color: var(--module-accent); cursor: pointer; }
+.module-toggle-control input:disabled { cursor: not-allowed; opacity: .65; }
+.module-governance-card h2 { margin: 5px 0 7px; font-size: 18px; }
+.module-governance-card > p { min-height: 52px; margin-bottom: 0; font-size: 12px; line-height: 1.55; }
+.module-live-state { margin-top: 11px; color: var(--module-accent); font-size: 10px; font-weight: 800; }
+.module-capabilities { gap: 6px; margin-top: 12px; }
+.module-capabilities span { padding: 5px 7px; border: 1px solid #e5e9ef; border-radius: 6px; background: #f8fafc; font-size: 10px; line-height: 1.2; }
+.module-card-foot { margin-top: auto; padding-top: 16px; }
+.module-card-foot > span { min-width: 0; padding: 9px; border: 1px solid #edf0f4; border-radius: 7px; background: rgba(255,255,255,.82); }
+.module-card-foot small { font-size: 10px; line-height: 1.35; }
+.module-card-foot strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.module-lock-note { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: #7a5a16; font-size: 10px; font-weight: 750; }
+.module-selection-notice { padding: 11px 13px; border: 1px solid #f0d49c; border-radius: 8px; background: #fff8e9; color: #8b5708; font-size: 12px; font-weight: 700; }
+.module-primary-panel { grid-template-columns: minmax(0, 1fr) minmax(220px, .45fr) auto; gap: 18px; padding: 18px; }
+.module-primary-panel > div:first-child { min-width: 0; }
+.module-primary-panel p { max-width: 720px; font-size: 12px; }
+.module-save-state { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; }
+.module-save-state .button { min-width: 190px; }
+.module-architecture-note { border-radius: 9px; }
+
+/* Team directory and permission governance */
+.team-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.team-summary-grid article { min-height: 116px; display: flex; flex-direction: column; justify-content: center; padding: 16px; border-radius: 10px; box-shadow: var(--shadow-xs); }
+.team-summary-grid article > span:first-child { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
+.team-summary-grid article > strong { margin-top: 5px; color: var(--ink); font-size: 24px; letter-spacing: -.03em; }
+.team-summary-grid article > small { margin-top: 4px; font-size: 11px; line-height: 1.45; }
+.team-directory-panel { margin-bottom: 18px; }
+.team-directory-panel .panel-head p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+.team-directory-table td:first-child { min-width: 190px; }
+.team-directory-table td:nth-child(3) { min-width: 180px; }
+.team-directory-table td:nth-child(4) { min-width: 155px; }
+.team-directory-table .row-actions { flex-wrap: wrap; }
+.access-scope-fieldset,
+.permission-matrix fieldset { min-inline-size: 0; }
+.access-scope-fieldset { padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: #fbfcfd; }
+.access-scope-fieldset > legend { padding-inline: 7px; color: var(--ink); font-size: 12px; font-weight: 800; }
+.access-scope-fieldset > small { margin-top: 10px; font-size: 11px; line-height: 1.5; }
+.access-empty { padding: 18px; border: 1px dashed #d7dde5; border-radius: 8px; color: var(--muted); font-size: 12px; text-align: center; }
+.permission-matrix fieldset { border-radius: 9px; background: #fbfcfd; }
+.permission-matrix legend { width: calc(100% - 12px); display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.permission-matrix legend span { color: var(--ink); font-size: 11px; }
+.permission-matrix legend small { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.permission-card { min-height: 70px; }
+.permission-card span { min-width: 0; }
+.permission-card strong { font-size: 12px; }
+.permission-card small { color: var(--muted); font-size: 10px; line-height: 1.45; }
+.permission-scope-links { margin-top: 2px; }
+dialog[id^="permissions-"] { width: min(900px, calc(100vw - 32px)); }
+
+@media (max-width: 1180px) {
+  .team-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .module-primary-panel { grid-template-columns: minmax(0, 1fr) minmax(210px, .55fr); }
+  .module-save-state { grid-column: 2; }
+}
+
+@media (max-width: 820px) {
+  .module-governance-summary { grid-template-columns: 1fr; }
+  .module-primary-panel { grid-template-columns: 1fr; }
+  .module-save-state { grid-column: auto; align-items: stretch; }
+  .module-save-state .button { width: 100%; }
+  .team-directory-panel .table-wrap:has(> table[data-mobile-cards]) { overflow: visible !important; }
+}
+
+@media (max-width: 720px) {
+  .property-directory-results .property-card-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; margin-right: 0; padding-right: 0; }
+  .property-directory-results .property-card-facts > span:last-child { grid-column: 1 / -1; }
+  .module-governance-grid { grid-template-columns: 1fr; }
+  .module-governance-card > p { min-height: 0; }
+  .team-summary-grid { grid-template-columns: 1fr 1fr; }
+  .permission-matrix legend { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .permission-grid, .checkbox-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .team-summary-grid { grid-template-columns: 1fr; }
+  .module-card-state { gap: 7px; }
+  .module-governance-card { padding: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .module-governance-card, .property-directory-results .property-card { transition: none !important; }
+}
