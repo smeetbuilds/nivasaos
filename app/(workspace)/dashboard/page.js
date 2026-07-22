@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth";
 import { dashboardData } from "@/lib/data";
 import { moduleDashboardData } from "@/lib/module-data";
 import { money, dateLabel, today } from "@/lib/format";
 import { rentPeriodLabel } from "@/lib/rent";
-import { hasPortfolioPermission } from "@/lib/permissions";
+import { hasPortfolioPermission, hasPortfolioRequirements, requirePortfolioPermission } from "@/lib/permissions";
+import { runWithPermissionScope } from "@/lib/permission-context";
 import Badge from "@/components/Badge";
 import PageHeader from "@/components/PageHeader";
 import Icon from "@/components/Icon";
@@ -13,22 +13,26 @@ import { extensions } from "@/lib/extensions";
 
 export const metadata = { title: "Overview" };
 
-function moduleAction(module) {
-  if (module.capabilities.includes("spaceInventory")) return ["/spaces", "Open space inventory"];
-  if (module.capabilities.includes("commercialProfiles")) return ["/commercial", "Open commercial leases"];
-  if (module.capabilities.includes("servicePlans")) return ["/services", "Open service operations"];
+function moduleAction(module, user) {
+  if (module.capabilities.includes("spaceInventory") && hasPortfolioRequirements(user, { allOf: ["inventory.manage", "agreements.manage"] })) return ["/spaces", "Open space inventory"];
+  if (module.capabilities.includes("commercialProfiles") && hasPortfolioPermission(user, "verticals.manage")) return ["/commercial", "Open commercial leases"];
+  if (module.capabilities.includes("servicePlans") && hasPortfolioPermission(user, "services.manage")) return ["/services", "Open service operations"];
   return ["/properties", "Open properties"];
 }
 
 export default async function DashboardPage({ searchParams }) {
-  const user = await requireUser();
-  const data = dashboardData(user);
-  const moduleRows = moduleDashboardData(user);
+  const user = await requirePortfolioPermission("portfolio.view");
+  const { data, moduleRows } = runWithPermissionScope("portfolio.view", () => ({
+    data: dashboardData(user),
+    moduleRows: moduleDashboardData(user)
+  }));
   const query = await searchParams;
   const canViewBilling = hasPortfolioPermission(user, "billing.manage");
   const canViewPayments = hasPortfolioPermission(user, "payments.manage");
   const canViewMaintenance = hasPortfolioPermission(user, "maintenance.manage");
   const canViewAgreements = hasPortfolioPermission(user, "agreements.manage");
+  const canManageSettings = hasPortfolioPermission(user, "settings.manage");
+  const canCreateProperties = hasPortfolioPermission(user, "properties.manage");
   const occupancy = Number(data.units.total || 0) ? Math.round(Number(data.units.occupied || 0) / Number(data.units.total) * 100) : 0;
   const currencyMetric = (groups, field) => groups.length === 0 ? money(0) : groups.length === 1 ? money(groups[0][field], groups[0].currency) : `${groups.length} currencies`;
   const currencyDetail = (groups, field) => groups.length === 0 ? "No activity yet" : groups.map((row) => money(row[field], row.currency)).join(" · ");
@@ -40,7 +44,7 @@ export default async function DashboardPage({ searchParams }) {
   const currentPeriod = today().slice(0, 7);
 
   return <>
-    {query?.welcome && <div className="welcome-banner modular-welcome"><div><span>Workspace configured</span><strong>Your operating environment is ready, {user.name.split(" ")[0]}.</strong><p>Add each property under the correct operating model so inventory, finance, and operational workflows remain accurate.</p></div><Link className="button light" href="/properties">Add first property <Icon name="arrow" size={17}/></Link></div>}
+    {query?.welcome && canCreateProperties && <div className="welcome-banner modular-welcome"><div><span>Workspace configured</span><strong>Your operating environment is ready, {user.name.split(" ")[0]}.</strong><p>Add each property under the correct operating model so inventory, finance, and operational workflows remain accurate.</p></div><Link className="button light" href="/properties">Add first property <Icon name="arrow" size={17}/></Link></div>}
     <PageHeader className="dashboard-page-header" eyebrow="Workspace command centre" title="Portfolio overview" description="Monitor occupancy, collections, operational risk, and upcoming work across the properties you are authorised to manage." actions={canViewBilling && <Link href="/invoices" className="button primary"><Icon name="plus" size={17}/>Create invoice</Link>}/>
     <section className="metric-grid executive-metrics">
       <article className="metric-card"><div className="metric-icon"><Icon name="property"/></div><span>Active properties</span><strong>{data.totalProperties || 0}</strong><small>Across your permitted portfolio</small></article>
@@ -49,7 +53,7 @@ export default async function DashboardPage({ searchParams }) {
       {canViewBilling && <article className="metric-card risk"><div className="metric-icon"><Icon name="invoice"/></div><span>Overdue balance</span><strong>{currencyMetric(data.overdueByCurrency, "balance")}</strong><small>{overdueCount} overdue invoice(s) · {currencyDetail(data.overdueByCurrency, "balance")}</small></article>}
     </section>
 
-    <section className="module-health-section"><div className="module-health-head"><div><span className="eyebrow">Operating models</span><h2>Operating model health</h2><p>Operational metrics are limited to properties inside your permission scope.</p></div><Link href="/modules" className="text-link">Configure modules <Icon name="arrow" size={15}/></Link></div>{moduleRows.length ? <div className="module-health-grid">{moduleRows.map((row) => { const [href, label] = moduleAction(row.module); const spaceUtilisation = Number(row.spaces) ? Math.round(Number(row.occupied_spaces) / Number(row.spaces) * 100) : null; const risk = Number(row.visitors_inside) + Number(row.missing_commercial_profiles); return <article className={`module-health-card module-${row.module.id}`} key={row.module.id}><div className="module-health-card-head"><ModuleBadge moduleId={row.module.id}/>{risk > 0 && <Badge tone="overdue">{risk} attention</Badge>}</div><h3>{row.module.label}</h3><p>{row.module.description}</p><div className="module-health-stats"><span><small>Properties</small><strong>{row.active_properties}/{row.property_count}</strong></span>{row.module.capabilities.includes("spaceInventory") && <span><small>Space use</small><strong>{spaceUtilisation ?? 0}%</strong></span>}{row.module.capabilities.includes("servicePlans") && <span><small>Services</small><strong>{row.active_services}</strong></span>}{row.module.capabilities.includes("visitorRegister") && <span><small>Visitors inside</small><strong>{row.visitors_inside}</strong></span>}{row.module.capabilities.includes("commercialProfiles") && <span><small>Profiles missing</small><strong>{row.missing_commercial_profiles}</strong></span>}</div><Link href={href} className="button secondary module-health-action">{label} <Icon name="arrow" size={15}/></Link></article>; })}</div> : <div className="panel quiet-state">Create the first property to activate operating model health.</div>}</section>
+    <section className="module-health-section"><div className="module-health-head"><div><span className="eyebrow">Operating models</span><h2>Operating model health</h2><p>Operational metrics are limited to properties inside your permission scope.</p></div>{canManageSettings && <Link href="/modules" className="text-link">Configure modules <Icon name="arrow" size={15}/></Link>}</div>{moduleRows.length ? <div className="module-health-grid">{moduleRows.map((row) => { const [href, label] = moduleAction(row.module, user); const spaceUtilisation = Number(row.spaces) ? Math.round(Number(row.occupied_spaces) / Number(row.spaces) * 100) : null; const risk = Number(row.visitors_inside) + Number(row.missing_commercial_profiles); return <article className={`module-health-card module-${row.module.id}`} key={row.module.id}><div className="module-health-card-head"><ModuleBadge moduleId={row.module.id}/>{risk > 0 && <Badge tone="overdue">{risk} attention</Badge>}</div><h3>{row.module.label}</h3><p>{row.module.description}</p><div className="module-health-stats"><span><small>Properties</small><strong>{row.active_properties}/{row.property_count}</strong></span>{row.module.capabilities.includes("spaceInventory") && <span><small>Space use</small><strong>{spaceUtilisation ?? 0}%</strong></span>}{row.module.capabilities.includes("servicePlans") && <span><small>Services</small><strong>{row.active_services}</strong></span>}{row.module.capabilities.includes("visitorRegister") && <span><small>Visitors inside</small><strong>{row.visitors_inside}</strong></span>}{row.module.capabilities.includes("commercialProfiles") && <span><small>Profiles missing</small><strong>{row.missing_commercial_profiles}</strong></span>}</div><Link href={href} className="button secondary module-health-action">{label} <Icon name="arrow" size={15}/></Link></article>; })}</div> : <div className="panel quiet-state">Create the first property to activate operating model health.</div>}</section>
 
     <section className="dashboard-grid">
       {canViewBilling && <article className="panel span-2"><div className="panel-head"><div><span className="eyebrow">Receivables</span><h2>Recent invoices</h2></div><Link href="/invoices" className="text-link">View all</Link></div><div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Tenant</th><th>Property</th><th>Due</th><th>Balance</th><th>Status</th></tr></thead><tbody>{data.recentInvoices.map((row) => { const overdue = row.status !== "paid" && row.status !== "void" && row.due_date < today(); return <tr key={row.id}><td><strong>{row.number}</strong><small>{row.description}</small></td><td>{row.tenant_name || "Unassigned"}</td><td>{row.property_name}</td><td>{dateLabel(row.due_date)}</td><td>{money(Number(row.amount) - Number(row.amount_paid), row.currency)}</td><td><Badge tone={overdue ? "overdue" : row.status}>{overdue ? "Overdue" : row.status}</Badge></td></tr>; })}</tbody></table></div></article>}
