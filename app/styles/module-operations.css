@@ -1,0 +1,66 @@
+/* Module-specific inventory, service, visitor, commercial, and vertical operations. */
+
+.module-page-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.module-directory-section { margin-bottom: 16px; overflow: hidden; }
+.module-directory-section .panel-head { min-height: 68px; margin-bottom: 0; padding: 15px 18px; }
+.module-directory-section .panel-head h2 { margin-top: 3px; font-size: 18px; line-height: 1.3; }
+.module-directory-table td { vertical-align: middle; }
+.module-directory-table td > strong,
+.module-directory-table td > small,
+.module-directory-table td > .badge + small { display: block; }
+.module-directory-table td > strong + small,
+.module-directory-table td > .badge + small { margin-top: 4px; }
+.module-directory-table td > .module-badge { margin-bottom: 5px; }
+.module-directory-table td small { color: var(--muted); font-size: 11px; line-height: 1.45; white-space: normal; }
+.module-directory-table td strong { overflow-wrap: anywhere; }
+.module-row-actions { min-width: 0; justify-content: flex-start; }
+.module-row-actions form,
+.module-row-actions .confirm-action { margin: 0; }
+.module-row-actions .button.small { min-height: 34px; }
+.module-form-note { padding: 11px 12px; border: 1px solid #dfe4ec; border-radius: 8px; background: #f8f9fb; color: #667085; font-size: 11px; line-height: 1.55; }
+.metric-card.attention { border-color: #ead5aa; background: #fffdf7; box-shadow: inset 3px 0 #b7791f, var(--shadow-xs); }
+.panel-count { display: inline-flex; align-items: center; min-height: 28px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 6px; background: #f8f9fb; color: var(--muted); font-size: 10px; font-weight: 800; white-space: nowrap; }
+
+.vertical-property-grid { gap: 13px; }
+.vertical-property-card { border-radius: 11px; box-shadow: var(--shadow-xs); }
+.vertical-property-card h2 { margin-top: 15px; font-size: 19px; }
+.vertical-property-card > p { font-size: 12px; line-height: 1.5; }
+.vertical-card-metrics { gap: 7px; margin: 15px 0; }
+.vertical-card-metrics span { padding: 10px; border-radius: 8px; }
+.vertical-card-metrics strong { font-size: 18px; }
+.vertical-card-metrics small { font-size: 10px; line-height: 1.4; }
+.vertical-card-actions { flex-wrap: wrap; }
+
+.module-directory-table .person-cell { min-width: 0; }
+.module-directory-table .person-cell > span:last-child { min-width: 0; }
+.module-directory-table .person-cell strong,
+.module-directory-table .person-cell small { overflow-wrap: anywhere; white-space: normal; }
+
+@media (max-width: 900px) {
+  .module-page-actions { width: 100%; justify-content: flex-start; }
+  .module-page-actions .button { flex: 1 1 170px; justify-content: center; }
+}
+
+@media (max-width: 720px) {
+  .module-directory-section .panel-head { align-items: stretch; flex-direction: column; gap: 10px; }
+  .module-directory-section .panel-head :is(.button, .panel-count) { width: 100%; justify-content: center; }
+  .module-row-actions { display: grid; grid-template-columns: 1fr; align-items: stretch; width: 100%; }
+  .module-row-actions :is(form, .confirm-action, .button, .text-button) { width: 100%; }
+  .module-row-actions :is(.button, .text-button) { justify-content: center; text-align: center; }
+  .vertical-card-actions { align-items: stretch; flex-direction: column; }
+  .vertical-card-actions :is(.button, .text-link) { width: 100%; justify-content: center; text-align: center; }
+  .field-grid.three { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .module-page-actions { display: grid; grid-template-columns: 1fr; }
+  .module-page-actions .button { width: 100%; }
+  .module-directory-section .panel-head { padding: 14px; }
+  .module-form-note { padding: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .module-directory-table tr,
+  .vertical-property-card,
+  .module-page-actions .button { transition: none !important; }
+}
