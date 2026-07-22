@@ -9,6 +9,14 @@ const uploadDirectory = configuredUploadDirectory
   ? path.resolve(/* turbopackIgnore: true */ configuredUploadDirectory)
   : path.join(process.cwd(), "storage", "uploads");
 
+function deploymentMetadata() {
+  const commit = String(process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || "").trim();
+  return {
+    deployment: process.env.RENDER_SERVICE_ID ? "render" : "self-hosted",
+    release: commit ? commit.slice(0, 12) : "unversioned"
+  };
+}
+
 export async function GET() {
   const startedAt = Date.now();
   try {
@@ -21,6 +29,7 @@ export async function GET() {
       status: "ok",
       database: "reachable",
       storage: "writable",
+      ...deploymentMetadata(),
       latencyMs: Date.now() - startedAt,
       timestamp: new Date().toISOString()
     }, {
@@ -31,6 +40,7 @@ export async function GET() {
     console.error("NivasaOS health check failed", error);
     return Response.json({
       status: "unhealthy",
+      ...deploymentMetadata(),
       timestamp: new Date().toISOString()
     }, {
       status: 503,

@@ -7,17 +7,32 @@ RUN bun install --frozen-lockfile
 
 FROM base AS builder
 ARG RENDER_EXTERNAL_HOSTNAME
+ARG RENDER_EXTERNAL_URL
+ARG RENDER_GIT_COMMIT
+ARG RENDER_GIT_BRANCH
 ARG NIVASA_PUBLIC_URL
 ARG NEXT_PUBLIC_APP_URL
 ENV RENDER_EXTERNAL_HOSTNAME=${RENDER_EXTERNAL_HOSTNAME} \
+    RENDER_EXTERNAL_URL=${RENDER_EXTERNAL_URL} \
+    RENDER_GIT_COMMIT=${RENDER_GIT_COMMIT} \
+    RENDER_GIT_BRANCH=${RENDER_GIT_BRANCH} \
     NIVASA_PUBLIC_URL=${NIVASA_PUBLIC_URL} \
-    NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL} \
+    NEXT_TELEMETRY_DISABLED=1 \
+    NIVASA_BUILD_STAGE=render \
+    NIVASA_DB_PATH=/tmp/nivasaos-build/nivasaos.sqlite \
+    NIVASA_UPLOAD_DIR=/tmp/nivasaos-build/uploads \
+    NIVASA_BACKUP_DIR=/tmp/nivasaos-build/backups
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN bun run verify && bun run build
+RUN mkdir -p /tmp/nivasaos-build/uploads /tmp/nivasaos-build/backups
+RUN bun run verify
+RUN bun run build:diagnostics
+RUN bun --bun next build --webpack --debug
 
 FROM oven/bun:1.3.0-alpine AS runner
 ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
     PORT=3000
 WORKDIR /app
@@ -33,7 +48,7 @@ COPY --from=builder --chown=bun:bun /app/scripts/backup.js /app/scripts/restore.
 COPY --from=builder --chown=bun:bun /app/scripts/lib ./scripts/lib
 COPY --from=builder --chown=bun:bun /app/lib/runtime-paths.js /app/lib/runtime-config.js /app/lib/schema.js ./lib/
 COPY --from=builder --chown=bun:bun /app/lib/schema ./lib/schema
-RUN bun -e "const p=await Bun.file('package.json').json(); p.scripts={start:'bun run scripts/start-container.js','setup:token':'bun run scripts/create-install-token.js',migrate:'bun run scripts/migrate.js',backup:'bun run scripts/backup.js',restore:'bun run scripts/restore.js'}; await Bun.write('package.json',JSON.stringify(p,null,2)+'\\n')"
+RUN bun -e "const p=await Bun.file('package.json').json(); p.scripts={start:'bun run scripts/start-container.js','setup:token':'bun run scripts/create-install-token.js',migrate:'bun run scripts/migrate.js',backup:'bun run scripts/backup.js',restore:'bun run scripts/restore.js'}; await Bun.write('package.json',JSON.stringify(p,null,2)+'\n')"
 
 USER bun
 EXPOSE 3000

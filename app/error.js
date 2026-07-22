@@ -1,5 +1,25 @@
 "use client";
 
-export default function ErrorPage({ reset }) {
-  return <div className="fatal-state"><div><span>Something needs attention</span><h1>The request could not be completed.</h1><p>Review the entered values and your property access, then try again. No successful financial transaction is rolled back silently.</p><div><button className="button primary" onClick={() => reset()}>Try again</button><button className="button secondary" onClick={() => history.back()}>Go back</button></div></div></div>;
+import { useEffect } from "react";
+import SystemState from "@/components/SystemState";
+
+export default function Error({ error, reset }) {
+  useEffect(() => {
+    console.error("NivasaOS route rendering error", error);
+  }, [error]);
+
+  return <main className="system-state-page">
+    <SystemState
+      code="500"
+      eyebrow="Unexpected application error"
+      title="This workspace view could not be completed."
+      description="Your saved data was not changed. Retry the view, or return to the dashboard and continue from a stable screen."
+      reference={error?.digest || ""}
+      primaryHref=""
+      secondaryHref="/dashboard"
+      secondaryLabel="Return to dashboard"
+    >
+      <button type="button" className="button primary" onClick={() => reset()}>Try again</button>
+    </SystemState>
+  </main>;
 }
