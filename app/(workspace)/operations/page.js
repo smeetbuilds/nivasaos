@@ -36,6 +36,19 @@ const labels = {
 const booleanFields = new Set(["identity_required", "guardian_required", "leave_approval_required", "payroll_recovery_enabled", "fitout_approval_required"]);
 const integerFields = new Set(["notice_period_days", "renewal_lead_days", "lock_in_days", "minimum_age", "housekeeping_turnover_minutes", "eligibility_review_days", "termination_checkout_days", "cam_billing_day", "compliance_review_days", "escalation_notice_days"]);
 const moneyFields = new Set(["payroll_recovery", "employer_paid_amount", "late_checkout_fee"]);
+const profileMaxLength = Object.freeze({
+  external_id: 120,
+  organisation: 180,
+  department: 180,
+  programme: 180,
+  level_or_designation: 180,
+  guardian_name: 180,
+  guardian_phone: 80,
+  guardian_email: 254,
+  sponsor_name: 180,
+  sponsor_reference: 180,
+  curfew_time: 20
+});
 
 function inputType(field) {
   if (field.includes("date") || ["term_start", "term_end", "eligibility_end_date"].includes(field)) return "date";
@@ -50,16 +63,24 @@ function parseSettings(value) {
   try { return JSON.parse(value || "{}"); } catch { return {}; }
 }
 
+function normalizedBoolean(value) {
+  if ([true, 1, "1", "true", "yes", "on"].includes(value)) return "yes";
+  if ([false, 0, "0", "false", "no", "off"].includes(value)) return "no";
+  return "";
+}
+
 function FieldControl({ field, name, value }) {
-  if (booleanFields.has(field)) return <select name={name} defaultValue={value ?? ""}><option value="">Not configured</option><option value="yes">Yes</option><option value="no">No</option></select>;
+  if (booleanFields.has(field)) return <select name={name} defaultValue={normalizedBoolean(value)}><option value="">Not configured</option><option value="yes">Yes</option><option value="no">No</option></select>;
   const type = inputType(field);
   const numeric = type === "number";
+  const textual = ["text", "email", "tel"].includes(type);
   return <input
     name={name}
     type={type}
     defaultValue={value ?? ""}
     min={numeric ? "0" : undefined}
     step={numeric ? (integerFields.has(field) ? "1" : "0.01") : undefined}
+    maxLength={textual ? (name.startsWith("config_") ? 500 : profileMaxLength[field] || 180) : undefined}
     inputMode={numeric ? (integerFields.has(field) ? "numeric" : "decimal") : type === "tel" ? "tel" : undefined}
     autoComplete={field === "guardian_email" ? "email" : field === "guardian_phone" ? "tel" : undefined}
   />;
