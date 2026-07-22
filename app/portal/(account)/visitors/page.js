@@ -51,11 +51,11 @@ export default async function PortalVisitorsPage({ searchParams }) {
 
     {data.leases.length > 0 && <form action={preregisterTenantVisitorAction}><ModalForm id="portal-visitor-create" title="Pre-register a visitor" description="This creates an expected visit only. Staff must confirm arrival and departure." submitLabel="Pre-register visitor" pendingLabel="Registering…"><div className="modal-body">
       <label><span>Home / agreement</span><select name="leaseId" required>{data.leases.map((lease) => <option value={lease.id} key={lease.id}>{lease.property_name} · {lease.unit_name} · {lease.reference}</option>)}</select></label>
-      <div className="field-grid two"><label><span>Visitor name</span><input name="visitorName" required maxLength="180" autoComplete="name"/></label><label><span>Visitor phone</span><input name="visitorPhone" type="tel" inputMode="tel" autoComplete="tel" maxLength="80"/></label></div>
+      <div className="field-grid two"><label><span>Visitor name</span><input name="visitorName" required maxLength="160" autoComplete="name"/></label><label><span>Visitor phone</span><input name="visitorPhone" type="tel" inputMode="tel" autoComplete="tel" maxLength="40"/></label></div>
       <label><span>Relationship</span><input name="relationship" maxLength="100" placeholder="Parent, friend, colleague"/></label>
-      <label><span>Purpose</span><input name="purpose" required maxLength="180" placeholder="Personal visit"/></label>
+      <label><span>Purpose</span><input name="purpose" required maxLength="500" placeholder="Personal visit"/></label>
       <div className="field-grid two"><label><span>Expected arrival</span><input type="datetime-local" name="expectedAt" required/></label><label><span>Expected checkout</span><input type="datetime-local" name="expectedCheckout"/></label></div>
-      <label><span>Notes for property staff</span><textarea name="notes" rows="3" maxLength="2000"/></label>
+      <label><span>Notes for property staff</span><textarea name="notes" rows="3" maxLength="1200"/></label>
       <div className="policy-warning">Pre-registration is not access approval. Follow property visitor rules and contact staff for exceptions.</div>
     </div></ModalForm></form>}
   </>;
