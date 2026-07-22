@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { tenantLogoutAction } from "@/app/actions";
 import BrandLogo from "@/components/BrandLogo";
 import Icon from "@/components/Icon";
@@ -11,9 +11,14 @@ function activeRoute(pathname, href) {
   return href === "/portal" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
 export default function TenantPortalShell({ tenant, company, branding, module, children }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreButtonRef = useRef(null);
+  const moreSheetRef = useRef(null);
+  const restoreMoreFocus = useRef(false);
   const nav = [
     ["/portal", "home", "Home"],
     ["/portal/lease", module.id === "commercial" ? "commercial" : "lease", module.id === "commercial" ? "My premises" : "My home"],
@@ -28,6 +33,7 @@ export default function TenantPortalShell({ tenant, company, branding, module, c
   const primaryHrefs = ["/portal", "/portal/billing", "/portal/requests", "/portal/maintenance"];
   const primary = primaryHrefs.map((href) => nav.find((item) => item[0] === href)).filter(Boolean);
   const secondary = nav.filter((item) => !primaryHrefs.includes(item[0]));
+
   useEffect(() => setMoreOpen(false), [pathname]);
   useEffect(() => {
     document.body.classList.toggle("portal-more-open", moreOpen);
@@ -35,6 +41,32 @@ export default function TenantPortalShell({ tenant, company, branding, module, c
     window.addEventListener("keydown", escape);
     return () => { document.body.classList.remove("portal-more-open"); window.removeEventListener("keydown", escape); };
   }, [moreOpen]);
+  useEffect(() => {
+    let frame;
+    if (moreOpen) {
+      restoreMoreFocus.current = true;
+      frame = requestAnimationFrame(() => moreSheetRef.current?.querySelector(FOCUSABLE)?.focus());
+    } else if (restoreMoreFocus.current) {
+      restoreMoreFocus.current = false;
+      frame = requestAnimationFrame(() => moreButtonRef.current?.focus());
+    }
+    return () => { if (frame) cancelAnimationFrame(frame); };
+  }, [moreOpen]);
+
+  const trapMoreFocus = (event) => {
+    if (event.key !== "Tab") return;
+    const focusable = [...(moreSheetRef.current?.querySelectorAll(FOCUSABLE) || [])];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   return <div className={`tenant-portal-shell module-${module.id}`}>
     <aside className="tenant-portal-sidebar">
@@ -50,12 +82,12 @@ export default function TenantPortalShell({ tenant, company, branding, module, c
       <main className="tenant-portal-content">{children}</main>
       <footer className="tenant-portal-footer">{branding.whiteLabel ? <>{branding.name} · {module.label} · Self-hosted</> : <>Powered by {branding.name} · {module.label} · Built by <a href="https://aahavlabs.in" target="_blank" rel="noreferrer">Aahav Labs</a></>}</footer>
     </div>
-    <button type="button" className={`portal-more-scrim${moreOpen ? " is-open" : ""}`} aria-label="Close portal menu" onClick={() => setMoreOpen(false)}/>
-    <section className={`portal-more-sheet${moreOpen ? " is-open" : ""}`} role="dialog" aria-modal="true" aria-hidden={!moreOpen} inert={!moreOpen} aria-label="More portal options">
-      <div className="portal-more-handle"/><div className="portal-more-head"><span><small>{module.shortLabel}</small><strong>More options</strong></span><button type="button" className="icon-button" aria-label="Close" onClick={() => setMoreOpen(false)}><Icon name="close" size={20}/></button></div>
+    <button type="button" className={`portal-more-scrim${moreOpen ? " is-open" : ""}`} aria-hidden="true" tabIndex={-1} onClick={() => setMoreOpen(false)}/>
+    <section ref={moreSheetRef} id="portal-more-sheet" className={`portal-more-sheet${moreOpen ? " is-open" : ""}`} role="dialog" aria-modal="true" aria-hidden={!moreOpen} inert={!moreOpen} aria-labelledby="portal-more-title" onKeyDown={trapMoreFocus}>
+      <div className="portal-more-handle"/><div className="portal-more-head"><span><small>{module.shortLabel}</small><strong id="portal-more-title">More options</strong></span><button type="button" className="icon-button" aria-label="Close portal menu" onClick={() => setMoreOpen(false)}><Icon name="close" size={20}/></button></div>
       <div className="portal-more-grid">{secondary.map(([href,icon,label]) => <Link href={href} key={href} className={activeRoute(pathname,href)?"is-active":""}><span><Icon name={icon} size={21}/></span><strong>{label}</strong></Link>)}</div>
       <form action={tenantLogoutAction}><button className="button secondary portal-more-logout"><Icon name="logout" size={17}/>Sign out</button></form>
     </section>
-    <nav className="tenant-portal-bottom-nav module-bottom-nav" aria-label="Tenant portal quick navigation">{primary.map(([href, icon, label]) => { const active = activeRoute(pathname, href); return <Link href={href} key={href} className={active ? "is-active" : ""} aria-current={active ? "page" : undefined}><Icon name={icon} size={20}/><span>{label}</span></Link>; })}<button type="button" className={moreOpen || secondary.some(([href]) => activeRoute(pathname,href)) ? "is-active" : ""} onClick={() => setMoreOpen(true)} aria-expanded={moreOpen}><Icon name="more" size={20}/><span>More</span></button></nav>
+    <nav className="tenant-portal-bottom-nav module-bottom-nav" aria-label="Tenant portal quick navigation">{primary.map(([href, icon, label]) => { const active = activeRoute(pathname, href); return <Link href={href} key={href} className={active ? "is-active" : ""} aria-current={active ? "page" : undefined}><Icon name={icon} size={20}/><span>{label}</span></Link>; })}<button ref={moreButtonRef} type="button" className={moreOpen || secondary.some(([href]) => activeRoute(pathname,href)) ? "is-active" : ""} onClick={() => setMoreOpen(true)} aria-haspopup="dialog" aria-controls="portal-more-sheet" aria-expanded={moreOpen}><Icon name="more" size={20}/><span>More</span></button></nav>
   </div>;
 }
