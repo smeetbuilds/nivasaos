@@ -3,6 +3,7 @@ import fs from "node:fs";
 const required = {
   "lib/tenant-auth.js": ["nivasa_tenant_session", "hashPortalToken", "requireTenant"],
   "lib/schema.js": ["tenant_accounts", "tenant_invites", "payment_submissions", "deposit_transactions", "maintenance_comments", "actor_tenant_id"],
+  "app/globals.css": ["@import \"./styles/portal.css\";"],
   "app/portal/(account)/page.js": ["Resident account summary", "openInvoiceCount", "Resident services summary"],
   "app/portal/(account)/billing/page.js": ["Submit payment proof", "Payment receipts", "cancel-portal-submission", "payable.length > 0"],
   "app/portal/(account)/lease/page.js": ["Deposit transactions", "depositDifference", "portal-record-action", "Acknowledging…"],
