@@ -1,0 +1,224 @@
+/* First-run installation, authentication, activation, settings, and onboarding. */
+
+.auth-page,
+.portal-auth-page,
+.modular-install-page { min-height: 100dvh; background: #f5f7fa; }
+
+.auth-page,
+.portal-auth-page { display: grid; grid-template-columns: minmax(360px, .9fr) minmax(460px, 1.1fr); }
+.auth-story,
+.portal-auth-story,
+.modular-install-story { color: #fff; background: linear-gradient(152deg, #0b1220 0%, #14213b 58%, #172c4e 100%); }
+.auth-story,
+.portal-auth-story { position: relative; min-height: 100dvh; display: flex; flex-direction: column; gap: 28px; padding: clamp(32px, 5vw, 68px); overflow: hidden; }
+.auth-story::after,
+.portal-auth-story::after,
+.modular-install-story::before { opacity: .14; }
+.auth-story > *,
+.portal-auth-story > * { position: relative; z-index: 1; }
+.story-copy,
+.portal-auth-story > div:nth-child(2) { max-width: 650px; margin: auto 0; }
+.story-copy h1,
+.portal-auth-story h1 { margin: 16px 0 14px; font-size: clamp(34px, 4vw, 56px); line-height: 1.02; letter-spacing: -.05em; }
+.story-copy p,
+.portal-auth-story p { max-width: 600px; color: rgba(255,255,255,.68); font-size: 14px; line-height: 1.7; }
+.auth-story .pill,
+.portal-auth-story .pill,
+.modular-story-copy .pill { display: inline-flex; width: max-content; max-width: 100%; padding: 6px 10px; border: 1px solid rgba(255,255,255,.17); border-radius: 999px; color: #d8def0; font-size: 10px; font-weight: 760; letter-spacing: .04em; }
+.auth-trust-list,
+.portal-trust-list { display: grid; gap: 8px; }
+.auth-trust-list span,
+.portal-trust-list span { display: flex; align-items: center; gap: 9px; color: #b8c3d8; font-size: 11px; font-weight: 650; }
+.auth-trust-list svg,
+.portal-trust-list svg { color: #a9b7ff; }
+.auth-credit { margin-top: auto; color: #8e9bb3; font-size: 10px; }
+.auth-credit a { color: #dfe5f2; font-weight: 750; }
+.auth-panel,
+.portal-auth-panel { min-width: 0; display: grid; place-items: center; padding: clamp(24px, 5vw, 70px); background: #f8f9fb; }
+.auth-form-wrap,
+.portal-auth-form { width: min(100%, 480px); padding: clamp(24px, 4vw, 38px); border: 1px solid #dfe4eb; border-radius: 12px; background: #fff; box-shadow: 0 18px 50px rgba(16,24,40,.07); }
+.auth-form-wrap h2,
+.portal-auth-form h2 { margin: 0; color: var(--ink); font-size: clamp(27px, 3vw, 36px); line-height: 1.12; }
+.auth-form-wrap > p,
+.portal-auth-form > p { margin: 9px 0 22px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.auth-credential-form { gap: 15px; }
+.auth-credential-form .button { margin-top: 3px; }
+.auth-error { margin: 0 0 17px; }
+.auth-route-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 19px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.portal-auth-help { margin: 17px 0 0 !important; padding: 11px 12px; border: 1px solid #e2e7ef; border-radius: 8px; background: #f8f9fb; font-size: 11px !important; }
+.portal-invite-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.portal-invite-meta > span { min-width: 0; padding: 11px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: rgba(255,255,255,.045); }
+.portal-invite-meta small,
+.portal-invite-meta strong { display: block; }
+.portal-invite-meta small { color: #8695af; font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.portal-invite-meta strong { margin-top: 4px; overflow-wrap: anywhere; color: #f8fafc; font-size: 11px; }
+.portal-auth-empty { text-align: center; }
+.portal-auth-empty .button { width: 100%; margin-top: 8px; }
+.portal-auth-state-icon { width: 58px; height: 58px; display: grid; place-items: center; margin: 0 auto 18px; border-radius: 12px; background: #eef1ff; color: #465fff; }
+.portal-activation-form .action-state-message { margin: 0; }
+.password-requirements { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; border: 1px solid #dfe5ef; border-radius: 8px; background: #f8f9fb; color: #5f6d82; }
+.password-requirements svg { flex: 0 0 auto; margin-top: 1px; color: #5366e8; }
+.password-requirements strong,
+.password-requirements small { display: block; }
+.password-requirements strong { color: #344054; font-size: 11px; }
+.password-requirements small { margin-top: 3px; font-size: 10px; line-height: 1.45; }
+
+.modular-install-page { grid-template-columns: minmax(320px, .72fr) minmax(620px, 1.28fr); }
+.modular-install-story { padding: clamp(30px, 4vw, 60px); }
+.modular-story-copy { margin: auto 0 34px; }
+.modular-story-copy h1 { font-size: clamp(38px, 4.5vw, 60px); }
+.modular-story-points { gap: 9px; margin-bottom: 28px; }
+.modular-story-points > span { padding: 12px; border-radius: 9px; }
+.modular-install-panel { padding: clamp(24px, 4vw, 60px); }
+.install-wizard { width: min(100%, 980px); }
+.install-wizard > .action-state-message { margin: 0 0 16px; }
+.install-progress-summary { display: grid; grid-template-columns: auto minmax(180px, 1fr); align-items: center; gap: 12px; margin-bottom: 12px; }
+.install-progress-summary > span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.install-progress-summary progress { width: 100%; height: 7px; accent-color: var(--accent); }
+.install-progress { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 0 0 28px; padding: 0; list-style: none; }
+.install-progress li { min-width: 0; }
+.install-progress button { width: 100%; min-height: 50px; display: flex; align-items: center; gap: 8px; padding: 8px 4px; border: 0; border-bottom: 2px solid #dce1e9; border-radius: 0; background: transparent; color: #8a94a5; text-align: left; }
+.install-progress button > span { width: 25px; height: 25px; flex: 0 0 25px; display: grid; place-items: center; border-radius: 7px; background: #e8ebf1; font-size: 10px; font-weight: 850; }
+.install-progress button strong { min-width: 0; font-size: 10px; line-height: 1.25; }
+.install-progress button.is-active,
+.install-progress button.is-complete { border-bottom-color: #5267ef; color: #293246; }
+.install-progress button.is-active > span,
+.install-progress button.is-complete > span { background: #5267ef; color: #fff; }
+.install-progress button:disabled { cursor: default; opacity: .72; }
+.install-step[hidden] { display: none !important; }
+.install-step-head h2:focus { outline: none; }
+.install-selection-status { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: -8px 0 15px; padding: 10px 12px; border: 1px solid #dfe4ec; border-radius: 8px; background: #fff; }
+.install-selection-status strong { color: var(--ink); font-size: 11px; }
+.install-selection-status span { color: var(--muted); font-size: 10px; }
+.module-selector-card { min-height: 176px; border-radius: 10px; }
+.module-selected-mark { border-radius: 8px; }
+.primary-module-picker,
+.install-form-card,
+.install-review-grid > article,
+.install-module-config { border-radius: 10px; box-shadow: var(--shadow-xs); }
+.install-module-config { padding: 18px; }
+.install-module-config-head p { white-space: normal; }
+.install-blocking-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid #efb8c4; border-radius: 8px; background: #fff5f7; color: #971b3b; }
+.install-blocking-note svg { flex: 0 0 auto; }
+.install-blocking-note strong,
+.install-blocking-note small { display: block; }
+.install-blocking-note small { margin-top: 3px; color: #9f5367; font-size: 10px; }
+.install-actions { align-items: center; }
+.install-actions .button.large { width: auto; }
+
+.first-run-onboarding { margin-bottom: 24px; overflow: hidden; border: 1px solid #d8def5; border-radius: 12px; background: #fff; box-shadow: var(--shadow-sm); }
+.first-run-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding: 20px 22px 17px; background: linear-gradient(135deg, #f6f8ff, #fff); }
+.first-run-head h2 { margin: 0; color: var(--ink); font-size: 24px; }
+.first-run-head p { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+.first-run-progress-copy { flex: 0 0 auto; text-align: right; }
+.first-run-progress-copy strong,
+.first-run-progress-copy span { display: block; }
+.first-run-progress-copy strong { color: #3f55db; font-size: 24px; }
+.first-run-progress-copy span { margin-top: 2px; color: var(--muted); font-size: 10px; }
+.first-run-onboarding > progress { width: 100%; height: 6px; display: block; border: 0; border-radius: 0; accent-color: #5267ef; }
+.first-run-steps { display: grid; margin: 0; padding: 0; list-style: none; }
+.first-run-steps li { min-width: 0; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid #edf0f4; }
+.first-run-step-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: #eef1ff; color: #465fff; }
+.first-run-steps li.is-complete .first-run-step-icon { background: #e9f8f2; color: #087a67; }
+.first-run-step-copy strong,
+.first-run-step-copy small { display: block; }
+.first-run-step-copy strong { color: var(--ink); font-size: 12px; }
+.first-run-step-copy small { margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.first-run-step-state { color: var(--muted); font-size: 10px; font-weight: 750; }
+.first-run-foot { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 20px; border-top: 1px solid #e7ebf2; background: #f8f9fb; }
+.first-run-foot > span { display: flex; align-items: center; gap: 8px; color: #5f6c80; font-size: 10px; }
+.first-run-foot > div { display: flex; align-items: center; gap: 12px; }
+
+.settings-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.settings-summary-grid > article { min-width: 0; padding: 15px 17px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: var(--shadow-xs); }
+.settings-summary-grid span,
+.settings-summary-grid strong,
+.settings-summary-grid small { display: block; }
+.settings-summary-grid span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.settings-summary-grid strong { margin-top: 8px; overflow-wrap: anywhere; color: var(--ink); font-size: 16px; }
+.settings-summary-grid small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.settings-layout { align-items: start; }
+.settings-form > .action-state-message { margin-top: 14px; }
+.settings-security-form { align-self: start; }
+.brand-asset-field { border-radius: 8px; }
+.brand-asset-status { display: flex; align-items: center; gap: 7px; margin-top: 9px; color: var(--muted); }
+.brand-asset-status strong { font-size: 10px; }
+.brand-asset-indicator { width: 8px; height: 8px; border-radius: 50%; background: #c9ced8; }
+.brand-asset-indicator.is-active { background: #0e9384; box-shadow: 0 0 0 3px rgba(14,147,132,.12); }
+
+:is(.auth-page,.portal-auth-page,.modular-install-page,.first-run-onboarding,.settings-layout) :is(a,button,input,select,textarea):focus-visible { outline: 3px solid rgba(70,95,255,.3); outline-offset: 2px; }
+
+@media (max-width: 1000px) {
+  .auth-page,
+  .portal-auth-page,
+  .modular-install-page { grid-template-columns: 1fr; }
+  .auth-story,
+  .portal-auth-story,
+  .modular-install-story { position: relative; top: auto; min-height: auto; padding: 28px clamp(20px, 5vw, 44px); }
+  .story-copy,
+  .portal-auth-story > div:nth-child(2),
+  .modular-story-copy { margin: 22px 0; }
+  .story-copy h1,
+  .portal-auth-story h1,
+  .modular-story-copy h1 { font-size: clamp(30px, 6vw, 44px); }
+  .auth-trust-list,
+  .portal-trust-list,
+  .modular-story-points { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .modular-story-points > span { min-width: 0; }
+  .auth-credit { margin-top: 10px; }
+  .auth-panel,
+  .portal-auth-panel,
+  .modular-install-panel { padding: 28px clamp(16px, 5vw, 44px); }
+  .settings-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-summary-grid > article:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  .auth-trust-list,
+  .portal-trust-list,
+  .modular-story-points { grid-template-columns: 1fr; }
+  .auth-form-wrap,
+  .portal-auth-form { padding: 22px 18px; border-radius: 10px; }
+  .auth-route-switch { align-items: flex-start; flex-direction: column; }
+  .portal-invite-meta { grid-template-columns: 1fr; }
+  .install-progress { gap: 3px; }
+  .install-progress button { min-height: 45px; justify-content: center; padding-inline: 2px; }
+  .install-progress button strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .install-selection-status { align-items: flex-start; flex-direction: column; }
+  .module-selector-grid { grid-template-columns: 1fr; }
+  .primary-module-picker { grid-template-columns: 1fr; }
+  .install-actions { align-items: stretch; flex-direction: column-reverse; }
+  .install-actions > span { display: none; }
+  .install-actions .button,
+  .install-actions .button.large { width: 100%; }
+  .first-run-head,
+  .first-run-foot { align-items: flex-start; flex-direction: column; }
+  .first-run-progress-copy { text-align: left; }
+  .first-run-steps li { grid-template-columns: 36px minmax(0, 1fr); padding: 14px 15px; }
+  .first-run-steps li > :last-child { grid-column: 2; width: 100%; justify-content: center; }
+  .first-run-foot > div { width: 100%; align-items: stretch; flex-direction: column; }
+  .first-run-foot > div :is(.button,.text-link) { width: 100%; justify-content: center; text-align: center; }
+  .settings-summary-grid { grid-template-columns: 1fr; }
+  .settings-summary-grid > article:last-child { grid-column: auto; }
+}
+
+@media (max-width: 420px) {
+  .auth-story,
+  .portal-auth-story,
+  .modular-install-story { padding-inline: 18px; }
+  .auth-panel,
+  .portal-auth-panel,
+  .modular-install-panel { padding: 18px 12px 24px; }
+  .install-progress-summary { grid-template-columns: 1fr; }
+  .install-progress { margin-bottom: 22px; }
+  .first-run-head { padding: 18px 16px 15px; }
+  .first-run-head h2 { font-size: 21px; }
+  .first-run-foot { padding-inline: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-page *,
+  .portal-auth-page *,
+  .modular-install-page *,
+  .first-run-onboarding * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}

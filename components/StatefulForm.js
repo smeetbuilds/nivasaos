@@ -47,8 +47,12 @@ function clearGeneratedErrors(form) {
   });
 }
 
+export function useStructuredActionState() {
+  return useContext(ActionStateContext);
+}
+
 export function ActionStateMessage() {
-  const state = useContext(ActionStateContext);
+  const state = useStructuredActionState();
   if (state.status !== "error") return null;
   return <div className="action-state-message" role="alert" aria-live="assertive" tabIndex={-1} data-action-error-summary>
     <strong>Review this form</strong>
@@ -57,10 +61,13 @@ export function ActionStateMessage() {
   </div>;
 }
 
-export default function StatefulForm({ action, children, className = "", ...props }) {
+export default function StatefulForm({ action, children, className = "", onError, ...props }) {
   const [state, formAction] = useActionState(action, INITIAL_ACTION_STATE);
   const formRef = useRef(null);
+  const onErrorRef = useRef(onError);
   const contextValue = useMemo(() => state || INITIAL_ACTION_STATE, [state]);
+
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
     if (state?.status !== "error" || !state.attempt || !formRef.current) return;
@@ -75,10 +82,11 @@ export default function StatefulForm({ action, children, className = "", ...prop
       firstInvalid ||= controls.find((control) => !control.disabled && control.type !== "hidden") || null;
     }
 
+    onErrorRef.current?.(state);
     const dialog = form.closest("dialog");
     if (dialog && !dialog.open) dialog.showModal();
     const summary = form.querySelector("[data-action-error-summary]");
-    requestAnimationFrame(() => (firstInvalid || summary)?.focus());
+    requestAnimationFrame(() => requestAnimationFrame(() => (firstInvalid || summary)?.focus()));
   }, [state?.attempt]);
 
   return <ActionStateContext.Provider value={contextValue}>

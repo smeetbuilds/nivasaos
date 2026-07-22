@@ -6,6 +6,7 @@ import { rentPeriodLabel } from "@/lib/rent";
 import { hasPortfolioPermission, hasPortfolioRequirements, requirePortfolioPermission } from "@/lib/permissions";
 import { runWithPermissionScope } from "@/lib/permission-context";
 import Badge from "@/components/Badge";
+import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import PageHeader from "@/components/PageHeader";
 import Icon from "@/components/Icon";
 import ModuleBadge from "@/components/ModuleBadge";
@@ -31,6 +32,7 @@ export default async function DashboardPage({ searchParams }) {
   const canViewPayments = hasPortfolioPermission(user, "payments.manage");
   const canViewMaintenance = hasPortfolioPermission(user, "maintenance.manage");
   const canViewAgreements = hasPortfolioPermission(user, "agreements.manage");
+  const canManageInventory = hasPortfolioPermission(user, "inventory.manage");
   const canManageSettings = hasPortfolioPermission(user, "settings.manage");
   const canCreateProperties = hasPortfolioPermission(user, "properties.manage");
   const occupancy = Number(data.units.total || 0) ? Math.round(Number(data.units.occupied || 0) / Number(data.units.total) * 100) : 0;
@@ -46,14 +48,20 @@ export default async function DashboardPage({ searchParams }) {
   const followupPanelCount = Number(canViewBilling) * 2 + Number(canViewAgreements);
 
   return <>
-    {query?.welcome && canCreateProperties && <div className="welcome-banner modular-welcome"><div><span>Workspace configured</span><strong>Your operating environment is ready, {user.name.split(" ")[0]}.</strong><p>Add each property under the correct operating model so inventory, finance, and operational workflows remain accurate.</p></div><Link className="button light" href="/properties">Add first property <Icon name="arrow" size={17}/></Link></div>}
+    {query?.welcome && <FirstRunOnboarding
+      firstName={user.name.split(" ")[0]}
+      totalProperties={data.totalProperties || 0}
+      totalUnits={data.units.total || 0}
+      activeAgreements={activeLeases}
+      permissions={{ properties: canCreateProperties, inventory: canManageInventory, agreements: canViewAgreements, settings: canManageSettings }}
+    />}
     <PageHeader className="dashboard-page-header" eyebrow="Workspace command centre" title="Portfolio overview" description="Monitor occupancy, collections, operational risk, and upcoming work across the properties you are authorised to manage." actions={canViewBilling && <Link href="/invoices" className="button primary"><Icon name="plus" size={17}/>Create invoice</Link>}/>
 
     <section className="metric-grid executive-metrics" aria-label="Portfolio summary">
       <article className="metric-card"><div className="metric-icon"><Icon name="property"/></div><span>Active properties</span><strong>{data.totalProperties || 0}</strong><small>Across your permitted portfolio</small></article>
       <article className="metric-card"><div className="metric-icon"><Icon name="unit"/></div><span>Unit occupancy</span><strong>{occupancy}%</strong><small>{data.units.occupied || 0} occupied · {data.units.available || 0} available</small></article>
       {canViewPayments && <article className="metric-card"><div className="metric-icon"><Icon name="payment"/></div><span>Collected this month</span><strong>{currencyMetric(data.paymentsByCurrency, "collected")}</strong><small>Recorded inside your payment scope</small></article>}
-      {canViewBilling && <article className="metric-card risk"><div className="metric-icon"><Icon name="invoice"/></div><span>Overdue balance</span><strong>{currencyMetric(data.overdueByCurrency, "balance")}</strong><small>{overdueCount} overdue invoice(s) · {currencyDetail(data.overdueByCurrency, "balance")}</small></article>}
+      {canViewBilling && <article className={`metric-card${overdueCount ? " risk" : ""}`}><div className="metric-icon"><Icon name="invoice"/></div><span>Overdue balance</span><strong>{currencyMetric(data.overdueByCurrency, "balance")}</strong><small>{overdueCount} overdue invoice(s) · {currencyDetail(data.overdueByCurrency, "balance")}</small></article>}
     </section>
 
     <section className="module-health-section" aria-labelledby="operating-model-health-title">
