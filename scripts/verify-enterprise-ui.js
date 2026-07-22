@@ -11,6 +11,7 @@ const foundation = read("app/styles/foundation.css");
 const portfolio = read("app/styles/portfolio.css");
 const finance = read("app/styles/finance.css");
 const operationsCss = read("app/styles/operations.css");
+const dashboardCss = read("app/styles/dashboard.css");
 const polish = read("app/styles/polish.css");
 const shell = read("components/AppShell.js");
 const pageHeader = read("components/PageHeader.js");
@@ -26,7 +27,7 @@ const reports = read("app/(workspace)/reports/workspace.js");
 const maintenance = read("app/(workspace)/maintenance/page.js");
 const reservations = read("app/(workspace)/reservations/page.js");
 
-for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css", "polish.css"]) {
+for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css", "dashboard.css", "polish.css"]) {
   contains(globals, `@import "./styles/${filename}";`, `Global CSS must load ${filename}.`);
 }
 contains(globals.trim(), '@import "./styles/polish.css";', "The visual-coherence stylesheet must remain the final CSS import.");
@@ -58,6 +59,24 @@ for (const contract of [
 ]) contains(polish, contract, `System polish contract missing: ${contract}`);
 excludes(polish, "font-size: 8px", "Final polish must not reintroduce unreadably small operational text.");
 excludes(polish, "border-radius: 20px", "Final polish must not reintroduce oversized card radii.");
+
+for (const contract of [
+  ".metric-grid.executive-metrics",
+  ".dashboard-grid.dashboard-primary-grid",
+  ".dashboard-grid.dashboard-followups",
+  ".dashboard-empty-state",
+  ".dashboard-invoice-table",
+  ".module-health-card .module-health-stats",
+  "@media (max-width: 720px)"
+]) contains(dashboardCss, contract, `Dashboard polish contract missing: ${contract}`);
+contains(dashboard, 'aria-label="Portfolio summary"', "Dashboard metrics need an accessible summary label.");
+contains(dashboard, 'aria-labelledby="operating-model-health-title"', "Operating-model health needs a stable section heading relationship.");
+contains(dashboard, "primaryPanelCount > 0", "Dashboard must not render an empty operational grid for restricted roles.");
+contains(dashboard, "followupPanelCount > 0", "Dashboard must not render an empty follow-up grid for restricted roles.");
+contains(dashboard, "data-mobile-cards", "Recent invoices must use the shared mobile record-card contract.");
+contains(dashboard, 'data-label="Invoice"', "Dashboard invoice rows need explicit mobile labels.");
+contains(dashboard, "dashboard-empty-state", "Dashboard panels need intentional empty states.");
+excludes(dashboard, 'className="panel span-2"', "Recent invoices must not force maintenance into an orphaned second row.");
 
 contains(shell, "sidebar-context", "Desktop navigation must expose the active workspace context.");
 contains(shell, '{current?.[2] || "Workspace"}', "Topbar must expose the current operational area.");
@@ -102,4 +121,4 @@ contains(reservations, 'aria-label="Filter reservations"', "Reservations require
 contains(reservations, "<TransitionConfirmation", "Reservation destructive transitions must retain confirmation.");
 contains(reservations, "activeValueLabel", "Reservation value must remain currency-safe.");
 
-console.log("Enterprise shell, coherent design density, typography, responsive surfaces, portfolio, finance, maintenance, and front-desk visual contracts verified.");
+console.log("Enterprise shell, permission-aware dashboard composition, coherent design density, typography, responsive records, portfolio, finance, maintenance, and front-desk visual contracts verified.");

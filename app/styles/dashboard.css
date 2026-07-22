@@ -1,0 +1,143 @@
+/* Dashboard-specific hierarchy, responsive data presentation, and permission-aware layouts. */
+.dashboard-page-header.page-header { margin-bottom: 20px; }
+.metric-grid.executive-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 0;
+}
+.executive-metrics .metric-card { min-width: 0; }
+
+.modular-welcome {
+  border-color: #364fb4;
+  background: linear-gradient(112deg, #172754, #30479d 72%, #263f8d);
+  box-shadow: 0 10px 28px rgba(32, 52, 120, .16);
+}
+.modular-welcome p { max-width: 760px; line-height: 1.55; }
+
+.module-health-section { margin: 26px 0 20px; }
+.module-health-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 13px;
+  padding-inline: 2px;
+}
+.module-health-head > div { min-width: 0; max-width: 780px; }
+.module-health-head h2 { margin-bottom: 4px; }
+.module-health-head p { font-size: 12px; line-height: 1.55; }
+.module-health-grid { align-items: stretch; }
+.module-health-card-head { min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.module-health-card .module-health-stats { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
+
+.dashboard-grid.dashboard-primary-grid {
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, .65fr);
+  gap: 14px;
+  align-items: stretch;
+}
+.dashboard-grid.dashboard-primary-grid.is-single { grid-template-columns: minmax(0, 1fr); }
+.dashboard-primary-grid > .panel { min-height: 100%; }
+.dashboard-invoices-panel .table-wrap { min-height: 246px; }
+.dashboard-invoice-table { min-width: 720px; }
+.dashboard-maintenance-panel { display: flex; flex-direction: column; }
+.dashboard-maintenance-panel .ticket-list { flex: 1; }
+.ticket-mini { align-items: center; }
+.ticket-mini > div { min-width: 0; }
+.ticket-mini div strong,
+.ticket-mini div span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.ticket-mini div span:last-child { white-space: nowrap; }
+
+.dashboard-empty-state {
+  min-height: 246px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 28px 20px;
+  color: var(--muted);
+  text-align: center;
+}
+.dashboard-empty-state.compact { min-height: 154px; }
+.dashboard-empty-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 3px;
+  border: 1px solid #dce3ff;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: #465ad9;
+}
+.dashboard-empty-state strong { color: var(--ink); font-size: 14px; }
+.dashboard-empty-state small { max-width: 42ch; font-size: 11px; line-height: 1.55; }
+
+.dashboard-grid.dashboard-followups {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+  align-items: stretch;
+}
+.dashboard-followups .action-panel {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-followups .panel-head { flex: none; }
+.dashboard-followups .action-panel-body,
+.dashboard-followups .expiry-list,
+.dashboard-followups .dashboard-empty-state { flex: 1; }
+.dashboard-followups .expiry-list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.dashboard-followups .expiry-list > div:last-child { border-bottom: 0; }
+.dashboard-followups .expiry-list > div > span:last-child { min-width: 0; }
+.dashboard-followups .expiry-list strong,
+.dashboard-followups .expiry-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1180px) {
+  .metric-grid.executive-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-grid.dashboard-primary-grid { grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); }
+}
+
+@media (max-width: 960px) {
+  .dashboard-grid.dashboard-primary-grid,
+  .dashboard-grid.dashboard-followups { grid-template-columns: 1fr; }
+  .dashboard-invoices-panel .table-wrap { min-height: 0; }
+}
+
+@media (max-width: 720px) {
+  .dashboard-page-header.page-header { margin-bottom: 16px; }
+  .metric-grid.executive-metrics {
+    width: 100%;
+    grid-template-columns: 1fr;
+    margin-right: 0;
+    padding-right: 0;
+  }
+  .modular-welcome .button { width: 100%; }
+  .module-health-head { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .module-health-card .module-health-stats { grid-template-columns: 1fr 1fr; }
+  .dashboard-invoices-panel .table-wrap:has(> table[data-mobile-cards]) { overflow: visible !important; }
+  .dashboard-invoice-table { min-width: 0; }
+  .dashboard-empty-state { min-height: 190px; padding: 28px 16px; }
+  .dashboard-empty-state.compact { min-height: 132px; }
+  .dashboard-followups .action-panel { min-height: 0; }
+  .ticket-mini { align-items: flex-start; }
+  .ticket-mini div span:last-child { white-space: normal; }
+}
+
+@media (max-width: 480px) {
+  .module-health-card .module-health-stats { grid-template-columns: 1fr; }
+  .dashboard-followups .expiry-list > div { align-items: flex-start; grid-template-columns: 1fr; gap: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-invoices-panel,
+  .dashboard-maintenance-panel,
+  .dashboard-followups .action-panel { transition: none !important; }
+}
