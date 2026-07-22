@@ -62,9 +62,10 @@ export default async function TenantPortalAdminPage({ searchParams }) {
        AND ti.consumed_at IS NULL AND ti.expires_at>$now AND ${portalScope.clause}`,
     { ...portalScope.params, tenantId: parsedHandoff.tenantId, tokenHash: hashPortalToken(parsedHandoff.token), now: nowIso }
   ) ? parsedHandoff : null;
-  const selectedTenantId = Number(query?.tenant || inviteHandoff?.tenantId || 0);
   const portalTenants = canManageAccess ? tenantDirectory(portalScope, nowIso) : [];
   const depositTenants = canManageDeposits ? tenantDirectory(depositScope, nowIso) : [];
+  const requestedTenantId = Number(query?.tenant || inviteHandoff?.tenantId || 0);
+  const selectedTenantId = portalTenants.some((tenant) => Number(tenant.id) === requestedTenantId) ? requestedTenantId : 0;
   const submissions = canReviewPayments ? all(
     `SELECT ps.*,p.name property_name,p.currency,t.full_name tenant_name,i.number invoice_number,
       i.amount-i.amount_paid invoice_balance
@@ -127,7 +128,7 @@ export default async function TenantPortalAdminPage({ searchParams }) {
       description="Manage only the resident-access, payment-review, and deposit responsibilities assigned to your account."
       actions={<>
         {canViewPeople && <Link href="/tenants" className="button secondary"><Icon name="tenant" size={17}/>Tenant profiles</Link>}
-        {canManageDeposits && <OpenModalButton target="deposit-modal" icon="deposit">Record deposit</OpenModalButton>}
+        {canManageDeposits && leases.length > 0 && <OpenModalButton target="deposit-modal" icon="deposit">Record deposit</OpenModalButton>}
       </>}
     />
     <PortalAccessSection
