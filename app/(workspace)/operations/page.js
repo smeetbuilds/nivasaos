@@ -37,17 +37,8 @@ const booleanFields = new Set(["identity_required", "guardian_required", "leave_
 const integerFields = new Set(["notice_period_days", "renewal_lead_days", "lock_in_days", "minimum_age", "housekeeping_turnover_minutes", "eligibility_review_days", "termination_checkout_days", "cam_billing_day", "compliance_review_days", "escalation_notice_days"]);
 const moneyFields = new Set(["payroll_recovery", "employer_paid_amount", "late_checkout_fee"]);
 const profileMaxLength = Object.freeze({
-  external_id: 120,
-  organisation: 180,
-  department: 180,
-  programme: 180,
-  level_or_designation: 180,
-  guardian_name: 180,
-  guardian_phone: 80,
-  guardian_email: 254,
-  sponsor_name: 180,
-  sponsor_reference: 180,
-  curfew_time: 20
+  external_id: 120, organisation: 180, department: 180, programme: 180, level_or_designation: 180,
+  guardian_name: 180, guardian_phone: 80, guardian_email: 254, sponsor_name: 180, sponsor_reference: 180, curfew_time: 20
 });
 
 function inputType(field) {
@@ -74,16 +65,11 @@ function FieldControl({ field, name, value }) {
   const type = inputType(field);
   const numeric = type === "number";
   const textual = ["text", "email", "tel"].includes(type);
-  return <input
-    name={name}
-    type={type}
-    defaultValue={value ?? ""}
-    min={numeric ? "0" : undefined}
+  return <input name={name} type={type} defaultValue={value ?? ""} min={numeric ? "0" : undefined}
     step={numeric ? (integerFields.has(field) ? "1" : "0.01") : undefined}
     maxLength={textual ? (name.startsWith("config_") ? 500 : profileMaxLength[field] || 180) : undefined}
     inputMode={numeric ? (integerFields.has(field) ? "numeric" : "decimal") : type === "tel" ? "tel" : undefined}
-    autoComplete={field === "guardian_email" ? "email" : field === "guardian_phone" ? "tel" : undefined}
-  />;
+    autoComplete={field === "guardian_email" ? "email" : field === "guardian_phone" ? "tel" : undefined}/>;
 }
 
 function ConfigFields({ contract, settings }) {
@@ -98,7 +84,7 @@ export default async function OperationsPage({ searchParams }) {
   const user = await requireUser();
   const scope = propertyScopeSql(user, "p");
   const query = await searchParams;
-  const properties = all(
+  const allProperties = all(
     `SELECT p.*,poc.settings_json,
       (SELECT COUNT(*) FROM tenants t WHERE t.property_id=p.id AND t.status='active') active_people,
       (SELECT COUNT(*) FROM module_requests mr WHERE mr.property_id=p.id AND mr.status='submitted') pending_requests
@@ -106,8 +92,12 @@ export default async function OperationsPage({ searchParams }) {
      WHERE ${scope.clause} ORDER BY p.name`,
     scope.params
   );
+  const properties = allProperties.filter((property) => hasPermission(user, "verticals.manage", property.id) || hasPermission(user, "requests.review", property.id));
   const propertyIds = properties.map((property) => Number(property.id));
-  const people = propertyIds.length ? all(
+  const profilePropertyIds = properties.filter((property) => hasPermission(user, "people.manage", property.id)).map((property) => Number(property.id));
+  const configurableProperties = properties.filter((property) => hasPermission(user, "verticals.manage", property.id));
+  const configurablePropertyIds = configurableProperties.map((property) => Number(property.id));
+  const people = profilePropertyIds.length ? all(
     `SELECT t.*,p.name property_name,p.module_id,l.id lease_id,l.reference lease_reference,u.name unit_name,
       rvp.external_id,rvp.organisation,rvp.department,rvp.programme,rvp.level_or_designation,rvp.guardian_name,
       rvp.guardian_phone,rvp.guardian_email,rvp.sponsor_name,rvp.sponsor_reference,rvp.payroll_recovery,
@@ -115,8 +105,17 @@ export default async function OperationsPage({ searchParams }) {
      FROM tenants t JOIN properties p ON p.id=t.property_id
      LEFT JOIN lease_tenants lt ON lt.tenant_id=t.id LEFT JOIN leases l ON l.id=lt.lease_id AND l.status='active'
      LEFT JOIN units u ON u.id=l.unit_id LEFT JOIN resident_vertical_profiles rvp ON rvp.tenant_id=t.id
-     WHERE t.property_id IN (${propertyIds.map(() => "?").join(",")}) GROUP BY t.id ORDER BY p.name,t.full_name`,
-    propertyIds
+     WHERE t.property_id IN (${profilePropertyIds.map(() => "?").join(",")}) GROUP BY t.id ORDER BY p.name,t.full_name`,
+    profilePropertyIds
+  ) : [];
+  const requestPeople = configurablePropertyIds.length ? all(
+    `SELECT t.id,t.full_name,t.property_id,p.name property_name,p.module_id,l.id lease_id,l.reference lease_reference,u.name unit_name
+     FROM tenants t JOIN properties p ON p.id=t.property_id
+     LEFT JOIN lease_tenants lt ON lt.tenant_id=t.id LEFT JOIN leases l ON l.id=lt.lease_id AND l.status='active'
+     LEFT JOIN units u ON u.id=l.unit_id
+     WHERE t.property_id IN (${configurablePropertyIds.map(() => "?").join(",")}) AND t.status='active'
+     GROUP BY t.id ORDER BY p.name,t.full_name`,
+    configurablePropertyIds
   ) : [];
   const requests = propertyIds.length ? all(
     `SELECT mr.*,p.name property_name,p.module_id,t.full_name tenant_name,l.reference lease_reference,reviewer.name reviewer_name
@@ -126,9 +125,8 @@ export default async function OperationsPage({ searchParams }) {
      ORDER BY CASE mr.status WHEN 'submitted' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END,mr.created_at DESC LIMIT 300`,
     propertyIds
   ) : [];
-  const configurableProperties = properties.filter((property) => hasPermission(user, "verticals.manage", property.id));
-  const profilePeople = people.filter((person) => hasPermission(user, "people.manage", person.property_id));
-  const configurablePeople = people.filter((person) => hasPermission(user, "verticals.manage", person.property_id));
+  const profilePeople = people;
+  const configurablePeople = requestPeople;
   const agreements = [...new Map(configurablePeople.filter((person) => person.lease_id).map((person) => [Number(person.lease_id), person])).values()];
   const canCreateRequest = configurableProperties.length > 0 && configurablePeople.length > 0;
   const submittedCount = requests.filter((item) => item.status === "submitted").length;
@@ -139,8 +137,8 @@ export default async function OperationsPage({ searchParams }) {
     <PageHeader eyebrow="Vertical operating system" title="Module operations" description="Configure property rules, maintain student, workforce, guest, household, and business profiles, and review module-specific resident workflows."/>
 
     <section className="metric-grid module-metric-grid" aria-label="Module operations summary">
-      <article className="metric-card"><span>Operating properties</span><strong>{properties.length}</strong><small>Each keeps an independent module contract</small></article>
-      <article className="metric-card"><span>Active people</span><strong>{properties.reduce((sum, property) => sum + Number(property.active_people || 0), 0)}</strong><small>Residents, students, employees, guests and businesses</small></article>
+      <article className="metric-card"><span>Operating properties</span><strong>{properties.length}</strong><small>Only properties within your vertical or request scope</small></article>
+      <article className="metric-card"><span>Active people</span><strong>{properties.reduce((sum, property) => sum + Number(property.active_people || 0), 0)}</strong><small>Aggregate count without exposing restricted profile data</small></article>
       <article className={`metric-card${submittedCount ? " risk" : ""}`}><span>Requests awaiting review</span><strong>{submittedCount}</strong><small>Portal and staff-created workflows</small></article>
       <article className={`metric-card${configuredCount < properties.length ? " attention" : ""}`}><span>Configured verticals</span><strong>{configuredCount}</strong><small>{properties.length - configuredCount} property rule set(s) not saved</small></article>
     </section>
@@ -154,7 +152,7 @@ export default async function OperationsPage({ searchParams }) {
         <div className="vertical-card-head"><ModuleBadge moduleId={module.id}/><Badge tone={property.status}>{property.status}</Badge></div>
         <h2>{property.name}</h2><p>{contract.label}</p>
         <div className="vertical-card-metrics"><span><strong>{property.active_people}</strong><small>{module.terminology.occupant}s</small></span><span><strong>{property.pending_requests}</strong><small>Pending requests</small></span><span><strong>{contract.config.length}</strong><small>Operating controls</small></span></div>
-        <div className="vertical-card-actions">{editable && <OpenModalButton target={`config-${property.id}`} icon="settings" className="button secondary">Configure</OpenModalButton>}<a href={`#people-${property.id}`} className="text-link">View profiles</a></div>
+        <div className="vertical-card-actions">{editable && <OpenModalButton target={`config-${property.id}`} icon="settings" className="button secondary">Configure</OpenModalButton>}{hasPermission(user, "people.manage", property.id) && <a href={`#people-${property.id}`} className="text-link">View profiles</a>}</div>
         {editable && <form action={savePropertyOperatingConfigAction}><ModalForm id={`config-${property.id}`} title={`${property.name} · operating configuration`} description={`Configure ${contract.label.toLowerCase()} without changing shared finance, audit, or security records.`} submitLabel="Save operating rules" pendingLabel="Saving…"><div className="modal-body">
           <input type="hidden" name="propertyId" value={property.id}/><div className="summary-box"><span>Operating model</span><strong>{module.label}</strong><small>{module.description}</small></div><ConfigFields contract={contract} settings={settings}/><div className="module-form-note">Blank controls remain inherited or unspecified. Boolean controls use explicit Yes or No values.</div>
         </div></ModalForm></form>}
@@ -162,13 +160,12 @@ export default async function OperationsPage({ searchParams }) {
     })}</section>
 
     <section className="panel module-directory-section" aria-labelledby="vertical-profiles-title">
-      <div className="panel-head"><div><span className="eyebrow">Domain identity</span><h2 id="vertical-profiles-title">People and vertical profiles</h2></div><span className="panel-count">{people.length} records</span></div>
-      {people.length ? <div className="table-wrap"><table className="module-directory-table" data-mobile-cards="vertical-profiles" aria-label="People and vertical profiles">
+      <div className="panel-head"><div><span className="eyebrow">Domain identity</span><h2 id="vertical-profiles-title">People and vertical profiles</h2></div><span className="panel-count">{profilePeople.length} records</span></div>
+      {profilePeople.length ? <div className="table-wrap"><table className="module-directory-table" data-mobile-cards="vertical-profiles" aria-label="People and vertical profiles">
         <thead><tr><th>Person</th><th>Module / property</th><th>Agreement</th><th>Domain identity</th><th>Responsible party</th><th>Actions</th></tr></thead>
-        <tbody>{people.map((person) => {
+        <tbody>{profilePeople.map((person) => {
           const module = moduleById(person.module_id);
           const contract = verticalContract(module.id);
-          const editable = hasPermission(user, "people.manage", person.property_id);
           const identity = person.external_id || person.programme || person.department || person.organisation || "Profile not completed";
           const responsible = person.guardian_name || person.sponsor_name || person.organisation || "Not recorded";
           return <tr id={`people-${person.property_id}`} key={person.id}>
@@ -177,10 +174,10 @@ export default async function OperationsPage({ searchParams }) {
             <td data-label="Agreement"><strong>{person.lease_reference || "No active agreement"}</strong><small>{person.unit_name || "No active unit"}</small></td>
             <td data-label="Domain identity"><strong>{identity}</strong><small>{person.level_or_designation || contract.profileTitle}</small></td>
             <td data-label="Responsible party"><strong>{responsible}</strong><small>{person.guardian_phone || person.guardian_email || person.sponsor_reference || "No supporting contact"}</small></td>
-            <td data-label="Actions">{editable ? <OpenModalButton target={`profile-${person.id}`} icon="edit" className="text-button">Edit profile</OpenModalButton> : <span className="muted">No profile access</span>}</td>
+            <td data-label="Actions"><OpenModalButton target={`profile-${person.id}`} icon="edit" className="text-button">Edit profile</OpenModalButton></td>
           </tr>;
         })}</tbody>
-      </table></div> : <Empty icon="tenant" title="No people available" text="Add people to a property before completing its module-specific profile."/>}
+      </table></div> : <Empty icon="tenant" title="No profile records in scope" text="Sensitive guardian, sponsor, payroll, and eligibility data appears only for properties where you hold people-management permission."/>}
     </section>
 
     {profilePeople.map((person) => {
