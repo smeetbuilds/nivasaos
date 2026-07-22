@@ -42,6 +42,7 @@ contains(services, 'data-mobile-cards="service-catalogue"', "Service catalogue m
 contains(services, 'data-mobile-cards="service-subscriptions"', "Service subscriptions must use mobile records.");
 contains(services, 'data-mobile-cards="service-jobs"', "Service billing history must use mobile records.");
 contains(services, "ConfirmAction", "Ending a service must require confirmation.");
+contains(services, 'hasPermission(user, "services.manage"', "Service records must be property-permission scoped.");
 contains(services, 'hasPermission(user, "billing.manage"', "Service billing actions must respect billing permission.");
 contains(services, "billingPropertyIds", "Service billing history must be restricted to billing-permitted properties.");
 contains(services, "Billing access required", "Subscriptions outside billing scope must not expose invoice state.");
@@ -52,11 +53,13 @@ contains(visitors, 'data-mobile-cards="visitors"', "Visitor register must use mo
 contains(visitors, "ActionButton", "Visitor transitions must expose pending state.");
 contains(visitors, "ConfirmAction", "Visitor cancellation must require confirmation.");
 contains(visitors, "Visitor access summary", "Visitor register needs an accessible summary.");
+contains(visitors, 'hasPermission(user, "visitors.manage"', "Visitor records must be property-permission scoped.");
 for (const contract of ['maxLength="160"', 'maxLength="40"', 'maxLength="120"', 'maxLength="500"', 'maxLength="1200"']) contains(visitors, contract, `Staff visitor form limit missing: ${contract}`);
 
 contains(spaces, 'data-mobile-cards="spaces"', "Space inventory must use mobile records.");
 contains(spaces, "ConfirmAction", "Space allocation release must require confirmation.");
 contains(spaces, "Bed and space inventory summary", "Space inventory needs an accessible summary.");
+contains(spaces, 'hasPermission(user, "inventory.manage"', "Space records must be property-permission scoped.");
 contains(spaces, 'hasPermission(user, "agreements.manage"', "Space allocation controls must require agreement permission.");
 contains(spaces, "allocationPropertySet", "Allocation forms must be generated only for agreement-permitted properties.");
 
@@ -81,4 +84,4 @@ contains(portalVisitors, "portal-visitor-cancel", "Resident visitor cancellation
 contains(portalVisitors, 'pendingLabel="Registering…"', "Resident visitor creation must expose pending state.");
 for (const contract of ['maxLength="160"', 'maxLength="40"', 'maxLength="500"', 'maxLength="1200"']) contains(portalVisitors, contract, `Resident visitor form limit missing: ${contract}`);
 
-console.log("Restored services routing, billing-scope isolation, responsive service, visitor, space, commercial and vertical registers, confirmation-safe actions, agreement-scoped allocation controls, exact client/server form bounds, student/staff profile semantics, and resident module flows verified.");
+console.log("Restored services routing, exact property view scopes, billing-scope isolation, responsive service, visitor, space, commercial and vertical registers, confirmation-safe actions, agreement-scoped allocation controls, exact client/server form bounds, student/staff profile semantics, and resident module flows verified.");
