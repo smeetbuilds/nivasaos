@@ -3,6 +3,7 @@ import { propertyScopeSql, requireUser } from "@/lib/auth";
 import { all } from "@/lib/db";
 import { dateLabel, money, today } from "@/lib/format";
 import { supportsCapability } from "@/lib/modules/catalog";
+import { hasPermission } from "@/lib/permissions";
 import Badge from "@/components/Badge";
 import ConfirmAction from "@/components/ConfirmAction";
 import Empty from "@/components/Empty";
@@ -20,6 +21,8 @@ export default async function SpacesPage({ searchParams }) {
   const allProperties = all(`SELECT p.* FROM properties p WHERE ${scope.clause} AND p.status='active' ORDER BY p.name`, scope.params);
   const properties = allProperties.filter((property) => supportsCapability(property.module_id, "spaceInventory"));
   const propertyIds = properties.map((property) => Number(property.id));
+  const allocationPropertyIds = properties.filter((property) => hasPermission(user, "agreements.manage", property.id)).map((property) => Number(property.id));
+  const allocationPropertySet = new Set(allocationPropertyIds);
   const units = propertyIds.length ? all(
     `SELECT u.*,p.name property_name,p.module_id,p.currency
      FROM units u JOIN properties p ON p.id=u.property_id
@@ -35,11 +38,11 @@ export default async function SpacesPage({ searchParams }) {
      WHERE rs.property_id IN (${propertyIds.map(() => "?").join(",")}) ORDER BY p.name,u.name,rs.code`,
     propertyIds
   ) : [];
-  const leases = propertyIds.length ? all(
+  const leases = allocationPropertyIds.length ? all(
     `SELECT l.id,l.reference,l.property_id,l.unit_id,p.name property_name,u.name unit_name
      FROM leases l JOIN properties p ON p.id=l.property_id JOIN units u ON u.id=l.unit_id
-     WHERE l.property_id IN (${propertyIds.map(() => "?").join(",")}) AND l.status='active' ORDER BY p.name,u.name,l.reference`,
-    propertyIds
+     WHERE l.property_id IN (${allocationPropertyIds.map(() => "?").join(",")}) AND l.status='active' ORDER BY p.name,u.name,l.reference`,
+    allocationPropertyIds
   ) : [];
   const leaseTenants = leases.length ? all(
     `SELECT lt.lease_id,t.id tenant_id,t.full_name
@@ -72,18 +75,19 @@ export default async function SpacesPage({ searchParams }) {
       <div className="table-wrap"><table className="module-directory-table" data-mobile-cards="spaces" aria-label="Bed and rentable space register">
         <thead><tr><th>Space</th><th>Property / unit</th><th>Policy</th><th>Rate / deposit</th><th>Allocation</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>{spaces.map((space) => {
-          const unitLeases = leases.filter((lease) => Number(lease.unit_id) === Number(space.unit_id));
+          const canManageAllocation = allocationPropertySet.has(Number(space.property_id));
+          const unitLeases = canManageAllocation ? leases.filter((lease) => Number(lease.unit_id) === Number(space.unit_id)) : [];
           return <tr key={space.id}>
             <td data-label="Space"><strong>{space.code}</strong><small>{space.space_type.replaceAll("_", " ")}</small></td>
             <td data-label="Property / unit"><ModuleBadge moduleId={space.module_id} compact/><strong>{space.property_name}</strong><small>{space.unit_name} · capacity {space.capacity}</small></td>
             <td data-label="Policy"><strong>{space.gender_policy === "any" ? "No restriction" : space.gender_policy}</strong><small>{space.notes || "No additional rule"}</small></td>
             <td data-label="Rate / deposit"><strong>{money(space.monthly_rate, space.currency)}</strong><small>Deposit {money(space.deposit, space.currency)}</small></td>
-            <td data-label="Allocation">{space.tenant_name ? <><strong>{space.tenant_name}</strong><small>{space.lease_reference} · since {dateLabel(space.allocation_start)}</small></> : <><strong>Not allocated</strong><small>{unitLeases.length ? `${unitLeases.length} compatible active agreement(s)` : "No active agreement in this unit"}</small></>}</td>
+            <td data-label="Allocation">{space.tenant_name ? <><strong>{space.tenant_name}</strong><small>{space.lease_reference} · since {dateLabel(space.allocation_start)}</small></> : <><strong>Not allocated</strong><small>{canManageAllocation ? (unitLeases.length ? `${unitLeases.length} compatible active agreement(s)` : "No active agreement in this unit") : "Agreement access required to allocate"}</small></>}</td>
             <td data-label="Status"><Badge tone={space.status}>{space.status.replaceAll("_", " ")}</Badge></td>
             <td data-label="Actions"><div className="table-actions module-row-actions">
               <OpenModalButton target={`space-edit-${space.id}`} icon="edit" className="text-button">Edit space</OpenModalButton>
-              {space.status === "available" && unitLeases.length > 0 && <OpenModalButton target={`space-allocate-${space.id}`} className="button secondary small">Allocate</OpenModalButton>}
-              {space.allocation_id && <ConfirmAction action={releaseSpaceAllocationAction} id={`space-release-${space.id}`} triggerLabel="Release allocation" triggerClassName="text-button danger" title={`Release ${space.code}?`} description={`${space.tenant_name} · ${space.property_name} · ${space.unit_name}`} submitLabel="Release allocation" pendingLabel="Releasing…"><div className="modal-body"><input type="hidden" name="allocationId" value={space.allocation_id}/><input type="hidden" name="endDate" value={today()}/><div className="confirm-consequence">The active allocation ends today. The agreement and historical occupancy record remain unchanged.</div></div></ConfirmAction>}
+              {canManageAllocation && space.status === "available" && unitLeases.length > 0 && <OpenModalButton target={`space-allocate-${space.id}`} className="button secondary small">Allocate</OpenModalButton>}
+              {canManageAllocation && space.allocation_id && <ConfirmAction action={releaseSpaceAllocationAction} id={`space-release-${space.id}`} triggerLabel="Release allocation" triggerClassName="text-button danger" title={`Release ${space.code}?`} description={`${space.tenant_name} · ${space.property_name} · ${space.unit_name}`} submitLabel="Release allocation" pendingLabel="Releasing…"><div className="modal-body"><input type="hidden" name="allocationId" value={space.allocation_id}/><input type="hidden" name="endDate" value={today()}/><div className="confirm-consequence">The active allocation ends today. The agreement and historical occupancy record remain unchanged.</div></div></ConfirmAction>}
             </div></td>
           </tr>;
         })}</tbody>
@@ -108,7 +112,7 @@ export default async function SpacesPage({ searchParams }) {
       <label><span>Notes</span><textarea name="notes" rows="3" maxLength="1500" defaultValue={space.notes || ""}/></label>
     </div></ModalForm></form>)}
 
-    {spaces.filter((space) => space.status === "available").map((space) => {
+    {spaces.filter((space) => space.status === "available" && allocationPropertySet.has(Number(space.property_id))).map((space) => {
       const unitLeases = leases.filter((lease) => Number(lease.unit_id) === Number(space.unit_id));
       const validLeaseIds = new Set(unitLeases.map((lease) => Number(lease.id)));
       const tenants = leaseTenants.filter((tenant) => validLeaseIds.has(Number(tenant.lease_id)));
