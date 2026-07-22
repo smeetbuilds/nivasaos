@@ -17,9 +17,30 @@ export default async function PortalServicesPage() {
   const active = services.filter((service) => service.status === "active");
   const included = active.filter((service) => service.billing_frequency === "included").length;
   const chargeable = active.filter((service) => service.billing_frequency !== "included");
+  const historical = services.length - active.length;
+
   return <>
-    <header className="portal-page-head"><div><span className="eyebrow">{module.shortLabel} entitlements</span><h1>My services</h1><p>Services attached to your {module.terminology.agreement.toLowerCase()} or specifically assigned to your resident profile.</p></div><Link href="/portal/billing" className="button secondary">Open billing <Icon name="arrow" size={16}/></Link></header>
-    <section className="portal-metric-grid module-portal-metrics"><article><span>Active services</span><strong>{active.length}</strong><small>Currently assigned</small></article><article><span>Included</span><strong>{included}</strong><small>No separate service invoice</small></article><article><span>Chargeable</span><strong>{chargeable.length}</strong><small>One-time or recurring</small></article><article><span>Historical</span><strong>{services.length-active.length}</strong><small>Ended or cancelled</small></article></section>
-    <section className="portal-card"><div className="portal-card-head"><div><span className="eyebrow">Current and historical</span><h2>Service register</h2></div></div>{services.length ? <div className="portal-service-list">{services.map((service) => {const amount=Number(service.custom_amount??service.default_amount);return <article key={service.id} className={service.status==="active"?"is-active":""}><span className="portal-service-icon"><Icon name="services" size={20}/></span><span><strong>{service.name}</strong><small>{service.property_name} · {service.unit_name} · {service.lease_reference}</small><p>{service.description || `${service.category} service`}</p></span><span><strong>{service.billing_frequency==="included"?"Included":money(amount,service.currency)}</strong><small>{service.billing_frequency.replaceAll("_"," ")} · from {dateLabel(service.start_date)}</small>{service.latest_invoice&&<Link href="/portal/billing" className="text-link">Invoice {service.latest_invoice}</Link>}</span><Badge tone={service.status}>{service.status}</Badge></article>})}</div> : <div className="portal-empty-state"><Icon name="services" size={30}/><strong>No services assigned</strong><p>Your property team will add meals, utilities, laundry, parking, CAM, or other relevant services here.</p></div>}</section>
+    <header className="portal-page-head"><div><span className="eyebrow">{module.shortLabel} entitlements</span><h1>My services</h1><p>Review services attached to your {module.terminology.agreement.toLowerCase()} or specifically assigned to your resident profile, including charge and invoice context.</p></div><Link href="/portal/billing" className="button secondary">Open billing <Icon name="arrow" size={16}/></Link></header>
+
+    <section className="portal-metric-grid module-portal-metrics" aria-label="Resident service summary">
+      <article><span>Active services</span><strong>{active.length}</strong><small>Currently assigned</small></article>
+      <article><span>Included</span><strong>{included}</strong><small>No separate service invoice</small></article>
+      <article className={chargeable.length ? "is-attention" : ""}><span>Chargeable</span><strong>{chargeable.length}</strong><small>One-time or recurring</small></article>
+      <article><span>Historical</span><strong>{historical}</strong><small>Ended or cancelled</small></article>
+    </section>
+
+    <section className="portal-card" aria-labelledby="portal-service-register-title">
+      <div className="portal-card-head"><div><span className="eyebrow">Current and historical</span><h2 id="portal-service-register-title">Service register</h2></div><span className="portal-section-count">{services.length}</span></div>
+      {services.length ? <div className="portal-service-list">{services.map((service) => {
+        const amount = Number(service.custom_amount ?? service.default_amount);
+        const titleId = `portal-service-${service.id}`;
+        return <article key={service.id} className={service.status === "active" ? "is-active" : "is-historical"} aria-labelledby={titleId}>
+          <span className="portal-service-icon"><Icon name="services" size={20}/></span>
+          <span><strong id={titleId}>{service.name}</strong><small>{service.property_name} · {service.unit_name} · {service.lease_reference}</small><p>{service.description || `${service.category} service`}</p></span>
+          <span><strong>{service.billing_frequency === "included" ? "Included" : money(amount, service.currency)}</strong><small>{service.billing_frequency.replaceAll("_", " ")} · from {dateLabel(service.start_date)}</small>{service.end_date && <small>Ended {dateLabel(service.end_date)}</small>}{service.latest_invoice && <Link href="/portal/billing" className="text-link">Invoice {service.latest_invoice}</Link>}</span>
+          <Badge tone={service.status}>{service.status.replaceAll("_", " ")}</Badge>
+        </article>;
+      })}</div> : <div className="portal-empty-state"><Icon name="services" size={30}/><strong>No services assigned</strong><p>Your property team will add meals, utilities, laundry, parking, CAM, or other relevant services here.</p></div>}
+    </section>
   </>;
 }
