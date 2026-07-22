@@ -11,7 +11,6 @@ import { all } from "@/lib/db";
 import { dateLabel, dateTimeLabel, money, today } from "@/lib/format";
 import { supportsCapability } from "@/lib/modules/catalog";
 import { hasPermission } from "@/lib/permissions";
-import ActionButton from "@/components/ActionButton";
 import Badge from "@/components/Badge";
 import ConfirmAction from "@/components/ConfirmAction";
 import Empty from "@/components/Empty";
@@ -58,6 +57,7 @@ export default async function ServicesPage({ searchParams }) {
   const properties = allProperties.filter((property) => supportsCapability(property.module_id, "servicePlans") && hasPermission(user, "services.manage", property.id));
   const propertyIds = properties.map((property) => Number(property.id));
   const billingProperties = properties.filter((property) => hasPermission(user, "billing.manage", property.id));
+  const billingPropertyIds = billingProperties.map((property) => Number(property.id));
   const services = propertyIds.length ? all(
     `SELECT sc.*,p.name property_name,p.currency,p.module_id,
       (SELECT COUNT(*) FROM lease_services ls WHERE ls.service_id=sc.id AND ls.status='active') active_subscriptions
@@ -91,16 +91,16 @@ export default async function ServicesPage({ searchParams }) {
      WHERE lt.lease_id IN (${leases.map(() => "?").join(",")}) ORDER BY t.full_name`,
     leases.map((lease) => Number(lease.id))
   ) : [];
-  const jobs = propertyIds.length ? all(
+  const jobs = billingPropertyIds.length ? all(
     `SELECT bj.*,p.name property_name
      FROM bulk_jobs bj JOIN properties p ON p.id=bj.property_id
-     WHERE bj.property_id IN (${propertyIds.map(() => "?").join(",")}) AND bj.job_type='service_billing'
+     WHERE bj.property_id IN (${billingPropertyIds.map(() => "?").join(",")}) AND bj.job_type='service_billing'
      ORDER BY bj.created_at DESC,bj.id DESC LIMIT 50`,
-    propertyIds
+    billingPropertyIds
   ) : [];
 
   const activeSubscriptions = subscriptions.filter((item) => item.status === "active");
-  const billable = activeSubscriptions.filter((item) => item.billing_frequency !== "included");
+  const billable = activeSubscriptions.filter((item) => item.billing_frequency !== "included" && hasPermission(user, "billing.manage", item.property_id));
   const billed = billable.filter((item) => item.current_invoice_id).length;
   const awaitingBilling = billable.filter((item) => !item.current_invoice_id).length;
   const activeJobs = jobs.filter((job) => ["preview", "running"].includes(job.status)).length;
@@ -122,8 +122,8 @@ export default async function ServicesPage({ searchParams }) {
     <section className="metric-grid module-metric-grid" aria-label="Service operations summary">
       <article className="metric-card"><span>Active catalogue items</span><strong>{activeServices.length}</strong><small>Across {properties.length} permitted properties</small></article>
       <article className="metric-card"><span>Active subscriptions</span><strong>{activeSubscriptions.length}</strong><small>Agreement or resident level</small></article>
-      <article className="metric-card"><span>Billed current cycle</span><strong>{billed}</strong><small>Frequency-specific idempotent runs</small></article>
-      <article className={`metric-card${awaitingBilling ? " risk" : ""}`}><span>Awaiting billing</span><strong>{awaitingBilling}</strong><small>{activeJobs ? `${activeJobs} preview or run job(s) active` : "Included services excluded"}</small></article>
+      <article className="metric-card"><span>Billed current cycle</span><strong>{billed}</strong><small>Within your billing permission scope</small></article>
+      <article className={`metric-card${awaitingBilling ? " risk" : ""}`}><span>Awaiting billing</span><strong>{awaitingBilling}</strong><small>{activeJobs ? `${activeJobs} preview or run job(s) active` : "Included or out-of-scope services excluded"}</small></article>
     </section>
 
     <section className="panel module-directory-section" aria-labelledby="service-catalogue-title">
@@ -155,7 +155,7 @@ export default async function ServicesPage({ searchParams }) {
             <td data-label="Agreement / resident"><strong>{item.lease_reference}</strong><small>{item.tenant_name || "Agreement-level service"}</small></td>
             <td data-label="Charge"><strong>{item.billing_frequency === "included" ? "Included" : money(amount, item.currency)}</strong><small>{item.billing_frequency.replaceAll("_", " ")}</small></td>
             <td data-label="Started"><strong>{dateLabel(item.start_date)}</strong>{item.end_date && <small>Ended {dateLabel(item.end_date)}</small>}</td>
-            <td data-label="Current cycle">{item.current_invoice_number ? <><Badge tone="paid">Billed</Badge><small>{currentPeriod} · {item.current_invoice_number}</small></> : item.status === "active" && item.billing_frequency !== "included" ? <><Badge tone="draft">Not billed</Badge><small>{currentPeriod}</small></> : <span className="quiet-copy">Not applicable</span>}</td>
+            <td data-label="Current cycle">{!canBill ? <span className="quiet-copy">Billing access required</span> : item.current_invoice_number ? <><Badge tone="paid">Billed</Badge><small>{currentPeriod} · {item.current_invoice_number}</small></> : item.status === "active" && item.billing_frequency !== "included" ? <><Badge tone="draft">Not billed</Badge><small>{currentPeriod}</small></> : <span className="quiet-copy">Not applicable</span>}</td>
             <td data-label="Status"><Badge tone={item.status}>{item.status.replaceAll("_", " ")}</Badge></td>
             <td data-label="Actions"><div className="table-actions module-row-actions">
               {item.status === "active" && item.billing_frequency !== "included" && !item.current_invoice_id && canBill && <OpenModalButton target={`service-bill-${item.id}`} className="text-button">Bill cycle</OpenModalButton>}
@@ -166,8 +166,8 @@ export default async function ServicesPage({ searchParams }) {
       </table></div> : <Empty icon="services" title="No service subscriptions" text="Assign a catalogue service to an active agreement or a specific linked resident."/>}
     </section>
 
-    <section className="panel module-directory-section" aria-labelledby="service-jobs-title">
-      <div className="panel-head"><div><span className="eyebrow">Controlled batch processing</span><h2 id="service-jobs-title">Bulk billing history</h2></div>{billingProperties.length > 0 && <OpenModalButton target="service-bulk" className="button secondary">Preview or run</OpenModalButton>}</div>
+    {billingProperties.length > 0 && <section className="panel module-directory-section" aria-labelledby="service-jobs-title">
+      <div className="panel-head"><div><span className="eyebrow">Controlled batch processing</span><h2 id="service-jobs-title">Bulk billing history</h2></div><OpenModalButton target="service-bulk" className="button secondary">Preview or run</OpenModalButton></div>
       {jobs.length ? <div className="table-wrap"><table className="module-directory-table" data-mobile-cards="service-jobs" aria-label="Service bulk billing history">
         <thead><tr><th>Property</th><th>Period</th><th>Prepared</th><th>Status</th><th>Created</th><th>Result</th></tr></thead>
         <tbody>{jobs.map((job) => {
@@ -183,7 +183,7 @@ export default async function ServicesPage({ searchParams }) {
           </tr>;
         })}</tbody>
       </table></div> : <Empty icon="billing" title="No bulk billing jobs" text="Preview a property and period before creating service invoices in a repeat-safe batch."/>}
-    </section>
+    </section>}
 
     {properties.length > 0 && <form action={createServiceAction}><ModalForm id="service-create" title="Create a service" description="Configure the catalogue item before assigning it. Included services never create a separate invoice." submitLabel="Create service" pendingLabel="Creating…"><div className="modal-body">
       <label><span>Property</span><select name="propertyId" required>{properties.map((property) => <option value={property.id} key={property.id}>{property.name}</option>)}</select></label>
