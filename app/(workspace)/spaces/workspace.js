@@ -19,7 +19,7 @@ export default async function SpacesPage({ searchParams }) {
   const user = await requireUser();
   const scope = propertyScopeSql(user, "p");
   const allProperties = all(`SELECT p.* FROM properties p WHERE ${scope.clause} AND p.status='active' ORDER BY p.name`, scope.params);
-  const properties = allProperties.filter((property) => supportsCapability(property.module_id, "spaceInventory"));
+  const properties = allProperties.filter((property) => supportsCapability(property.module_id, "spaceInventory") && hasPermission(user, "inventory.manage", property.id));
   const propertyIds = properties.map((property) => Number(property.id));
   const allocationPropertyIds = properties.filter((property) => hasPermission(user, "agreements.manage", property.id)).map((property) => Number(property.id));
   const allocationPropertySet = new Set(allocationPropertyIds);
@@ -57,7 +57,7 @@ export default async function SpacesPage({ searchParams }) {
   const utilization = spaces.length ? Math.round(occupied / spaces.length * 100) : 0;
   const emptyText = properties.length
     ? "Add beds or assignable spaces beneath compatible rooms. Capacity and allocation conflicts are enforced server-side."
-    : "Enable a shared-accommodation module and create a compatible property first.";
+    : "No space-inventory properties are available within your permission scope.";
 
   return <>
     <Flash searchParams={query}/>
