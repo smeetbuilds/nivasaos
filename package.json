@@ -19,7 +19,7 @@
     "verify:operations": "bun run scripts/verify-operations.js",
     "verify:money": "bun run scripts/verify-money-storage.js",
     "verify:reporting": "bun run scripts/verify-reporting.js",
-    "verify:ui": "bun run scripts/verify-ui.js && bun run scripts/verify-handover-ui.js && bun run scripts/verify-enterprise-ui.js",
+    "verify:ui": "bun run scripts/verify-ui.js && bun run scripts/verify-handover-ui.js && bun run scripts/verify-enterprise-ui.js && bun run scripts/verify-module-operations-ui.js",
     "verify:mobile-records": "bun run scripts/verify-mobile-records.js",
     "verify:action-state": "bun run scripts/verify-action-state.js",
     "verify:browser-contract": "bun run scripts/verify-browser-gate.js",
