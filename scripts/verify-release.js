@@ -15,7 +15,7 @@ for (const file of [
   ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/ISSUE_TEMPLATE/config.yml",
   "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "README.md", "SECURITY.md", "CHANGELOG.md", "LICENSE",
   "Caddyfile", "Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "render.yaml", "next.config.mjs", "proxy.js", "app/layout.js",
-  "app/api/reports/export/route.js", "app/styles/forms.css", "app/styles/records.css", "app/styles/operations.css", "app/styles/governance.css", "app/styles/polish.css",
+  "app/api/reports/export/route.js", "app/styles/forms.css", "app/styles/records.css", "app/styles/finance.css", "app/styles/operations.css", "app/styles/governance.css", "app/styles/polish.css",
   "components/ModuleGovernanceForm.js", "components/OperationsBoard.js",
   "docs/ACCESSIBILITY_CERTIFICATION.md", "docs/BACKUPS.md", "docs/BROWSER_TESTING.md", "docs/DEPLOYMENT.md", "docs/KNOWN_LIMITATIONS.md",
   "docs/MIGRATIONS.md", "docs/PRODUCTION_RELEASE.md", "docs/REPORTING_EXPORTS.md", "docs/RUNTIME_IMAGE.md", "docs/WHITE_LABEL.md",
@@ -65,6 +65,7 @@ const contracts = {
   "app/styles/polish.css": ["Final visual-coherence layer", ".page-header {", ".module-health-grid", ".vertical-property-card::after { display: none; }", ".modal[open] { display: grid;", ".mobile-bottom-nav :is(a, button).is-active", "@media (max-width: 720px)"],
   "app/styles/governance.css": ["Properties, module architecture", ".property-directory-results", ".module-governance-summary", ".module-governance-card.is-enabled", ".team-summary-grid", "dialog[id^=\"permissions-\"]", "@media (max-width: 720px)"],
   "app/styles/operations.css": ["Shared board navigation", ".operations-board-nav", ".operations-board-tab.is-active", ".enterprise-housekeeping-board", ".housekeeping-context-grid", ".operations-history-note", "@media (max-width: 480px)"],
+  "app/styles/finance.css": ["Finance operating views", ".finance-empty-state", ".report-collection-period", ".report-arrears-panel", ".invoice-row-actions", "@media (max-width: 480px)"],
   "components/ModuleGovernanceForm.js": ["Keep at least one operating module enabled", "selectedModules.map", "module.propertyCount", "Unsaved changes", "name=\"primaryModule\""],
   "components/OperationsBoard.js": ["ResizeObserver", "data-board-column", "prefersReducedMotion", "View previous board columns", "operations-board-hint"],
   "app/(workspace)/modules/page.js": ["ModuleGovernanceForm", "updateWorkspaceModulesAction", "Module deactivation safeguard"],
@@ -73,6 +74,11 @@ const contracts = {
   "app/(workspace)/maintenance/page.js": ["OperationsBoard", "Return to reported", "Reopen work", "Apply filters", "board-column-empty"],
   "app/(workspace)/reservations/page.js": ["OperationsBoard", "Historical reservation record", "TransitionConfirmation", "activeValueLabel", "Apply filters"],
   "app/(workspace)/housekeeping/page.js": ["Housekeeping workload summary", "Filter housekeeping tasks", "[\"cancelled\", \"Cancelled\"]", "manageableProperties", "OperationsBoard"],
+  "app/(workspace)/invoices/page.js": ["Receivables summary", "workspace.overdueCount ? \" risk\"", "lateFees.count > 0"],
+  "app/(workspace)/invoices/InvoiceTable.js": ["data-mobile-cards=\"invoices\"", "data-label=\"Actions\"", "Apply filters", "Invoice directory results"],
+  "app/(workspace)/payments/page.js": ["unallocatedCount", "missingProofCount", "properties.length > 0 ? <OpenModalButton", "data-mobile-cards=\"payments\""],
+  "app/(workspace)/billing/page.js": ["data-mobile-cards=\"late-fees\"", "late-fee-preview-title", "summary.count ? \" risk\"", "Property billing policies"],
+  "app/(workspace)/reports/workspace.js": ["requestedPropertyId", "selectedProperty", "report-collection-period", "Portfolio report insights", "data-mobile-cards=\"arrears\""],
   "components/AppShell.js": ["mobileNavigationItems(flatNav)"],
   "lib/actions/leases.js": ["const claimed = run(", "status='available'", "Number(claimed.changes) !== 1"],
   "lib/actions/team.js": ["passwordInput(formData, \"password\")"],
@@ -160,4 +166,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, exact repository gate, cohesive workspace polish, live module governance, property and team access ergonomics, navigable maintenance, reservation, and housekeeping boards, self-hosted and Render deployment contracts, validated startup migration, centralized migration ownership, atomic occupancy and reservation flow hardening, formula-safe exports, bounded credential parsing, delegated mobile navigation, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, cohesive workspace polish, live module governance, property and team access ergonomics, actionable finance and reporting intelligence, navigable maintenance, reservation, and housekeeping boards, self-hosted and Render deployment contracts, validated startup migration, centralized migration ownership, atomic occupancy and reservation flow hardening, formula-safe exports, bounded credential parsing, delegated mobile navigation, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
