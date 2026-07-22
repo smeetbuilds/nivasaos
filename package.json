@@ -47,7 +47,8 @@
     "check": "bun run gate",
     "hooks:install": "bun run scripts/install-hooks.js",
     "backup": "bun run scripts/backup.js",
-    "restore": "bun run scripts/restore.js"
+    "restore": "bun run scripts/restore.js",
+    "gate:render": "bash scripts/render-build-gate.sh"
   },
   "dependencies": {
     "next": "16.2.10",
