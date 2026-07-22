@@ -12,9 +12,24 @@ import Flash from "@/components/Flash";
 import Badge from "@/components/Badge";
 import Empty from "@/components/Empty";
 import Icon from "@/components/Icon";
+import OperationsBoard from "@/components/OperationsBoard";
 
 export const metadata = { title: "Maintenance" };
+
 const columns = [["reported", "Reported"], ["in_progress", "In progress"], ["resolved", "Resolved"]];
+const backwardTransitions = {
+  in_progress: { status: "reported", label: "Return to reported" },
+  resolved: { status: "in_progress", label: "Reopen work" }
+};
+const forwardTransitions = {
+  reported: { status: "in_progress", label: "Start work", pending: "Starting…" },
+  in_progress: { status: "resolved", label: "Resolve", pending: "Resolving…" }
+};
+const emptyColumnCopy = {
+  reported: "No newly reported work orders.",
+  in_progress: "No work orders are currently in progress.",
+  resolved: "No resolved work orders in this view."
+};
 
 export default async function MaintenancePage({ searchParams }) {
   const user = await requirePortfolioPermission("maintenance.manage");
@@ -34,7 +49,12 @@ export default async function MaintenancePage({ searchParams }) {
   const team = propertyIds.length ? all(`SELECT DISTINCT u.id,u.name,u.role FROM users u LEFT JOIN user_properties up ON up.user_id=u.id WHERE u.status='active' AND (u.role='owner' OR up.property_id IN (${propertyIds.map(() => "?").join(",")})) ORDER BY u.name`, propertyIds) : [];
   const ticketIds = tickets.map((ticket) => Number(ticket.id));
   const comments = ticketIds.length ? all(`SELECT mc.*,u.name user_name,t.full_name tenant_name FROM maintenance_comments mc LEFT JOIN users u ON u.id=mc.actor_user_id LEFT JOIN tenants t ON t.id=mc.actor_tenant_id WHERE mc.ticket_id IN (${ticketIds.map(() => "?").join(",")}) ORDER BY mc.created_at ASC,mc.id ASC`, ticketIds) : [];
-  const commentsByTicket = comments.reduce((map, comment) => { const key = Number(comment.ticket_id); if (!map[key]) map[key] = []; map[key].push(comment); return map; }, {});
+  const commentsByTicket = comments.reduce((map, comment) => {
+    const key = Number(comment.ticket_id);
+    if (!map[key]) map[key] = [];
+    map[key].push(comment);
+    return map;
+  }, {});
   const query = await searchParams;
   const filters = {
     q: String(query?.q || "").trim().toLowerCase(),
@@ -47,10 +67,12 @@ export default async function MaintenancePage({ searchParams }) {
     const assignmentMatches = !filters.assignment || (filters.assignment === "assigned" ? Boolean(ticket.assigned_to) : !ticket.assigned_to);
     return (!filters.q || haystack.includes(filters.q)) && (!filters.property || String(ticket.property_id) === filters.property) && (!filters.priority || ticket.priority === filters.priority) && assignmentMatches;
   });
+  const hasActiveFilters = Object.values(filters).some(Boolean);
   const openTickets = tickets.filter((ticket) => ticket.status !== "resolved").length;
   const urgentTickets = tickets.filter((ticket) => ticket.status !== "resolved" && ["urgent", "high"].includes(ticket.priority)).length;
   const unassignedTickets = tickets.filter((ticket) => ticket.status !== "resolved" && !ticket.assigned_to).length;
   const resolvedTickets = tickets.filter((ticket) => ticket.status === "resolved").length;
+  const boardColumns = columns.map(([id, label]) => ({ id, label, count: filteredTickets.filter((ticket) => ticket.status === id).length }));
 
   return <>
     <Flash searchParams={query}/>
@@ -59,36 +81,50 @@ export default async function MaintenancePage({ searchParams }) {
     <section className="metric-grid operations-summary-grid" aria-label="Maintenance workload summary">
       <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="maintenance"/></div><span>Open work orders</span><strong>{openTickets}</strong><small>Reported or currently in progress</small></article>
       <article className={`metric-card compact-metric${urgentTickets ? " risk" : ""}`}><div className="metric-icon"><Icon name="report"/></div><span>High priority</span><strong>{urgentTickets}</strong><small>Urgent and high-priority open work</small></article>
-      <article className={`metric-card compact-metric${unassignedTickets ? " risk" : ""}`}><div className="metric-icon"><Icon name="team"/></div><span>Unassigned</span><strong>{unassignedTickets}</strong><small>Open tickets without an owner</small></article>
+      <article className={`metric-card compact-metric${unassignedTickets ? " risk" : ""}`}><div className="metric-icon"><Icon name="team"/></div><span>Unassigned</span><strong>{unassignedTickets}</strong><small>Open tickets without an assignee</small></article>
       <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="check"/></div><span>Resolved</span><strong>{resolvedTickets}</strong><small>Preserved in the operational history</small></article>
     </section>
 
     {tickets.length > 0 && <form className="panel operations-toolbar" method="get" aria-label="Filter maintenance tickets">
-      <div className="operations-toolbar-copy"><span className="eyebrow">Work queue</span><strong>Maintenance board</strong><small>{filteredTickets.length} of {tickets.length} tickets shown</small></div>
+      <div className="operations-toolbar-copy"><span className="eyebrow">Work queue</span><strong>Maintenance board</strong><small aria-live="polite">{filteredTickets.length} of {tickets.length} tickets shown</small></div>
       <div className="operations-filter-grid maintenance-filter-grid">
-        <label className="operations-search-field"><span>Search</span><input type="search" name="q" defaultValue={query?.q || ""} placeholder="Issue, property, unit, person, or assignee"/></label>
+        <label className="operations-search-field"><span>Search work orders</span><input type="search" name="q" defaultValue={query?.q || ""} placeholder="Issue, property, unit, resident, or assignee"/></label>
         <label><span>Property</span><select name="property" defaultValue={filters.property}><option value="">All properties</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></label>
         <label><span>Priority</span><select name="priority" defaultValue={filters.priority}><option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
         <label><span>Assignment</span><select name="assignment" defaultValue={filters.assignment}><option value="">Any assignment</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select></label>
-        <div className="operations-filter-actions"><button className="button secondary" type="submit">Apply</button><Link href="/maintenance" className="text-link">Reset</Link></div>
+        <div className="operations-filter-actions"><button className="button secondary" type="submit">Apply filters</button><Link href="/maintenance" className="text-link">Reset</Link></div>
       </div>
     </form>}
 
-    {filteredTickets.length ? <div className="kanban enterprise-kanban" aria-label="Maintenance workflow board">{columns.map(([status, label]) => {
-      const columnTickets = filteredTickets.filter((ticket) => ticket.status === status);
-      return <section className="kanban-column enterprise-kanban-column" key={status} aria-labelledby={`maintenance-${status}`}>
-        <div className="kanban-head"><div><span className="eyebrow">Workflow</span><h2 id={`maintenance-${status}`}>{label}</h2></div><span>{columnTickets.length}</span></div>
-        <div className="kanban-list">{columnTickets.length ? columnTickets.map((ticket) => <article className={`ticket-card enterprise-ticket-card priority-${ticket.priority}`} key={ticket.id}>
-          <div className="ticket-top"><Badge tone={ticket.priority}>{ticket.priority}</Badge><small>Updated {dateTimeLabel(ticket.updated_at || ticket.reported_at)}</small></div>
-          <h3>{ticket.title}</h3><p>{ticket.description}</p>
-          <div className="ticket-context-grid"><span><small>Location</small><strong>{ticket.property_name}{ticket.unit_name ? ` · ${ticket.unit_name}` : ""}</strong></span><span><small>Resident</small><strong>{ticket.tenant_name || "Not linked"}</strong></span><span><small>Owner</small><strong>{ticket.assigned_name || "Unassigned"}</strong></span></div>
-          <div className="ticket-actions"><OpenModalButton target={`ticket-updates-${ticket.id}`} icon="message" className="text-button">Updates ({ticket.comment_count || 0})</OpenModalButton>{status !== "reported" && <form action={updateMaintenanceAction}><input type="hidden" name="ticketId" value={ticket.id}/><input type="hidden" name="status" value={status === "resolved" ? "in_progress" : "reported"}/><ActionButton className="text-button" pendingLabel="Moving…">Move back</ActionButton></form>}{status !== "resolved" && <form action={updateMaintenanceAction}><input type="hidden" name="ticketId" value={ticket.id}/><input type="hidden" name="status" value={status === "reported" ? "in_progress" : "resolved"}/><ActionButton className={status === "in_progress" ? "button primary small" : "text-button"} pendingLabel={status === "reported" ? "Starting…" : "Resolving…"}>{status === "reported" ? "Start work" : "Resolve"}</ActionButton></form>}</div>
-        </article>) : <div className="kanban-empty">No matching tickets</div>}</div>
-      </section>;
-    })}</div> : tickets.length ? <Empty icon="maintenance" title="No maintenance tickets match these filters" text="Adjust the search, property, priority, or assignment filters to view more work orders."/> : <Empty icon="maintenance" title="No maintenance tickets" text="Report an issue and track it through the three-stage operational flow."/>}
+    {filteredTickets.length ? <OperationsBoard id="maintenance-board" label="Maintenance workflow board" columns={boardColumns} className="kanban enterprise-kanban">
+      {columns.map(([status, label]) => {
+        const columnTickets = filteredTickets.filter((ticket) => ticket.status === status);
+        return <section id={`maintenance-board-${status}`} data-board-column={status} className="kanban-column enterprise-kanban-column" key={status} aria-labelledby={`maintenance-${status}`}>
+          <div className="kanban-head"><div><span className="eyebrow">Workflow stage</span><h2 id={`maintenance-${status}`}>{label}</h2></div><span>{columnTickets.length}</span></div>
+          <div className="kanban-list">{columnTickets.length ? columnTickets.map((ticket) => {
+            const titleId = `maintenance-ticket-${ticket.id}`;
+            const backward = backwardTransitions[status];
+            const forward = forwardTransitions[status];
+            return <article className={`ticket-card enterprise-ticket-card priority-${ticket.priority}`} aria-labelledby={titleId} key={ticket.id}>
+              <div className="ticket-top"><Badge tone={ticket.priority}>{ticket.priority}</Badge><small>Updated {dateTimeLabel(ticket.updated_at || ticket.reported_at)}</small></div>
+              <h3 id={titleId}>{ticket.title}</h3><p>{ticket.description || "No description was provided for this work order."}</p>
+              <div className="ticket-context-grid"><span><small>Location</small><strong>{ticket.property_name}{ticket.unit_name ? ` · ${ticket.unit_name}` : ""}</strong></span><span><small>Resident</small><strong>{ticket.tenant_name || "Not linked"}</strong></span><span><small>Assignee</small><strong>{ticket.assigned_name || "Unassigned"}</strong></span></div>
+              <div className="ticket-actions">
+                <OpenModalButton target={`ticket-updates-${ticket.id}`} icon="message" className="button secondary small">Updates ({ticket.comment_count || 0})</OpenModalButton>
+                {backward && <form action={updateMaintenanceAction}><input type="hidden" name="ticketId" value={ticket.id}/><input type="hidden" name="status" value={backward.status}/><ActionButton className="text-button" pendingLabel="Moving…">{backward.label}</ActionButton></form>}
+                {forward && <form action={updateMaintenanceAction}><input type="hidden" name="ticketId" value={ticket.id}/><input type="hidden" name="status" value={forward.status}/><ActionButton className="button primary small" pendingLabel={forward.pending}>{forward.label}</ActionButton></form>}
+              </div>
+            </article>;
+          }) : <div className="kanban-empty board-column-empty">{hasActiveFilters ? "No matching tickets in this workflow stage." : emptyColumnCopy[status]}</div>}</div>
+        </section>;
+      })}
+    </OperationsBoard> : tickets.length ? <Empty icon="maintenance" title="No maintenance tickets match these filters" text="Adjust the search, property, priority, or assignment filters to view more work orders."/> : <Empty icon="maintenance" title="No maintenance tickets" text="Report an issue and track it through the three-stage operational flow."/>}
 
-    <StatefulForm action={createMaintenanceAction}><ModalForm id="maintenance-modal" title="Report maintenance issue" description="Capture enough detail for staff to act without a second call." submitLabel="Create ticket" pendingLabel="Creating…"><div className="modal-body"><label><span>Property</span><select name="propertyId" required>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></label><div className="field-grid two"><label><span>Unit (optional)</span><select name="unitId"><option value="">Common area / property</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.property_name} · {unit.name}</option>)}</select></label><label><span>Tenant (optional)</span><select name="tenantId"><option value="">No tenant</option>{tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.property_name} · {tenant.full_name}</option>)}</select></label></div><label><span>Issue title</span><input name="title" required placeholder="Water leak under sink"/></label><label><span>Description</span><textarea name="description" rows="4" required/></label><div className="field-grid two"><label><span>Priority</span><select name="priority" defaultValue="normal"><option>low</option><option>normal</option><option>high</option><option>urgent</option></select></label><label><span>Assign to</span><select name="assignedTo"><option value="">Unassigned</option>{team.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label></div></div></ModalForm></StatefulForm>
+    <StatefulForm action={createMaintenanceAction}><ModalForm id="maintenance-modal" title="Report maintenance issue" description="Capture enough detail for staff to act without a second call." submitLabel="Create ticket" pendingLabel="Creating…"><div className="modal-body"><label><span>Property</span><select name="propertyId" required>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></label><div className="field-grid two"><label><span>Unit (optional)</span><select name="unitId"><option value="">Common area / property</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.property_name} · {unit.name}</option>)}</select></label><label><span>Tenant (optional)</span><select name="tenantId"><option value="">No tenant</option>{tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.property_name} · {tenant.full_name}</option>)}</select></label></div><label><span>Issue title</span><input name="title" required placeholder="Water leak under sink"/></label><label><span>Description</span><textarea name="description" rows="4" required/></label><div className="field-grid two"><label><span>Priority</span><select name="priority" defaultValue="normal"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label><label><span>Assign to</span><select name="assignedTo"><option value="">Unassigned</option>{team.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label></div></div></ModalForm></StatefulForm>
 
-    {tickets.map((ticket) => { const timeline = commentsByTicket[Number(ticket.id)] || []; return <StatefulForm action={addStaffMaintenanceCommentAction} key={`updates-${ticket.id}`}><ModalForm id={`ticket-updates-${ticket.id}`} title={`Updates · ${ticket.title}`} description={`${ticket.property_name}${ticket.unit_name ? ` · ${ticket.unit_name}` : ""}${ticket.tenant_name ? ` · ${ticket.tenant_name}` : ""}`} submitLabel="Add update" pendingLabel="Posting…"><div className="modal-body"><input type="hidden" name="ticketId" value={ticket.id}/><div className="maintenance-thread">{timeline.length ? timeline.map((comment) => <div className={`maintenance-thread-item${comment.visibility === "internal" ? " internal" : ""}`} key={comment.id}><span className="portal-comment-avatar">{(comment.user_name || comment.tenant_name || "U").slice(0, 1)}</span><span><strong>{comment.actor_tenant_id ? comment.tenant_name || "Tenant" : comment.user_name || "Former team member"}</strong><small>{dateTimeLabel(comment.created_at)} · {comment.visibility === "internal" ? "Internal note" : "Visible to tenant"}</small><p>{comment.message}</p></span></div>) : <div className="quiet-state">No updates yet.</div>}</div><label><span>New update</span><textarea name="message" rows="4" required/></label><label><span>Visibility</span><select name="visibility" defaultValue={ticket.tenant_id ? "tenant" : "internal"}><option value="tenant" disabled={!ticket.tenant_id}>Visible to linked tenant</option><option value="internal">Internal team note</option></select></label></div></ModalForm></StatefulForm>; })}
+    {tickets.map((ticket) => {
+      const timeline = commentsByTicket[Number(ticket.id)] || [];
+      return <StatefulForm action={addStaffMaintenanceCommentAction} key={`updates-${ticket.id}`}><ModalForm id={`ticket-updates-${ticket.id}`} title={`Updates · ${ticket.title}`} description={`${ticket.property_name}${ticket.unit_name ? ` · ${ticket.unit_name}` : ""}${ticket.tenant_name ? ` · ${ticket.tenant_name}` : ""}`} submitLabel="Add update" pendingLabel="Posting…"><div className="modal-body"><input type="hidden" name="ticketId" value={ticket.id}/><div className="maintenance-thread">{timeline.length ? timeline.map((comment) => <div className={`maintenance-thread-item${comment.visibility === "internal" ? " internal" : ""}`} key={comment.id}><span className="portal-comment-avatar">{(comment.user_name || comment.tenant_name || "U").slice(0, 1)}</span><span><strong>{comment.actor_tenant_id ? comment.tenant_name || "Tenant" : comment.user_name || "Former team member"}</strong><small>{dateTimeLabel(comment.created_at)} · {comment.visibility === "internal" ? "Internal note" : "Visible to tenant"}</small><p>{comment.message}</p></span></div>) : <div className="quiet-state">No updates have been posted yet.</div>}</div><label><span>New update</span><textarea name="message" rows="4" required/></label><label><span>Visibility</span><select name="visibility" defaultValue={ticket.tenant_id ? "tenant" : "internal"}><option value="tenant" disabled={!ticket.tenant_id}>Visible to linked tenant</option><option value="internal">Internal team note</option></select></label></div></ModalForm></StatefulForm>;
+    })}
   </>;
 }
