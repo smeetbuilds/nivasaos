@@ -1,86 +1,273 @@
-/* Daily operating views: maintenance and reservations. */
+/* Daily operating views: maintenance, reservations, and housekeeping. */
 
-.operations-summary-grid { margin-bottom: 16px; }
+.metric-grid.operations-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
 .operations-summary-grid .compact-metric { min-height: 132px; }
 
-.operations-toolbar { display: grid; grid-template-columns: minmax(190px, .4fr) minmax(0, 1.6fr); align-items: end; gap: 18px; margin-bottom: 16px; padding: 15px 16px; overflow: visible; }
+.operations-toolbar {
+  display: grid;
+  grid-template-columns: minmax(190px, .4fr) minmax(0, 1.6fr);
+  align-items: end;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 15px 16px;
+  overflow: visible;
+}
 .operations-toolbar-copy { min-width: 0; align-self: center; }
 .operations-toolbar-copy .eyebrow { margin-bottom: 3px; }
-.operations-toolbar-copy strong, .operations-toolbar-copy small { display: block; }
-.operations-toolbar-copy strong { color: var(--ink); font-size: 13px; }
-.operations-toolbar-copy small { margin-top: 3px; color: var(--muted); font-size: 10px; }
-.operations-filter-grid { display: grid; grid-template-columns: minmax(240px, 1.35fr) repeat(3, minmax(145px, .62fr)) auto; align-items: end; gap: 10px; }
+.operations-toolbar-copy strong,
+.operations-toolbar-copy small { display: block; }
+.operations-toolbar-copy strong { color: var(--ink); font-size: 14px; }
+.operations-toolbar-copy small { margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.operations-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.35fr) repeat(3, minmax(145px, .62fr)) auto;
+  align-items: end;
+  gap: 10px;
+}
 .operations-filter-grid label { gap: 5px; }
-.operations-filter-grid label > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.operations-filter-grid label > span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .operations-search-field { min-width: 0; }
 .operations-filter-actions { min-height: 42px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 
+/* Shared board navigation */
+.operations-board-shell { min-width: 0; }
+.operations-board-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+.operations-board-tabs { min-width: 0; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.operations-board-tabs::-webkit-scrollbar { display: none; }
+.operations-board-tab {
+  min-height: 36px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+.operations-board-tab strong {
+  min-width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  padding-inline: 5px;
+  border-radius: 6px;
+  background: #eef1f5;
+  color: #667085;
+  font-size: 10px;
+}
+.operations-board-tab:hover { background: #f7f9fb; color: var(--ink-2); }
+.operations-board-tab.is-active { border-color: #cfd7ff; background: var(--accent-soft); color: var(--accent-strong); }
+.operations-board-tab.is-active strong { background: #fff; color: var(--accent-strong); }
+.operations-board-controls { flex: none; display: flex; align-items: center; gap: 5px; }
+.operations-board-controls .icon-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-2);
+}
+.operations-board-controls .icon-button.is-previous svg { transform: rotate(180deg); }
+.operations-board-controls .icon-button:disabled { cursor: not-allowed; opacity: .38; }
+.operations-board-viewport {
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: 8px;
+  scrollbar-color: #c8ced8 transparent;
+}
+.operations-board-hint { display: none; margin: 8px 2px 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+
+/* Maintenance */
 .enterprise-kanban { display: grid; grid-template-columns: repeat(3, minmax(270px, 1fr)); gap: 12px; align-items: start; }
-.enterprise-kanban-column { min-width: 0; padding: 8px; border: 1px solid #e2e6ec; background: #eef1f5; }
+.enterprise-kanban-column { min-width: 0; padding: 8px; border: 1px solid #e2e6ec; border-radius: 10px; background: #eef1f5; scroll-snap-align: start; }
 .enterprise-kanban-column .kanban-head { min-height: 54px; padding: 7px 8px 11px; }
 .enterprise-kanban-column .kanban-head > div { min-width: 0; }
 .enterprise-kanban-column .kanban-head .eyebrow { margin-bottom: 2px; }
 .enterprise-kanban-column .kanban-head h2 { margin: 0; color: var(--ink); font-size: 14px; }
-.enterprise-kanban-column .kanban-head > span { min-width: 25px; min-height: 25px; display: grid; place-items: center; border: 1px solid #d6dce5; border-radius: 7px; background: #fff; color: var(--muted); font-size: 10px; font-weight: 800; }
-.enterprise-ticket-card { position: relative; padding: 15px; border: 1px solid var(--line); border-left-width: 3px; background: #fff; box-shadow: var(--shadow-xs); }
+.enterprise-kanban-column .kanban-head > span,
+.enterprise-reservation-board .reservation-column-head > span,
+.enterprise-housekeeping-board .housekeeping-column-head > span {
+  min-width: 25px;
+  min-height: 25px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d6dce5;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+.enterprise-ticket-card { position: relative; padding: 15px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 9px; background: #fff; box-shadow: var(--shadow-xs); }
 .enterprise-ticket-card.priority-urgent { border-left-color: #c4324f; }
 .enterprise-ticket-card.priority-high { border-left-color: #d97706; }
 .enterprise-ticket-card.priority-normal { border-left-color: #5267ff; }
 .enterprise-ticket-card.priority-low { border-left-color: #98a2b3; }
-.enterprise-ticket-card h3 { margin-top: 12px; font-size: 15px; line-height: 1.35; }
-.enterprise-ticket-card > p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; min-height: 49px; margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.enterprise-ticket-card h3 { margin: 12px 0 0; font-size: 15px; line-height: 1.35; }
+.enterprise-ticket-card > p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  min-height: 55px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
 .ticket-context-grid { display: grid; gap: 7px; margin: 13px 0; }
 .ticket-context-grid > span { min-width: 0; padding: 8px 9px; border: 1px solid #edf0f4; border-radius: 7px; background: #fafbfc; }
-.ticket-context-grid small, .ticket-context-grid strong { display: block; }
-.ticket-context-grid small { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.ticket-context-grid strong { margin-top: 2px; overflow: hidden; color: var(--ink-2); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.ticket-context-grid small,
+.ticket-context-grid strong { display: block; }
+.ticket-context-grid small { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.ticket-context-grid strong { margin-top: 3px; overflow: hidden; color: var(--ink-2); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.ticket-top small { color: var(--muted); font-size: 10px; }
 .enterprise-ticket-card .ticket-actions { align-items: center; padding-top: 11px; border-top: 1px solid #edf0f4; }
-.kanban-empty { min-height: 96px; display: grid; place-items: center; padding: 18px; border: 1px dashed #d4dae3; border-radius: 8px; color: var(--muted); font-size: 10px; text-align: center; }
 
-.enterprise-reservation-board { display: grid; grid-template-columns: repeat(5, minmax(260px, 1fr)); gap: 12px; align-items: start; overflow-x: auto; padding-bottom: 8px; scrollbar-color: #c8ced8 transparent; }
-.enterprise-reservation-board .reservation-column { min-width: 260px; padding: 8px; border: 1px solid #e2e6ec; background: #eef1f5; }
-.enterprise-reservation-board .reservation-column-head { min-height: 54px; padding: 7px 8px 11px; }
-.enterprise-reservation-board .reservation-column-head > div { min-width: 0; }
-.enterprise-reservation-board .reservation-column-head .eyebrow { margin-bottom: 2px; }
-.enterprise-reservation-board .reservation-column-head strong { color: var(--ink); font-size: 13px; text-transform: capitalize; }
-.enterprise-reservation-board .reservation-column-head > span { min-width: 25px; min-height: 25px; display: grid; place-items: center; border: 1px solid #d6dce5; border-radius: 7px; background: #fff; color: var(--muted); font-size: 10px; }
-.enterprise-reservation-card { padding: 15px; border: 1px solid var(--line); background: #fff; box-shadow: var(--shadow-xs); }
-.enterprise-reservation-card h2 { margin-top: 10px; font-size: 16px; }
-.enterprise-reservation-card > p { margin-top: 4px; min-height: 34px; color: var(--muted); font-size: 10px; line-height: 1.5; }
-.reservation-attention { display: inline-flex; margin-top: 10px; padding: 4px 7px; border: 1px solid #f2d4a7; border-radius: 6px; background: #fff8eb; color: #9a5a06; font-size: 8px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+/* Reservation board */
+.enterprise-reservation-board { display: grid; grid-template-columns: repeat(5, minmax(270px, 1fr)); gap: 12px; align-items: start; }
+.enterprise-reservation-board .reservation-column,
+.enterprise-housekeeping-board .housekeeping-column { min-width: 270px; padding: 8px; border: 1px solid #e2e6ec; border-radius: 10px; background: #eef1f5; scroll-snap-align: start; }
+.enterprise-reservation-board .reservation-column-head,
+.enterprise-housekeeping-board .housekeeping-column-head { min-height: 54px; padding: 7px 8px 11px; }
+.enterprise-reservation-board .reservation-column-head > div,
+.enterprise-housekeeping-board .housekeeping-column-head > div { min-width: 0; }
+.enterprise-reservation-board .reservation-column-head .eyebrow,
+.enterprise-housekeeping-board .housekeeping-column-head .eyebrow { margin-bottom: 2px; }
+.enterprise-reservation-board .reservation-column-head strong,
+.enterprise-housekeeping-board .housekeeping-column-head h2 { margin: 0; color: var(--ink); font-size: 13px; text-transform: capitalize; }
+.enterprise-reservation-card { padding: 15px; border: 1px solid var(--line); border-radius: 9px; background: #fff; box-shadow: var(--shadow-xs); }
+.enterprise-reservation-card h2 { margin: 10px 0 0; font-size: 16px; line-height: 1.35; }
+.enterprise-reservation-card > p { margin: 4px 0 0; min-height: 38px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.reservation-reference { color: var(--muted); font-size: 10px; font-weight: 700; }
+.reservation-attention { display: inline-flex; margin-top: 10px; padding: 4px 7px; border: 1px solid #f2d4a7; border-radius: 6px; background: #fff8eb; color: #9a5a06; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .reservation-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
 .reservation-facts > span { min-width: 0; padding: 8px; border: 1px solid #edf0f4; border-radius: 7px; background: #f9fafb; }
-.reservation-facts small, .reservation-facts strong { display: block; }
-.reservation-facts small { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.reservation-facts strong { margin-top: 3px; overflow: hidden; color: var(--ink); font-size: 10px; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+.reservation-facts small,
+.reservation-facts strong { display: block; }
+.reservation-facts small { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.reservation-facts strong { margin-top: 3px; overflow: hidden; color: var(--ink); font-size: 11px; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
 .enterprise-reservation-card .reservation-actions { padding-top: 11px; border-top: 1px solid #edf0f4; }
+
+/* Housekeeping */
+.enterprise-housekeeping-board { display: grid; grid-template-columns: repeat(5, minmax(270px, 1fr)); gap: 12px; align-items: start; }
+.enterprise-housekeeping-card { padding: 15px; border: 1px solid var(--line); border-left: 3px solid #5267ff; border-radius: 9px; background: #fff; box-shadow: var(--shadow-xs); }
+.enterprise-housekeeping-card.priority-urgent { border-left-color: #c4324f; }
+.enterprise-housekeeping-card.priority-high { border-left-color: #d97706; }
+.enterprise-housekeeping-card.priority-low { border-left-color: #98a2b3; }
+.enterprise-housekeeping-card h3 { margin: 12px 0 0; font-size: 15px; line-height: 1.35; text-transform: capitalize; }
+.enterprise-housekeeping-card > p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.housekeeping-context-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 13px 0; }
+.housekeeping-context-grid > span { min-width: 0; padding: 8px; border: 1px solid #edf0f4; border-radius: 7px; background: #fafbfc; }
+.housekeeping-context-grid small,
+.housekeeping-context-grid strong { display: block; }
+.housekeeping-context-grid small { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.housekeeping-context-grid strong { margin-top: 3px; overflow: hidden; color: var(--ink-2); font-size: 11px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.housekeeping-context-grid .is-overdue { border-color: #f0c5cf; background: #fff5f6; }
+.housekeeping-context-grid .is-overdue strong { color: #a82a45; }
+.housekeeping-note { margin-top: 0 !important; padding: 10px; border: 1px solid #e7eaf0; border-radius: 7px; background: #f7f9fb; color: #596579 !important; }
+.housekeeping-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 11px; border-top: 1px solid #edf0f4; }
+.operations-history-note { display: inline-flex; align-items: center; min-height: 32px; color: var(--muted); font-size: 10px; font-weight: 750; }
+
+.ticket-actions,
+.reservation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ticket-actions form,
+.reservation-actions form { display: flex; }
+.board-column-empty { min-height: 112px; font-size: 11px; line-height: 1.45; }
 
 @media (max-width: 1260px) {
   .operations-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operations-search-field { grid-column: 1 / -1; }
   .operations-filter-actions { justify-content: flex-start; }
+  .metric-grid.operations-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 960px) {
   .operations-toolbar { grid-template-columns: 1fr; }
-  .enterprise-kanban { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; }
-  .enterprise-kanban-column { min-width: min(82vw, 350px); scroll-snap-align: start; }
-  .enterprise-reservation-board { scroll-snap-type: x mandatory; }
-  .enterprise-reservation-board .reservation-column { min-width: min(82vw, 330px); scroll-snap-align: start; }
+  .enterprise-kanban,
+  .enterprise-reservation-board,
+  .enterprise-housekeeping-board { display: flex; scroll-snap-type: x mandatory; padding-bottom: 8px; }
+  .enterprise-kanban-column,
+  .enterprise-reservation-board .reservation-column,
+  .enterprise-housekeeping-board .housekeeping-column { min-width: min(82vw, 350px); }
+  .operations-board-hint { display: block; }
 }
 
 @media (max-width: 720px) {
-  .operations-summary-grid { margin-bottom: 14px; }
+  .metric-grid.operations-summary-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-right: 0;
+    margin-bottom: 14px;
+    padding-right: 0;
+    overflow: visible;
+  }
+  .operations-summary-grid .compact-metric { min-height: 124px; }
   .operations-toolbar { padding: 14px; }
   .operations-filter-grid { grid-template-columns: 1fr; }
   .operations-search-field { grid-column: auto; }
   .operations-filter-actions { justify-content: flex-start; }
   .operations-filter-actions .button { flex: 1; }
-  .enterprise-ticket-card, .enterprise-reservation-card { padding: 14px; }
+  .operations-board-nav { align-items: stretch; }
+  .operations-board-tabs { padding-bottom: 1px; }
+  .operations-board-controls { align-self: center; }
+  .enterprise-ticket-card,
+  .enterprise-reservation-card,
+  .enterprise-housekeeping-card { padding: 14px; }
   .reservation-facts { grid-template-columns: 1fr 1fr; }
   .reservation-facts > span:last-child { grid-column: 1 / -1; }
+  .ticket-actions > form,
+  .ticket-actions > button,
+  .reservation-actions > form,
+  .reservation-actions > button,
+  .housekeeping-actions > button { flex: 1 1 calc(50% - 4px); }
+  .ticket-actions :is(.button, .text-button),
+  .reservation-actions :is(.button, .text-button),
+  .housekeeping-actions :is(.button, .text-button) { width: 100%; min-height: 38px; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .metric-grid.operations-summary-grid { grid-template-columns: 1fr; }
+  .operations-board-controls { display: none; }
+  .enterprise-kanban-column,
+  .enterprise-reservation-board .reservation-column,
+  .enterprise-housekeeping-board .housekeeping-column { min-width: calc(100vw - 34px); }
+  .housekeeping-context-grid { grid-template-columns: 1fr; }
+  .ticket-actions > form,
+  .ticket-actions > button,
+  .reservation-actions > form,
+  .reservation-actions > button,
+  .housekeeping-actions > button { flex-basis: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .enterprise-ticket-card, .enterprise-reservation-card { transition: none !important; }
+  .enterprise-ticket-card,
+  .enterprise-reservation-card,
+  .enterprise-housekeeping-card,
+  .operations-board-tab { transition: none !important; }
 }
