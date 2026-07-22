@@ -42,22 +42,37 @@ requireText("app/styles/system-states.css", [
   "@media (max-width: 520px)",
   "@media (prefers-reduced-motion: reduce)"
 ]);
+requireText("scripts/render-build-gate.sh", [
+  "#!/usr/bin/env bash",
+  "set -Eeuo pipefail",
+  "--capture-only",
+  "--enforce-only",
+  "NIVASA_RENDER_ARTIFACT_DIR",
+  "NIVASA_RENDER_IMAGE_TAG",
+  "LC_ALL=C sed 's/[^[:alnum:]_.-]/-/g'",
+  "build-metadata.txt",
+  "DOCKER_BUILDKIT=1 docker build --pull --progress=plain",
+  'RENDER_GIT_COMMIT=${commit}',
+  'RENDER_GIT_BRANCH=${branch}',
+  "build_status=${PIPESTATUS[0]}",
+  "read_recorded_status"
+]);
 requireText(".circleci/config.yml", [
   "render-build-gate:",
   "Capture Render-equivalent Docker build",
-  "DOCKER_BUILDKIT=1 docker build --pull --progress=plain",
-  "RENDER_EXTERNAL_HOSTNAME=nivasaos-ci.onrender.com",
-  'RENDER_GIT_COMMIT="${CIRCLE_SHA1}"',
-  "artifacts/render/build.log",
-  "build-exit-code.txt",
+  "bash scripts/render-build-gate.sh --capture-only",
   "destination: render-build",
   "Enforce Render build result",
+  "bash scripts/render-build-gate.sh --enforce-only",
   "- render-build-gate"
 ]);
 requireText("docs/RENDER_BUILD_EVIDENCE.md", [
-  "render-build-gate",
+  "bun run gate:render",
+  "repository-owned authority",
+  "Codespaces",
   "build.log",
   "build-exit-code.txt",
+  "build-metadata.txt",
   "first failing Docker layer",
   "must never be supplied as Docker build arguments",
   "does not replace an actual Render deployment"
@@ -70,22 +85,35 @@ const css = read("app/styles/system-states.css");
 if (css.includes("overflow-x: auto")) failures.push("System states must not depend on horizontal scrolling");
 if (css.includes("border-radius: 20px")) failures.push("System states reintroduced oversized card radii");
 
+const renderScript = fs.existsSync("scripts/render-build-gate.sh") ? read("scripts/render-build-gate.sh") : "";
+if (renderScript.includes("tr -c")) failures.push("scripts/render-build-gate.sh: image-tag sanitization must not use locale-sensitive tr ranges");
+if (renderScript.includes("NIVASA_INSTALL_TOKEN")) failures.push("scripts/render-build-gate.sh: Render build reproduction must not expose the installation token as a build argument");
+const buildArguments = [...renderScript.matchAll(/--build-arg\s+"?([A-Z0-9_]+)=/g)].map((match) => match[1]);
+const allowedBuildArguments = ["RENDER_EXTERNAL_HOSTNAME", "RENDER_EXTERNAL_URL", "RENDER_GIT_COMMIT", "RENDER_GIT_BRANCH"];
+if (JSON.stringify(buildArguments) !== JSON.stringify(allowedBuildArguments)) failures.push(`scripts/render-build-gate.sh: build arguments must exactly equal ${allowedBuildArguments.join(", ")}`);
+for (const value of ["build.log", "build-exit-code.txt", "build-metadata.txt", "image-inspect.json", "image-size.jsonl"]) {
+  if (!renderScript.includes(value)) failures.push(`scripts/render-build-gate.sh: retained evidence is missing ${value}`);
+}
+
 const circleci = fs.existsSync(".circleci/config.yml") ? read(".circleci/config.yml") : "";
 const renderJob = circleci.split("\n  render-build-gate:")[1]?.split("\n  container-gate:")[0] || "";
 const workflow = circleci.split("\nworkflows:")[1] || "";
 if (!renderJob) failures.push(".circleci/config.yml: render-build-gate job block could not be isolated");
 if (renderJob.includes("NIVASA_INSTALL_TOKEN")) failures.push(".circleci/config.yml: Render build reproduction must not expose the installation token as a build argument");
-for (const value of ["set +e", "PIPESTATUS[0]", "store_artifacts:", "Enforce Render build result"]) {
+if (renderJob.includes("docker build --pull")) failures.push(".circleci/config.yml: Docker reproduction logic must stay in the repository-owned render build script");
+for (const value of ["--capture-only", "store_artifacts:", "--enforce-only"]) {
   if (!renderJob.includes(value)) failures.push(`.circleci/config.yml: render-build-gate missing ${value}`);
 }
+const captureIndex = renderJob.indexOf("--capture-only");
 const artifactIndex = renderJob.indexOf("store_artifacts:");
-const enforceIndex = renderJob.indexOf("Enforce Render build result");
-if (artifactIndex === -1 || enforceIndex === -1 || artifactIndex > enforceIndex) failures.push(".circleci/config.yml: Render evidence must be stored before the recorded build failure is enforced");
+const enforceIndex = renderJob.indexOf("--enforce-only");
+if (captureIndex === -1 || artifactIndex === -1 || enforceIndex === -1 || !(captureIndex < artifactIndex && artifactIndex < enforceIndex)) failures.push(".circleci/config.yml: Render evidence must be captured, stored, and then enforced in that order");
 if (!workflow.includes("- render-build-gate:")) failures.push(".circleci/config.yml: Render build reproduction is not scheduled on main");
 if (!/container-gate:\s*\n\s*requires:\s*\n\s*- release-gate\s*\n\s*- render-build-gate/.test(workflow)) failures.push(".circleci/config.yml: container certification must require both repository and Render build gates");
 
 const packageJson = JSON.parse(read("package.json"));
 if (packageJson.scripts?.["build:diagnostics"] !== "bun run scripts/build-diagnostics.js") failures.push("package.json: build diagnostics command changed");
+if (packageJson.scripts?.["gate:render"] !== "bash scripts/render-build-gate.sh") failures.push("package.json: repository-owned Render build gate command changed");
 for (const script of ["verify:ui", "verify:deployment", "verify:release"]) {
   if (!String(packageJson.scripts?.[script] || "").includes("verify-deployment-surfaces.js")) failures.push(`package.json: ${script} does not enforce deployment surfaces`);
 }
@@ -94,4 +122,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Phase-separated Render builds, retained failure evidence, sanitized diagnostics, disposable build storage, health release metadata, global recovery, loading, not-found, and stable permission-denied surfaces verified.");
+console.log("Repository-owned Render builds, retained failure evidence, sanitized diagnostics, disposable build storage, health release metadata, global recovery, loading, not-found, and stable permission-denied surfaces verified.");
