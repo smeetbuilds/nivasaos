@@ -21,15 +21,8 @@ contains(packageJson.scripts["verify:ui"], "verify-module-operations-ui.js", "Mo
 contains(packageJson.scripts["verify:release"], "verify-module-operations-ui.js", "Module operations verifier is not attached to the release boundary.");
 contains(globals, '@import "./styles/module-operations.css";', "Module operations stylesheet is not loaded.");
 for (const contract of [
-  ".module-directory-section",
-  ".module-directory-table",
-  ".module-row-actions",
-  ".module-form-note",
-  ".metric-card.attention",
-  ".portal-service-list > article",
-  ".portal-visitor-list > article",
-  "@media (max-width: 720px)",
-  "@media (prefers-reduced-motion: reduce)"
+  ".module-directory-section", ".module-directory-table", ".module-row-actions", ".module-form-note", ".metric-card.attention",
+  ".portal-service-list > article", ".portal-visitor-list > article", "@media (max-width: 720px)", "@media (prefers-reduced-motion: reduce)"
 ]) contains(css, contract, `Module operations CSS contract missing: ${contract}`);
 excludes(css, "font-size: 8px", "Module operations UI must not use unreadably small text.");
 excludes(css, "border-radius: 20px", "Module operations UI must not reintroduce oversized card radii.");
@@ -73,8 +66,13 @@ contains(verticals, 'data-mobile-cards="module-requests"', "Module requests must
 contains(verticals, "booleanFields", "Vertical configuration must expose explicit boolean controls.");
 contains(verticals, "normalizedBoolean", "Stored vertical boolean values must normalize into explicit controls.");
 contains(verticals, "profileMaxLength", "Student and staff profile limits must match server parsing.");
-contains(verticals, "guardian_email", "Student guardian fields must remain available.");
-contains(verticals, "eligibility_end_date", "Staff eligibility fields must remain available.");
+contains(verticals, "profilePropertyIds", "Sensitive profiles must be queried only from people-managed properties.");
+contains(verticals, "requestPeople", "Request creation must use a minimal non-profile person dataset.");
+contains(verticals, 'hasPermission(user, "people.manage"', "Vertical profile access must require people.manage.");
+contains(verticals, 'hasPermission(user, "requests.review"', "Request records must remain request-review scoped.");
+contains(verticals, "No profile records in scope", "Restricted users need an intentional profile empty state.");
+contains(verticals, "guardian_email", "Student guardian fields must remain available to authorised profile managers.");
+contains(verticals, "eligibility_end_date", "Staff eligibility fields must remain available to authorised profile managers.");
 contains(verticals, "optgroup", "Cross-property selectors must group related records.");
 
 contains(portalServices, "Resident service summary", "Resident services need an accessible summary.");
@@ -84,4 +82,4 @@ contains(portalVisitors, "portal-visitor-cancel", "Resident visitor cancellation
 contains(portalVisitors, 'pendingLabel="Registering…"', "Resident visitor creation must expose pending state.");
 for (const contract of ['maxLength="160"', 'maxLength="40"', 'maxLength="500"', 'maxLength="1200"']) contains(portalVisitors, contract, `Resident visitor form limit missing: ${contract}`);
 
-console.log("Restored services routing, exact property view scopes, billing-scope isolation, responsive service, visitor, space, commercial and vertical registers, confirmation-safe actions, agreement-scoped allocation controls, exact client/server form bounds, student/staff profile semantics, and resident module flows verified.");
+console.log("Restored services routing, exact property view scopes, billing isolation, responsive module records, confirmation-safe actions, agreement-scoped allocations, exact form bounds, sensitive student/staff profile isolation, and resident module flows verified.");
