@@ -15,7 +15,7 @@ for (const file of [
   ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/ISSUE_TEMPLATE/config.yml",
   "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "README.md", "SECURITY.md", "CHANGELOG.md", "LICENSE",
   "Caddyfile", "Dockerfile", ".dockerignore", "compose.yml", "compose.production.yml", "render.yaml", "next.config.mjs", "proxy.js", "app/layout.js",
-  "app/api/reports/export/route.js", "app/styles/forms.css", "app/styles/records.css",
+  "app/api/reports/export/route.js", "app/styles/forms.css", "app/styles/records.css", "app/styles/polish.css",
   "docs/ACCESSIBILITY_CERTIFICATION.md", "docs/BACKUPS.md", "docs/BROWSER_TESTING.md", "docs/DEPLOYMENT.md", "docs/KNOWN_LIMITATIONS.md",
   "docs/MIGRATIONS.md", "docs/PRODUCTION_RELEASE.md", "docs/REPORTING_EXPORTS.md", "docs/RUNTIME_IMAGE.md", "docs/WHITE_LABEL.md",
   "lib/action-state.js", "lib/auth-rate-limit.js", "lib/csv.js", "lib/document-authorization.js", "lib/money.js", "lib/navigation.js", "lib/portal-handoff.js",
@@ -61,6 +61,7 @@ if (String(packageJson.scripts["verify:remediation"] || "").includes("verify-flo
 const contracts = {
   "app/api/lease-documents/[id]/route.js": ["canDeliverLeaseDocument", "hasPermission", "archived_at IS NULL"],
   "app/api/reports/export/route.js": ["hasPortfolioPermission", "hasPermission", "reportData", "minorDecimal", "amount_minor", "csvRow", "private, no-store"],
+  "app/styles/polish.css": ["Final visual-coherence layer", ".page-header {", ".module-health-grid", ".vertical-property-card::after { display: none; }", ".modal[open] { display: grid;", ".mobile-bottom-nav :is(a, button).is-active", "@media (max-width: 720px)"],
   "components/AppShell.js": ["mobileNavigationItems(flatNav)"],
   "lib/actions/leases.js": ["const claimed = run(", "status='available'", "Number(claimed.changes) !== 1"],
   "lib/actions/team.js": ["passwordInput(formData, \"password\")"],
@@ -148,4 +149,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("NivasaOS packaging, exact repository gate, self-hosted and Render deployment contracts, validated startup migration, dedicated deployment verification, centralized migration ownership, atomic occupancy and reservation flow hardening, formula-safe exports, bounded credential parsing, delegated mobile navigation, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");
+console.log("NivasaOS packaging, exact repository gate, cohesive workspace polish, self-hosted and Render deployment contracts, validated startup migration, dedicated deployment verification, centralized migration ownership, atomic occupancy and reservation flow hardening, formula-safe exports, bounded credential parsing, delegated mobile navigation, safe Bun SQLite cleanup, slim standalone runtime, authenticated browser matrix, evidence-backed accessibility, structured validation, exact reporting, mobile records, bounded recovery, security, governance, and release contracts are intact.");

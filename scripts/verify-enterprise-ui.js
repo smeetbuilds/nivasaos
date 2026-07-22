@@ -11,6 +11,7 @@ const foundation = read("app/styles/foundation.css");
 const portfolio = read("app/styles/portfolio.css");
 const finance = read("app/styles/finance.css");
 const operationsCss = read("app/styles/operations.css");
+const polish = read("app/styles/polish.css");
 const shell = read("components/AppShell.js");
 const pageHeader = read("components/PageHeader.js");
 const dashboard = read("app/(workspace)/dashboard/page.js");
@@ -25,9 +26,10 @@ const reports = read("app/(workspace)/reports/workspace.js");
 const maintenance = read("app/(workspace)/maintenance/page.js");
 const reservations = read("app/(workspace)/reservations/page.js");
 
-for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css"]) {
+for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css", "polish.css"]) {
   contains(globals, `@import "./styles/${filename}";`, `Global CSS must load ${filename}.`);
 }
+contains(globals.trim(), '@import "./styles/polish.css";', "The visual-coherence stylesheet must remain the final CSS import.");
 excludes(globals, "part-14.css", "Anonymous enterprise stylesheet imports must be retired.");
 excludes(globals, "part-15.css", "Anonymous portfolio stylesheet imports must be retired.");
 contains(legacyIndex, '@import "./part-1.css";', "Legacy CSS must preserve the first compatibility slice.");
@@ -42,6 +44,21 @@ contains(foundation, ".table-wrap tbody tr:hover", "Enterprise table interaction
 contains(foundation, "@media (max-width: 960px)", "Tablet and mobile shell breakpoint is missing.");
 contains(foundation, "@media (prefers-reduced-motion: reduce)", "Reduced-motion accessibility handling is missing.");
 excludes(foundation, ".button.primary {\n  background: linear-gradient", "Primary actions must not use decorative gradients.");
+
+for (const contract of [
+  ".page-header {",
+  ".metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }",
+  ".module-health-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }",
+  ".vertical-property-card::after { display: none; }",
+  ".permission-card small",
+  ".modal[open] { display: grid;",
+  ".mobile-bottom-nav :is(a, button).is-active",
+  "@media (max-width: 720px)",
+  "@media (prefers-reduced-motion: reduce)"
+]) contains(polish, contract, `System polish contract missing: ${contract}`);
+excludes(polish, "font-size: 8px", "Final polish must not reintroduce unreadably small operational text.");
+excludes(polish, "border-radius: 20px", "Final polish must not reintroduce oversized card radii.");
+
 contains(shell, "sidebar-context", "Desktop navigation must expose the active workspace context.");
 contains(shell, '{current?.[2] || "Workspace"}', "Topbar must expose the current operational area.");
 contains(shell, "{user.role}", "User identity must expose role rather than an abstract permission count.");
@@ -85,4 +102,4 @@ contains(reservations, 'aria-label="Filter reservations"', "Reservations require
 contains(reservations, "<TransitionConfirmation", "Reservation destructive transitions must retain confirmation.");
 contains(reservations, "activeValueLabel", "Reservation value must remain currency-safe.");
 
-console.log("Enterprise shell, CSS architecture, portfolio, finance, maintenance, and front-desk visual contracts verified.");
+console.log("Enterprise shell, coherent design density, typography, responsive surfaces, portfolio, finance, maintenance, and front-desk visual contracts verified.");
