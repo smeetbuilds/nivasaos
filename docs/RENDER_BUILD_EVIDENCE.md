@@ -1,13 +1,33 @@
 # Render build evidence
 
-The `render-build-gate` CircleCI job reproduces the repository Dockerfile with the public build arguments that Render provides to a Docker service. It runs independently of the ordinary repository release gate on `main`, so a verification or image-build failure still produces a dedicated Docker log.
+`bun run gate:render` reproduces the repository Dockerfile with the public build arguments that Render provides to a Docker service. It is the repository-owned authority for this build boundary and can run from Codespaces, a self-hosted Docker machine, or CircleCI.
+
+The `render-build-gate` CircleCI job invokes the same script independently of the ordinary repository release gate on `main`, so a verification or image-build failure still produces a dedicated Docker log.
+
+## Run it directly
+
+From a complete checkout with Docker available:
+
+```bash
+bun run gate:render
+```
+
+The command exits with the real Docker build status. To capture evidence without immediately failing, then enforce it after uploading or copying the artifact directory:
+
+```bash
+bash scripts/render-build-gate.sh --capture-only
+bash scripts/render-build-gate.sh --enforce-only
+```
+
+Set `NIVASA_RENDER_ARTIFACT_DIR` to change the evidence directory or `NIVASA_RENDER_IMAGE_TAG` to change the local image tag.
 
 ## Retained artifacts
 
 The job stores an artifact directory named `render-build` containing:
 
 - `build.log` — plain BuildKit output for every Docker layer, including the `[nivasa-build]` preflight record and the first failing Docker layer or command;
-- `build-exit-code.txt` — the Docker build exit code used to fail the job after artifacts are stored;
+- `build-exit-code.txt` — the Docker build exit code used to fail the command or job after artifacts are stored;
+- `build-metadata.txt` — non-secret commit, branch, host, URL, and image-tag metadata;
 - `image-inspect.json` — image metadata when the build succeeds;
 - `image-size.jsonl` — the resulting image-size record when the build succeeds.
 
