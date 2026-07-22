@@ -42,6 +42,26 @@ requireText("app/styles/system-states.css", [
   "@media (max-width: 520px)",
   "@media (prefers-reduced-motion: reduce)"
 ]);
+requireText(".circleci/config.yml", [
+  "render-build-gate:",
+  "Capture Render-equivalent Docker build",
+  "DOCKER_BUILDKIT=1 docker build --pull --progress=plain",
+  "RENDER_EXTERNAL_HOSTNAME=nivasaos-ci.onrender.com",
+  'RENDER_GIT_COMMIT="${CIRCLE_SHA1}"',
+  "artifacts/render/build.log",
+  "build-exit-code.txt",
+  "destination: render-build",
+  "Enforce Render build result",
+  "- render-build-gate"
+]);
+requireText("docs/RENDER_BUILD_EVIDENCE.md", [
+  "render-build-gate",
+  "build.log",
+  "build-exit-code.txt",
+  "first failing Docker layer",
+  "must never be supplied as Docker build arguments",
+  "does not replace an actual Render deployment"
+]);
 
 for (const file of ["lib/permissions.js", "lib/auth.js"]) {
   if (read(file).includes("/dashboard?error=forbidden")) failures.push(`${file}: legacy dashboard query-string forbidden redirect remains`);
@@ -49,6 +69,20 @@ for (const file of ["lib/permissions.js", "lib/auth.js"]) {
 const css = read("app/styles/system-states.css");
 if (css.includes("overflow-x: auto")) failures.push("System states must not depend on horizontal scrolling");
 if (css.includes("border-radius: 20px")) failures.push("System states reintroduced oversized card radii");
+
+const circleci = fs.existsSync(".circleci/config.yml") ? read(".circleci/config.yml") : "";
+const renderJob = circleci.split("\n  render-build-gate:")[1]?.split("\n  container-gate:")[0] || "";
+const workflow = circleci.split("\nworkflows:")[1] || "";
+if (!renderJob) failures.push(".circleci/config.yml: render-build-gate job block could not be isolated");
+if (renderJob.includes("NIVASA_INSTALL_TOKEN")) failures.push(".circleci/config.yml: Render build reproduction must not expose the installation token as a build argument");
+for (const value of ["set +e", "PIPESTATUS[0]", "store_artifacts:", "Enforce Render build result"]) {
+  if (!renderJob.includes(value)) failures.push(`.circleci/config.yml: render-build-gate missing ${value}`);
+}
+const artifactIndex = renderJob.indexOf("store_artifacts:");
+const enforceIndex = renderJob.indexOf("Enforce Render build result");
+if (artifactIndex === -1 || enforceIndex === -1 || artifactIndex > enforceIndex) failures.push(".circleci/config.yml: Render evidence must be stored before the recorded build failure is enforced");
+if (!workflow.includes("- render-build-gate:")) failures.push(".circleci/config.yml: Render build reproduction is not scheduled on main");
+if (!/container-gate:\s*\n\s*requires:\s*\n\s*- release-gate\s*\n\s*- render-build-gate/.test(workflow)) failures.push(".circleci/config.yml: container certification must require both repository and Render build gates");
 
 const packageJson = JSON.parse(read("package.json"));
 if (packageJson.scripts?.["build:diagnostics"] !== "bun run scripts/build-diagnostics.js") failures.push("package.json: build diagnostics command changed");
@@ -60,4 +94,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Phase-separated Render builds, sanitized diagnostics, disposable build storage, health release metadata, global recovery, loading, not-found, and stable permission-denied surfaces verified.");
+console.log("Phase-separated Render builds, retained failure evidence, sanitized diagnostics, disposable build storage, health release metadata, global recovery, loading, not-found, and stable permission-denied surfaces verified.");

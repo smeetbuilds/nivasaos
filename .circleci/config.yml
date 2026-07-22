@@ -108,6 +108,49 @@ jobs:
           path: artifacts/cross-browser
           destination: cross-browser-gate
 
+  render-build-gate:
+    machine:
+      image: ubuntu-2404:2026.05.1
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Verify Docker builder
+          command: |
+            docker version
+            docker buildx version
+      - run:
+          name: Capture Render-equivalent Docker build
+          command: |
+            mkdir -p artifacts/render
+            image_tag="nivasaos:render-${CIRCLE_SHA1}"
+            set +e
+            DOCKER_BUILDKIT=1 docker build --pull --progress=plain \
+              --build-arg RENDER_EXTERNAL_HOSTNAME=nivasaos-ci.onrender.com \
+              --build-arg RENDER_EXTERNAL_URL=https://nivasaos-ci.onrender.com \
+              --build-arg RENDER_GIT_COMMIT="${CIRCLE_SHA1}" \
+              --build-arg RENDER_GIT_BRANCH="${CIRCLE_BRANCH:-detached}" \
+              --tag "${image_tag}" \
+              . 2>&1 | tee artifacts/render/build.log
+            build_status=${PIPESTATUS[0]}
+            set -e
+            printf '%s\n' "${build_status}" > artifacts/render/build-exit-code.txt
+            if [ "${build_status}" -eq 0 ]; then
+              docker image inspect "${image_tag}" > artifacts/render/image-inspect.json
+              docker image ls "${image_tag}" --format '{{json .}}' > artifacts/render/image-size.jsonl
+            fi
+      - store_artifacts:
+          path: artifacts/render
+          destination: render-build
+      - run:
+          name: Enforce Render build result
+          command: |
+            build_status="$(cat artifacts/render/build-exit-code.txt)"
+            if [ "${build_status}" -ne 0 ]; then
+              echo "Render-equivalent Docker build failed with exit code ${build_status}. Open the render-build/build.log artifact and locate the first failing Docker layer."
+              exit "${build_status}"
+            fi
+
   container-gate:
     machine:
       image: ubuntu-2404:2026.05.1
@@ -135,6 +178,11 @@ workflows:
   verify:
     jobs:
       - release-gate
+      - render-build-gate:
+          filters:
+            branches:
+              only:
+                - main
       - browser-gate:
           requires:
             - release-gate
@@ -152,6 +200,7 @@ workflows:
       - container-gate:
           requires:
             - release-gate
+            - render-build-gate
           filters:
             branches:
               only:
