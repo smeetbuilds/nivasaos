@@ -4,7 +4,9 @@ const failures = [];
 const read = (file) => fs.readFileSync(file, "utf8");
 const registers = [
   ["app/(workspace)/units/page.js", "units", 7],
+  ["app/(workspace)/invoices/InvoiceTable.js", "invoices", 9],
   ["app/(workspace)/payments/page.js", "payments", 7],
+  ["app/(workspace)/billing/page.js", "late-fees", 7],
   ["app/(workspace)/visitors/workspace.js", "visitors", 7],
   ["app/(workspace)/audit/workspace.js", "audit", 6],
   ["app/(workspace)/reports/workspace.js", "arrears", 7]
@@ -39,4 +41,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Units, payments, visitors, audit history, and arrears use semantic labeled mobile record cards without removing table headers from assistive technology.");
+console.log("Units, invoices, payments, late-fee previews, visitors, audit history, and arrears use semantic labeled mobile record cards without removing table headers from assistive technology.");

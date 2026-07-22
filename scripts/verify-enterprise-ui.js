@@ -128,18 +128,40 @@ contains(agreements, 'aria-label="Agreement portfolio summary"', "Agreements req
 contains(agreements, 'aria-label="Filter agreements"', "Agreements require URL-shareable filters.");
 contains(agreements, "moduleOptions", "Agreement model filtering must retain historical operating models.");
 
-contains(finance, ".finance-toolbar", "Finance directories require a shared filter toolbar.");
-contains(finance, ".finance-command-grid", "Finance operations require command-centre hierarchy.");
-contains(finance, ".finance-policy-grid", "Billing policy views require an enterprise card grid.");
-contains(finance, ".report-dashboard-grid", "Reports require a structured intelligence layout.");
+for (const contract of [
+  ".finance-toolbar",
+  ".finance-command-grid",
+  ".finance-policy-grid",
+  ".finance-empty-state",
+  ".report-collection-period",
+  ".report-arrears-panel",
+  "@media (max-width: 480px)"
+]) contains(finance, contract, `Finance and reporting polish contract missing: ${contract}`);
+excludes(finance, "font-size: 8px", "Finance interfaces must not use unreadably small text.");
+excludes(finance, "nth-child(10)::before", "Invoice mobile labels must not depend on fragile column positions.");
 contains(invoices, 'aria-label="Receivables summary"', "Invoices require a receivables summary.");
+contains(invoices, 'workspace.overdueCount ? " risk"', "Invoice risk styling must be driven by actual overdue records.");
 contains(invoiceTable, 'aria-label="Filter invoices"', "Invoices require accessible filters.");
+contains(invoiceTable, 'data-mobile-cards="invoices"', "Invoices must use the shared mobile record-card contract.");
+contains(invoiceTable, 'data-label="Actions"', "Invoice actions need explicit mobile labels.");
+contains(invoiceTable, "Apply filters", "Invoice filtering needs an explicit action label.");
 contains(payments, 'aria-label="Payment collection summary"', "Payments require a currency-safe collection summary.");
 contains(payments, 'aria-label="Filter payments"', "Payments require URL-shareable filters.");
+contains(payments, "unallocatedCount", "Payment summaries must expose allocation risk.");
+contains(payments, "missingProofCount", "Payment summaries must expose evidence gaps.");
+contains(payments, 'properties.length > 0 ? <OpenModalButton', "Payment creation must not open without a permitted property.");
+contains(payments, 'data-mobile-cards="payments"', "Payments must retain mobile record cards.");
 contains(billing, 'aria-label="Billing policy summary"', "Billing policies require an operational summary.");
 contains(billing, 'aria-label="Filter billing policies"', "Billing policies require URL-shareable filters.");
+contains(billing, 'data-mobile-cards="late-fees"', "Late-fee previews must be mobile record cards.");
+contains(billing, 'aria-labelledby="late-fee-preview-title"', "Late-fee preview needs a stable accessible heading.");
+contains(billing, 'summary.count ? " risk"', "Billing risk styling must reflect actual eligibility.");
 contains(reports, 'aria-label="Reporting summary"', "Reports require an intelligence summary.");
 contains(reports, 'aria-label="Filter reports by property"', "Reports require one explicit scope control.");
+contains(reports, "requestedPropertyId", "Report scope must validate the requested property.");
+contains(reports, "selectedProperty", "Report context must identify the selected property.");
+contains(reports, "report-collection-period", "Collection rows need property context in portfolio view.");
+contains(reports, 'aria-label="Portfolio report insights"', "Report insights need an accessible region label.");
 
 for (const contract of [
   ".operations-board-nav",
@@ -177,4 +199,4 @@ contains(housekeeping, '["cancelled", "Cancelled"]', "Cancelled housekeeping tas
 contains(housekeeping, "manageableProperties", "Housekeeping creation must respect property-level management scope.");
 contains(housekeeping, "<OperationsBoard", "Housekeeping must use navigable status columns.");
 
-console.log("Enterprise shell, permission-aware dashboard composition, live module governance, coherent property and team access surfaces, responsive records, portfolio, finance, and fully navigable maintenance, reservation, and housekeeping workflow contracts verified.");
+console.log("Enterprise shell, permission-aware dashboard composition, live module governance, coherent property and team access surfaces, responsive records, actionable finance and reporting intelligence, and fully navigable maintenance, reservation, and housekeeping workflow contracts verified.");
