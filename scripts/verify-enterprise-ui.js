@@ -17,6 +17,7 @@ const polish = read("app/styles/polish.css");
 const shell = read("components/AppShell.js");
 const pageHeader = read("components/PageHeader.js");
 const moduleGovernanceForm = read("components/ModuleGovernanceForm.js");
+const operationsBoard = read("components/OperationsBoard.js");
 const dashboard = read("app/(workspace)/dashboard/page.js");
 const properties = read("app/(workspace)/properties/page.js");
 const modulesPage = read("app/(workspace)/modules/page.js");
@@ -30,6 +31,7 @@ const billing = read("app/(workspace)/billing/page.js");
 const reports = read("app/(workspace)/reports/workspace.js");
 const maintenance = read("app/(workspace)/maintenance/page.js");
 const reservations = read("app/(workspace)/reservations/page.js");
+const housekeeping = read("app/(workspace)/housekeeping/page.js");
 
 for (const filename of ["legacy/index.css", "part-12.css", "part-13.css", "foundation.css", "portfolio.css", "finance.css", "operations.css", "dashboard.css", "governance.css", "polish.css"]) {
   contains(globals, `@import "./styles/${filename}";`, `Global CSS must load ${filename}.`);
@@ -139,16 +141,40 @@ contains(billing, 'aria-label="Filter billing policies"', "Billing policies requ
 contains(reports, 'aria-label="Reporting summary"', "Reports require an intelligence summary.");
 contains(reports, 'aria-label="Filter reports by property"', "Reports require one explicit scope control.");
 
-contains(operationsCss, ".operations-toolbar", "Maintenance and reservation views require a shared filter toolbar.");
-contains(operationsCss, ".enterprise-kanban", "Maintenance requires a responsive operational board.");
-contains(operationsCss, ".enterprise-reservation-board", "Reservations require a responsive front-desk board.");
-contains(operationsCss, "@media (prefers-reduced-motion: reduce)", "Operations must respect reduced-motion preferences.");
+for (const contract of [
+  ".operations-board-nav",
+  ".operations-board-tab.is-active",
+  ".operations-board-viewport",
+  ".enterprise-kanban",
+  ".enterprise-reservation-board",
+  ".enterprise-housekeeping-board",
+  ".housekeeping-context-grid",
+  ".operations-history-note",
+  "@media (max-width: 480px)",
+  "@media (prefers-reduced-motion: reduce)"
+]) contains(operationsCss, contract, `Operations-board contract missing: ${contract}`);
+excludes(operationsCss, "font-size: 8px", "Operational boards must not use unreadably small text.");
+contains(operationsBoard, '"use client"', "Operations boards need client-side column navigation.");
+contains(operationsBoard, "ResizeObserver", "Operations boards must react to responsive overflow changes.");
+contains(operationsBoard, "data-board-column", "Operations boards need stable column navigation targets.");
+contains(operationsBoard, "prefersReducedMotion", "Board scrolling must respect reduced-motion preferences.");
+contains(operationsBoard, "View previous board columns", "Board overflow controls need accessible labels.");
 contains(maintenance, 'aria-label="Maintenance workload summary"', "Maintenance requires workload metrics.");
 contains(maintenance, 'aria-label="Filter maintenance tickets"', "Maintenance requires URL-shareable filters.");
-contains(maintenance, "<ActionButton", "Maintenance transitions must retain pending states.");
+contains(maintenance, "<OperationsBoard", "Maintenance must use navigable workflow columns.");
+contains(maintenance, "Return to reported", "Maintenance backward transitions need explicit language.");
+contains(maintenance, "Reopen work", "Resolved maintenance must expose an explicit reopen action.");
+contains(maintenance, "Apply filters", "Maintenance filtering needs a clear action label.");
 contains(reservations, 'aria-label="Reservation operations summary"', "Reservations require front-desk metrics.");
 contains(reservations, 'aria-label="Filter reservations"', "Reservations require URL-shareable filters.");
+contains(reservations, "<OperationsBoard", "Reservations must use navigable status columns.");
 contains(reservations, "<TransitionConfirmation", "Reservation destructive transitions must retain confirmation.");
 contains(reservations, "activeValueLabel", "Reservation value must remain currency-safe.");
+contains(reservations, "Historical reservation record", "Closed reservation cards need an explicit historical state.");
+contains(housekeeping, 'aria-label="Housekeeping workload summary"', "Housekeeping needs operational workload metrics.");
+contains(housekeeping, 'aria-label="Filter housekeeping tasks"', "Housekeeping needs URL-shareable filters.");
+contains(housekeeping, '["cancelled", "Cancelled"]', "Cancelled housekeeping tasks must remain visible in history.");
+contains(housekeeping, "manageableProperties", "Housekeeping creation must respect property-level management scope.");
+contains(housekeeping, "<OperationsBoard", "Housekeeping must use navigable status columns.");
 
-console.log("Enterprise shell, permission-aware dashboard composition, live module governance, coherent property and team access surfaces, responsive records, portfolio, finance, maintenance, and front-desk visual contracts verified.");
+console.log("Enterprise shell, permission-aware dashboard composition, live module governance, coherent property and team access surfaces, responsive records, portfolio, finance, and fully navigable maintenance, reservation, and housekeeping workflow contracts verified.");
