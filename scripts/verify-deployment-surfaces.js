@@ -77,6 +77,12 @@ requireText("docs/RENDER_BUILD_EVIDENCE.md", [
   "must never be supplied as Docker build arguments",
   "does not replace an actual Render deployment"
 ]);
+requireText("scripts/verify-release-completeness.js", [
+  "Recently added deployment recovery",
+  "verify:completeness",
+  "expectedLabels",
+  "stale positional invoice-label contract returned"
+]);
 
 for (const file of ["lib/permissions.js", "lib/auth.js"]) {
   if (read(file).includes("/dashboard?error=forbidden")) failures.push(`${file}: legacy dashboard query-string forbidden redirect remains`);
@@ -114,6 +120,10 @@ if (!/container-gate:\s*\n\s*requires:\s*\n\s*- release-gate\s*\n\s*- render-bui
 const packageJson = JSON.parse(read("package.json"));
 if (packageJson.scripts?.["build:diagnostics"] !== "bun run scripts/build-diagnostics.js") failures.push("package.json: build diagnostics command changed");
 if (packageJson.scripts?.["gate:render"] !== "bash scripts/render-build-gate.sh") failures.push("package.json: repository-owned Render build gate command changed");
+if (packageJson.scripts?.["verify:completeness"] !== "bun run scripts/verify-release-completeness.js") failures.push("package.json: release completeness command changed");
+const releaseSteps = String(packageJson.scripts?.["verify:release"] || "").split(/\s*&&\s*/).filter(Boolean);
+if (releaseSteps.filter((step) => step === "bun run verify:completeness").length !== 1) failures.push("package.json: verify:release must execute release completeness exactly once");
+if (releaseSteps.at(-1) !== "bun run verify:completeness") failures.push("package.json: release completeness must be the final verify:release step");
 for (const script of ["verify:ui", "verify:deployment", "verify:release"]) {
   if (!String(packageJson.scripts?.[script] || "").includes("verify-deployment-surfaces.js")) failures.push(`package.json: ${script} does not enforce deployment surfaces`);
 }
@@ -122,4 +132,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Repository-owned Render builds, retained failure evidence, sanitized diagnostics, disposable build storage, health release metadata, global recovery, loading, not-found, and stable permission-denied surfaces verified.");
+console.log("Repository-owned Render builds, retained failure evidence, release completeness, sanitized diagnostics, disposable build storage, health release metadata, global recovery, loading, not-found, and stable permission-denied surfaces verified.");

@@ -4,7 +4,7 @@ const failures = [];
 const read = (file) => fs.readFileSync(file, "utf8");
 const registers = [
   ["app/(workspace)/units/page.js", "units", 7],
-  ["app/(workspace)/invoices/InvoiceTable.js", "invoices", 9],
+  ["app/(workspace)/invoices/InvoiceTable.js", "invoices", 10],
   ["app/(workspace)/payments/page.js", "payments", 7],
   ["app/(workspace)/billing/page.js", "late-fees", 7],
   ["app/(workspace)/tenant-portal/PortalAccessSection.js", "portal-accounts", 5],
