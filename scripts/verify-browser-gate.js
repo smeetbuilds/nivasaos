@@ -7,8 +7,11 @@ const requiredFiles = [
   ".circleci/config.yml",
   ".gitignore",
   "scripts/browser-gate.js",
+  "app/globals.css",
   "app/styles/portfolio.css",
   "app/styles/finance.css",
+  "app/styles/records.css",
+  "app/(workspace)/invoices/InvoiceTable.js",
   "docs/BROWSER_TESTING.md",
   "docs/KNOWN_LIMITATIONS.md"
 ];
@@ -19,8 +22,11 @@ if (!failures.length) {
   const circleci = read(".circleci/config.yml");
   const ignore = read(".gitignore");
   const browserGate = read("scripts/browser-gate.js");
+  const globals = read("app/globals.css");
   const portfolio = read("app/styles/portfolio.css");
   const finance = read("app/styles/finance.css");
+  const records = read("app/styles/records.css");
+  const invoiceTable = read("app/(workspace)/invoices/InvoiceTable.js");
   const docs = read("docs/BROWSER_TESTING.md");
   const limitations = read("docs/KNOWN_LIMITATIONS.md");
 
@@ -76,12 +82,22 @@ if (!failures.length) {
   ]) if (!portfolio.includes(needle)) failures.push(`app/styles/portfolio.css: missing ${needle}`);
 
   for (const needle of [
-    ".invoices-table tbody tr",
+    ".table-wrap:has(> table[data-mobile-cards])",
+    "table[data-mobile-cards]",
+    "table[data-mobile-cards] tbody tr",
     "display: grid !important",
-    '.invoices-table td:nth-child(1)::before { content: "Invoice"; }',
-    '.invoices-table td:nth-child(10)::before { content: "Actions"; }',
+    "content: attr(data-label)",
     "overflow: visible !important"
-  ]) if (!finance.includes(needle)) failures.push(`app/styles/finance.css: missing ${needle}`);
+  ]) if (!records.includes(needle)) failures.push(`app/styles/records.css: missing ${needle}`);
+  if (!globals.includes('@import "./styles/records.css";')) failures.push("app/globals.css: shared mobile record-card styles are not imported");
+
+  if (!invoiceTable.includes('className="finance-table invoices-table"')) failures.push("app/(workspace)/invoices/InvoiceTable.js: invoice table class contract changed");
+  if (!invoiceTable.includes('data-mobile-cards="invoices"')) failures.push("app/(workspace)/invoices/InvoiceTable.js: invoice table is not opted into the shared mobile record-card contract");
+  const expectedInvoiceLabels = ["Invoice", "Charge", "Tenant", "Property / unit", "Due", "Amount", "Balance", "Status", "Reminder", "Actions"];
+  const invoiceLabels = [...invoiceTable.matchAll(/<td\s+data-label="([^"]+)"/g)].map((match) => match[1]);
+  for (const label of expectedInvoiceLabels) if (!invoiceLabels.includes(label)) failures.push(`app/(workspace)/invoices/InvoiceTable.js: missing mobile field label ${label}`);
+  if (invoiceLabels.length !== expectedInvoiceLabels.length) failures.push(`app/(workspace)/invoices/InvoiceTable.js: expected ${expectedInvoiceLabels.length} explicit mobile field labels, found ${invoiceLabels.length}`);
+  if (finance.includes(".invoices-table td:nth-child")) failures.push("app/styles/finance.css: invoice labels must come from the shared data-label contract, not duplicated positional pseudo-content");
 
   if (!ignore.includes("artifacts/browser/")) failures.push(".gitignore: generated browser evidence must not be tracked");
   for (const needle of ["bun run gate:browser", "Chrome DevTools Protocol", "accessibility tree", "artifacts/browser", "CircleCI"]) {
@@ -98,7 +114,7 @@ if (!failures.length) {
 }
 
 if (failures.length) {
-  console.error(failures.join("\n"));
+  console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Pinned authenticated Chrome execution, centralized fixture migrations, Firefox/WebKit boundary documentation, accessibility-tree inspection, runtime-error capture, mobile record-card behavior, evidence storage, and CircleCI wiring are verified.");
+console.log("Pinned authenticated Chrome execution, centralized fixture migrations, Firefox/WebKit boundary documentation, accessibility-tree inspection, runtime-error capture, shared semantic mobile record-card behavior, evidence storage, and CircleCI wiring are verified.");
