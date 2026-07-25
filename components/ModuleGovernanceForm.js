@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ActionButton from "@/components/ActionButton";
+import StatefulForm, { ActionStateMessage } from "@/components/StatefulForm";
 import Badge from "@/components/Badge";
 import Icon from "@/components/Icon";
 
@@ -32,7 +33,8 @@ export default function ModuleGovernanceForm({ modules, primary, action }) {
     setNotice("");
   };
 
-  return <form action={action} className="module-governance-form">
+  return <StatefulForm action={action} className="module-governance-form">
+    <ActionStateMessage/>
     <section className="module-governance-summary" aria-label="Operating module summary">
       <article><span>Enabled models</span><strong>{selected.length}</strong><small>of {modules.length} available operating models</small></article>
       <article><span>Primary model</span><strong>{modules.find((module) => module.id === primaryModule)?.label || "Not selected"}</strong><small>Default for newly created properties</small></article>
@@ -52,7 +54,7 @@ export default function ModuleGovernanceForm({ modules, primary, action }) {
                 <Badge tone={checked ? "active" : "inactive"}>{checked ? "Enabled" : "Disabled"}</Badge>
                 <span className="module-toggle-control">
                   <input type="checkbox" name={locked ? undefined : "moduleIds"} value={module.id} checked={checked} disabled={locked} onChange={() => toggleModule(module.id)} aria-label={`${checked ? "Disable" : "Enable"} ${module.label}`}/>
-                  {locked && <input type="hidden" name="moduleIds" value={module.id}/>} 
+                  {locked && <input type="hidden" name="moduleIds" value={module.id}/>}
                 </span>
               </span>
             </span>
@@ -75,5 +77,5 @@ export default function ModuleGovernanceForm({ modules, primary, action }) {
       <label><span>Primary module</span><select name="primaryModule" value={primaryModule} onChange={(event) => setPrimaryModule(event.target.value)}>{selectedModules.map((module) => <option value={module.id} key={module.id}>{module.label}</option>)}</select></label>
       <div className="module-save-state"><Badge tone={dirty ? "draft" : "active"}>{dirty ? "Unsaved changes" : "Saved architecture"}</Badge><ActionButton pendingLabel="Saving…">Save module architecture</ActionButton></div>
     </section>
-  </form>;
+  </StatefulForm>;
 }

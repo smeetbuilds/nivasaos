@@ -19,10 +19,23 @@ const registers = [
   ["app/(workspace)/operations/page.js", "vertical-profiles", 6],
   ["app/(workspace)/operations/page.js", "module-requests", 6],
   ["app/(workspace)/audit/workspace.js", "audit", 6],
-  ["app/(workspace)/reports/workspace.js", "arrears", 7]
+  ["app/(workspace)/reports/workspace.js", "arrears", 7],
+  ["app/(workspace)/handover/workspace.js", "handover-inspections", 7],
+  ["app/(workspace)/handover/workspace.js", "handover-documents", 6],
+  ["app/(workspace)/handover/workspace.js", "handover-keys", 6]
 ];
 for (const file of ["app/styles/records.css", "app/globals.css", ...registers.map(([file]) => file)]) {
   if (!fs.existsSync(file)) failures.push(`${file}: missing`);
+}
+
+function tableBlock(source, name) {
+  const marker = `data-mobile-cards="${name}"`;
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return "";
+  const start = source.lastIndexOf("<table", markerIndex);
+  const end = source.indexOf("</table>", markerIndex);
+  if (start < 0 || end < markerIndex) return "";
+  return source.slice(start, end + 8);
 }
 
 if (!failures.length) {
@@ -41,9 +54,13 @@ if (!failures.length) {
 
   for (const [file, name, minimumLabels] of registers) {
     const source = read(file);
-    if (!source.includes(`data-mobile-cards="${name}"`)) failures.push(`${file}: ${name} table is not opted into the mobile record-card contract`);
-    const labels = (source.match(/data-label=/g) || []).length;
-    if (labels < minimumLabels) failures.push(`${file}: expected at least ${minimumLabels} explicit mobile field labels, found ${labels}`);
+    const table = tableBlock(source, name);
+    if (!table) {
+      failures.push(`${file}: ${name} table is not opted into an isolatable mobile record-card contract`);
+      continue;
+    }
+    const labels = (table.match(/data-label=/g) || []).length;
+    if (labels < minimumLabels) failures.push(`${file}: ${name} expected at least ${minimumLabels} explicit mobile field labels, found ${labels}`);
   }
 }
 
@@ -51,4 +68,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Units, invoices, payments, late-fee previews, portal administration, service catalogue, subscriptions, service jobs, visitors, spaces, commercial profiles, vertical profiles, module requests, audit history, and arrears use semantic labeled mobile record cards without removing table headers from assistive technology.");
+console.log("Units, invoices, payments, late-fee previews, portal administration, services, visitors, spaces, commercial and vertical profiles, module requests, audit history, arrears, inspections, lease documents, and key records use isolated semantic mobile record cards without removing table headers from assistive technology.");

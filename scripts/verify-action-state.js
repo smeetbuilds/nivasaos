@@ -14,7 +14,11 @@ const required = [
   "app/(workspace)/leases/page.js",
   "app/(workspace)/invoices/InvoiceForms.js",
   "app/(workspace)/payments/page.js",
-  "app/(workspace)/maintenance/page.js"
+  "app/(workspace)/maintenance/page.js",
+  "app/(workspace)/handover/workspace.js",
+  "app/(workspace)/team/page.js",
+  "app/(workspace)/billing/page.js",
+  "components/ModuleGovernanceForm.js"
 ];
 for (const file of required) if (!fs.existsSync(file)) failures.push(`${file}: missing`);
 
@@ -24,9 +28,16 @@ if (!failures.length) {
   const modal = read("components/ModalForm.js");
   const globals = read("app/globals.css");
   const packageJson = JSON.parse(read("package.json"));
-  const pages = required.filter((file) => file.startsWith("app/(workspace)")).map(read).join("\n");
+  const pages = required.filter((file) => file.startsWith("app/(workspace)") || file === "components/ModuleGovernanceForm.js").map(read).join("\n");
 
-  for (const name of ["createPropertyAction", "updatePropertyAction", "createTenantAction", "updateTenantAction", "createLeaseAction", "createInvoiceAction", "createRentRunAction", "recordPaymentAction", "createLateFeeRunAction", "createMaintenanceAction", "addStaffMaintenanceCommentAction"]) {
+  for (const name of [
+    "createPropertyAction", "updatePropertyAction", "createTenantAction", "updateTenantAction", "createLeaseAction",
+    "createInvoiceAction", "createRentRunAction", "recordPaymentAction", "createLateFeeRunAction",
+    "createMaintenanceAction", "addStaffMaintenanceCommentAction", "createInspectionAction", "addInspectionItemAction",
+    "completeInspectionAction", "uploadLeaseDocumentAction", "recordKeyTransactionAction",
+    "createTeamMemberAction", "updateTeamMemberAction", "updateUserPermissionsAction",
+    "updateBillingPolicyAction", "updateWorkspaceModulesAction"
+  ]) {
     if (!actions.includes(`function ${name}(previousStateOrFormData, maybeFormData)`)) failures.push(`app/actions.js: ${name} is not state-compatible`);
   }
   for (const needle of ["runStructuredAction", "NEXT_REDIRECT", "SENSITIVE_FIELD", "fieldErrors", "serializedValues"]) {
@@ -37,7 +48,19 @@ if (!failures.length) {
   }
   if (!modal.includes("<ActionStateMessage/>")) failures.push("components/ModalForm.js: action-state summary is not rendered inside dialogs");
   if (!globals.includes('@import "./styles/forms.css";')) failures.push("app/globals.css: structured form styles are not imported");
-  if ((pages.match(/<StatefulForm action=/g) || []).length < 11) failures.push("workspace forms: expected high-use create/edit modals to use StatefulForm");
+  const teamPage = read("app/(workspace)/team/page.js");
+  const billingPage = read("app/(workspace)/billing/page.js");
+  const moduleForm = read("components/ModuleGovernanceForm.js");
+  if ((teamPage.match(/<StatefulForm action=/g) || []).length !== 4) failures.push("Team administration must use four structured modal form contracts");
+  for (const name of ["createTeamMemberAction", "updateTeamMemberAction", "updateUserPermissionsAction"]) {
+    if (teamPage.includes(`<form action={${name}}>`)) failures.push(`Team administration still uses a legacy ${name} form`);
+  }
+  if ((billingPage.match(/<StatefulForm action=/g) || []).length !== 2) failures.push("Billing administration must use structured policy and fee-run forms");
+  for (const name of ["updateBillingPolicyAction", "createLateFeeRunAction"]) {
+    if (billingPage.includes(`<form action={${name}}>`)) failures.push(`Billing administration still uses a legacy ${name} form`);
+  }
+  if (!moduleForm.includes("<StatefulForm action={action}") || !moduleForm.includes("<ActionStateMessage/>")) failures.push("Module governance does not preserve and announce rejected submissions");
+  if ((pages.match(/<StatefulForm action=/g) || []).length < 23) failures.push("workspace forms: expected high-use, handover, Team, billing, and module-governance workflows to use StatefulForm");
   if (packageJson.scripts?.["verify:action-state"] !== "bun run scripts/verify-action-state.js") failures.push("package.json: verify:action-state is not wired");
   if (!String(packageJson.scripts?.verify || "").includes("verify:action-state")) failures.push("package.json: repository verification omits action-state checks");
 }
@@ -60,4 +83,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Structured server-action errors, safe value preservation, modal retention, field annotation, legacy compatibility, and high-use workflow adoption are verified.");
+console.log("Structured server-action errors, safe value preservation, modal retention, field annotation, legacy compatibility, and high-use, handover, Team, billing, and module-governance adoption are verified.");

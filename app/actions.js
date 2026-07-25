@@ -81,13 +81,21 @@ export async function createMaintenanceAction(previousStateOrFormData, maybeForm
   return runStructuredAction((formData) => maintenance.createMaintenanceAction(formData), previousStateOrFormData, maybeFormData);
 }
 export async function updateMaintenanceAction(formData) { return maintenance.updateMaintenanceAction(formData); }
-export async function createTeamMemberAction(formData) { return team.createTeamMemberAction(formData); }
-export async function updateTeamMemberAction(formData) { return team.updateTeamMemberAction(formData); }
+export async function createTeamMemberAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => team.createTeamMemberAction(formData), previousStateOrFormData, maybeFormData);
+}
+export async function updateTeamMemberAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => team.updateTeamMemberAction(formData), previousStateOrFormData, maybeFormData);
+}
 export async function toggleUserAction(formData) { return team.toggleUserAction(formData); }
-export async function updateUserPermissionsAction(formData) { return team.updateUserPermissionsAction(formData); }
+export async function updateUserPermissionsAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => team.updateUserPermissionsAction(formData), previousStateOrFormData, maybeFormData);
+}
 export async function updateSettingsAction(formData) { return settings.updateSettingsAction(formData); }
 export async function changePasswordAction(formData) { return settings.changePasswordAction(formData); }
-export async function updateBillingPolicyAction(formData) { return billing.updateBillingPolicyAction(formData); }
+export async function updateBillingPolicyAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => billing.updateBillingPolicyAction(formData), previousStateOrFormData, maybeFormData);
+}
 
 export async function createTenantInviteAction(formData) {
   await authorizeEntityAction(formData, "portal.manage", "tenant");
@@ -117,38 +125,50 @@ export async function addStaffMaintenanceCommentAction(previousStateOrFormData, 
   return runStructuredAction((formData) => portal.addStaffMaintenanceCommentAction(formData), previousStateOrFormData, maybeFormData);
 }
 
-export async function createInspectionAction(formData) {
-  await authorizeEntityAction(formData, "handover.manage", "lease");
-  return handover.createInspectionAction(formData);
+export async function createInspectionAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeEntityAction(formData, "handover.manage", "lease");
+    return handover.createInspectionAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
-export async function addInspectionItemAction(formData) {
-  await authorizeEntityAction(formData, "handover.manage", "inspection");
-  return handover.addInspectionItemAction(formData);
+export async function addInspectionItemAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeEntityAction(formData, "handover.manage", "inspection");
+    return handover.addInspectionItemAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
 export async function shareInspectionAction(formData) {
   await authorizeEntityAction(formData, "handover.manage", "inspection");
   return handover.shareInspectionAction(formData);
 }
 export async function acknowledgeInspectionAction(formData) { return handover.acknowledgeInspectionAction(formData); }
-export async function completeInspectionAction(formData) {
-  await authorizeEntityAction(formData, "handover.manage", "inspection");
-  if (formData.get("applyDeduction") === "on") await authorizeEntityAction(formData, "deposits.manage", "inspection");
-  return handover.completeInspectionAction(formData);
+export async function completeInspectionAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeEntityAction(formData, "handover.manage", "inspection");
+    if (formData.get("applyDeduction") === "on") await authorizeEntityAction(formData, "deposits.manage", "inspection");
+    return handover.completeInspectionAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
-export async function uploadLeaseDocumentAction(formData) {
-  await authorizeEntityAction(formData, "handover.manage", "lease");
-  return handover.uploadLeaseDocumentAction(formData);
+export async function uploadLeaseDocumentAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeEntityAction(formData, "handover.manage", "lease");
+    return handover.uploadLeaseDocumentAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
 export async function archiveLeaseDocumentAction(formData) {
   await authorizeEntityAction(formData, "handover.manage", "document");
   return handover.archiveLeaseDocumentAction(formData);
 }
-export async function recordKeyTransactionAction(formData) {
-  await authorizeEntityAction(formData, "handover.manage", "lease");
-  return handover.recordKeyTransactionAction(formData);
+export async function recordKeyTransactionAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction(async (formData) => {
+    await authorizeEntityAction(formData, "handover.manage", "lease");
+    return handover.recordKeyTransactionAction(formData);
+  }, previousStateOrFormData, maybeFormData);
 }
 
-export async function updateWorkspaceModulesAction(formData) { return modules.updateWorkspaceModulesAction(formData); }
+export async function updateWorkspaceModulesAction(previousStateOrFormData, maybeFormData) {
+  return runStructuredAction((formData) => modules.updateWorkspaceModulesAction(formData), previousStateOrFormData, maybeFormData);
+}
 export async function createSpaceAction(formData) {
   await authorizePropertyAction(formData, "inventory.manage");
   return spaces.createSpaceAction(formData);

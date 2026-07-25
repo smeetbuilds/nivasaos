@@ -20,6 +20,10 @@ const releaseCriticalFiles = [
   "app/(workspace)/error.js",
   "app/(workspace)/loading.js",
   "app/(workspace)/forbidden/page.js",
+  "app/(workspace)/handover/workspace.js",
+  "app/(workspace)/team/page.js",
+  "app/(workspace)/billing/page.js",
+  "components/ModuleGovernanceForm.js",
   "app/styles/system-states.css",
   "app/styles/records.css",
   "app/(workspace)/invoices/InvoiceTable.js",
@@ -30,6 +34,7 @@ const releaseCriticalFiles = [
   "scripts/render-build-gate.sh",
   "scripts/verify-deployment-surfaces.js",
   "scripts/verify-team-access.js",
+  "scripts/verify-handover-ui.js",
   "scripts/verify-browser-gate.js",
   "scripts/verify-mobile-records.js",
   "docs/RENDER_BUILD_EVIDENCE.md"
@@ -47,6 +52,36 @@ requireText("components/SystemState.js", ["system-state-card", "system-state-ref
 requireText("components/SystemLoading.js", ['role="status"', 'aria-busy="true"', "system-loading-metrics", "system-loading-panels"]);
 requireText("app/styles/system-states.css", [".system-state-page", ".workspace-system-state", "@media (prefers-reduced-motion: reduce)"]);
 requireText("app/styles/records.css", ["table[data-mobile-cards]", "content: attr(data-label)", "display: grid !important"]);
+requireText("app/(workspace)/handover/workspace.js", [
+  'import StatefulForm from "@/components/StatefulForm"',
+  'data-mobile-cards="handover-inspections"',
+  'data-mobile-cards="handover-documents"',
+  'data-mobile-cards="handover-keys"',
+  "Reselect the file after a rejected submission."
+]);
+requireText("scripts/verify-handover-ui.js", [
+  "All five handover modal workflows",
+  "tableLabels",
+  "handover-inspections",
+  "handover-documents",
+  "handover-keys"
+]);
+requireText("app/(workspace)/team/page.js", [
+  'import StatefulForm from "@/components/StatefulForm"',
+  "<StatefulForm action={createTeamMemberAction}",
+  "<StatefulForm action={updateTeamMemberAction}",
+  "<StatefulForm action={updateUserPermissionsAction}"
+]);
+requireText("app/(workspace)/billing/page.js", [
+  'import StatefulForm from "@/components/StatefulForm"',
+  "<StatefulForm action={updateBillingPolicyAction}",
+  "<StatefulForm action={createLateFeeRunAction}"
+]);
+requireText("components/ModuleGovernanceForm.js", [
+  'StatefulForm, { ActionStateMessage }',
+  "<StatefulForm action={action}",
+  "<ActionStateMessage/>"
+]);
 
 if (fs.existsSync("package.json")) {
   const packageJson = JSON.parse(read("package.json"));
@@ -69,8 +104,15 @@ if (fs.existsSync("app/(workspace)/invoices/InvoiceTable.js")) {
   if (JSON.stringify(labels) !== JSON.stringify(expectedLabels)) failures.push(`Invoice mobile labels must exactly equal ${expectedLabels.join(", ")}; found ${labels.join(", ") || "none"}`);
 }
 
-if (fs.existsSync("scripts/verify-mobile-records.js") && !read("scripts/verify-mobile-records.js").includes('["app/(workspace)/invoices/InvoiceTable.js", "invoices", 10]')) {
-  failures.push("scripts/verify-mobile-records.js: invoice register must require all ten mobile field labels");
+if (fs.existsSync("scripts/verify-mobile-records.js")) {
+  const mobileVerifier = read("scripts/verify-mobile-records.js");
+  if (!mobileVerifier.includes('["app/(workspace)/invoices/InvoiceTable.js", "invoices", 10]')) failures.push("scripts/verify-mobile-records.js: invoice register must require all ten mobile field labels");
+  for (const marker of [
+    '["app/(workspace)/handover/workspace.js", "handover-inspections", 7]',
+    '["app/(workspace)/handover/workspace.js", "handover-documents", 6]',
+    '["app/(workspace)/handover/workspace.js", "handover-keys", 6]',
+    "function tableBlock(source, name)"
+  ]) if (!mobileVerifier.includes(marker)) failures.push(`scripts/verify-mobile-records.js: missing ${marker}`);
 }
 if (fs.existsSync("scripts/verify-browser-gate.js")) {
   const browserVerifier = read("scripts/verify-browser-gate.js");
@@ -94,4 +136,4 @@ if (failures.length) {
   console.error([...new Set(failures)].join("\n"));
   process.exit(1);
 }
-console.log("Recently added deployment recovery, Team access, Render evidence, build diagnostics, shared invoice mobile records, and anti-drift release contracts are fully inventoried and anchored.");
+console.log("Recently added deployment recovery, Team access, Render evidence, build diagnostics, structured handover and administration recovery, shared invoice and handover mobile records, and anti-drift release contracts are fully inventoried and anchored.");

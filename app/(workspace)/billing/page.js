@@ -7,6 +7,7 @@ import { permissionScopeSql, requirePortfolioPermission } from "@/lib/permission
 import PageHeader from "@/components/PageHeader";
 import OpenModalButton from "@/components/OpenModalButton";
 import ModalForm from "@/components/ModalForm";
+import StatefulForm from "@/components/StatefulForm";
 import Flash from "@/components/Flash";
 import Badge from "@/components/Badge";
 import Empty from "@/components/Empty";
@@ -54,7 +55,15 @@ export default async function BillingPage({ searchParams }) {
 
   return <>
     <Flash searchParams={query}/>
-    <PageHeader eyebrow="Collection governance" title="Grace periods & late fees" description="Define transparent property-level collection rules, preview eligible rent invoices, and preserve one active late fee per source invoice." actions={<><Link href="/invoices" className="button secondary"><Icon name="invoice" size={17}/>Invoices</Link><OpenModalButton target="late-fee-run-modal" icon="billing" className={summary.count ? "button primary" : "button secondary"}>Apply eligible fees</OpenModalButton></>}/>
+    <PageHeader
+      eyebrow="Collection governance"
+      title="Grace periods & late fees"
+      description="Define transparent property-level collection rules, preview eligible rent invoices, and preserve one active late fee per source invoice."
+      actions={<>
+        <Link href="/invoices" className="button secondary"><Icon name="invoice" size={17}/>Invoices</Link>
+        <OpenModalButton target="late-fee-run-modal" icon="billing" className={summary.count ? "button primary" : "button secondary"}>Apply eligible fees</OpenModalButton>
+      </>}
+    />
 
     <section className="metric-grid finance-summary-grid" aria-label="Billing policy summary">
       <article className="metric-card compact-metric"><div className="metric-icon"><Icon name="property"/></div><span>Properties configured</span><strong>{configured}</strong><small>of {policies.length} permitted properties</small></article>
@@ -75,18 +84,69 @@ export default async function BillingPage({ searchParams }) {
     {filteredPolicies.length ? <section className="policy-grid finance-policy-grid" aria-label="Property billing policies">{filteredPolicies.map((policy) => {
       const titleId = `billing-policy-${policy.id}-title`;
       return <article className="panel policy-card finance-policy-card" aria-labelledby={titleId} key={policy.id}>
-        <div className="panel-head"><div><span className="eyebrow">{policy.currency} · {policy.status} property</span><h2 id={titleId}>{policy.name}</h2></div><Badge tone={policy.late_fee_type === "none" ? "inactive" : "active"}>{policy.late_fee_type === "none" ? "Disabled" : "Active"}</Badge></div>
+        <div className="panel-head">
+          <div><span className="eyebrow">{policy.currency} · {policy.status} property</span><h2 id={titleId}>{policy.name}</h2></div>
+          <Badge tone={policy.late_fee_type === "none" ? "inactive" : "active"}>{policy.late_fee_type === "none" ? "Disabled" : "Active"}</Badge>
+        </div>
         <div className="policy-body">
-          <div className="finance-policy-facts"><span><small>Grace period</small><strong>{policy.grace_days} day{Number(policy.grace_days) === 1 ? "" : "s"}</strong></span><span><small>Fee rule</small><strong>{policyDescription(policy)}</strong></span></div>
+          <div className="finance-policy-facts">
+            <span><small>Grace period</small><strong>{policy.grace_days} day{Number(policy.grace_days) === 1 ? "" : "s"}</strong></span>
+            <span><small>Fee rule</small><strong>{policyDescription(policy)}</strong></span>
+          </div>
           <p>Fees apply only to unpaid rent invoices after the grace period ends. Existing active fee invoices are skipped automatically.</p>
           <OpenModalButton target={`billing-policy-${policy.id}`} icon="edit" className="button secondary">Edit policy</OpenModalButton>
         </div>
       </article>;
     })}</section> : policies.length ? <Empty icon="billing" title="No billing policies match these filters" text="Adjust the search or rule-state filter to view more properties."/> : <Empty icon="billing" title="No properties available" text="Add a property before defining collection policies."/>}
 
-    <section className="panel billing-preview finance-preview-panel" aria-labelledby="late-fee-preview-title"><div className="panel-head"><div><span className="eyebrow">Dry-run preview</span><h2 id="late-fee-preview-title">Rent invoices eligible today</h2></div><Badge tone={summary.count ? "overdue" : "paid"}>{summary.count ? `${summary.count} ready` : "Nothing due"}</Badge></div>{summary.rows.length ? <div className="table-wrap"><table className="finance-table late-fee-preview-table" data-mobile-cards="late-fees" aria-label="Late fee preview"><thead><tr><th>Rent invoice</th><th>Person / unit</th><th>Property</th><th>Due</th><th>Grace ended</th><th>Balance</th><th>Fee to create</th></tr></thead><tbody>{summary.rows.map((row) => <tr key={row.id}><td data-label="Rent invoice"><strong>{row.number}</strong><small>{row.lease_reference || "No agreement reference"}</small></td><td data-label="Person / unit"><strong>{row.tenant_name || "Unassigned"}</strong><small>{row.unit_name || "No unit"}</small></td><td data-label="Property">{row.property_name}</td><td data-label="Due">{dateLabel(row.due_date)}</td><td data-label="Grace ended">{dateLabel(row.grace_ends)}</td><td data-label="Balance">{money(row.balance, row.currency)}</td><td data-label="Fee to create"><strong className="finance-balance">{money(row.fee_amount, row.currency)}</strong><small>{row.late_fee_type === "percent" ? `${Number(row.late_fee_value)}% rule` : "Flat fee"}</small></td></tr>)}</tbody></table></div> : <div className="finance-empty-state"><span className="finance-empty-icon"><Icon name="billing" size={21}/></span><strong>No late fees to apply</strong><small>Enable a property policy or wait until an unpaid rent invoice passes its grace period.</small></div>}</section>
+    <section className="panel billing-preview finance-preview-panel" aria-labelledby="late-fee-preview-title">
+      <div className="panel-head">
+        <div><span className="eyebrow">Dry-run preview</span><h2 id="late-fee-preview-title">Rent invoices eligible today</h2></div>
+        <Badge tone={summary.count ? "overdue" : "paid"}>{summary.count ? `${summary.count} ready` : "Nothing due"}</Badge>
+      </div>
+      {summary.rows.length ? <div className="table-wrap">
+        <table className="finance-table late-fee-preview-table" data-mobile-cards="late-fees" aria-label="Late fee preview">
+          <thead><tr><th>Rent invoice</th><th>Person / unit</th><th>Property</th><th>Due</th><th>Grace ended</th><th>Balance</th><th>Fee to create</th></tr></thead>
+          <tbody>{summary.rows.map((row) => <tr key={row.id}>
+            <td data-label="Rent invoice"><strong>{row.number}</strong><small>{row.lease_reference || "No agreement reference"}</small></td>
+            <td data-label="Person / unit"><strong>{row.tenant_name || "Unassigned"}</strong><small>{row.unit_name || "No unit"}</small></td>
+            <td data-label="Property">{row.property_name}</td>
+            <td data-label="Due">{dateLabel(row.due_date)}</td>
+            <td data-label="Grace ended">{dateLabel(row.grace_ends)}</td>
+            <td data-label="Balance">{money(row.balance, row.currency)}</td>
+            <td data-label="Fee to create"><strong className="finance-balance">{money(row.fee_amount, row.currency)}</strong><small>{row.late_fee_type === "percent" ? `${Number(row.late_fee_value)}% rule` : "Flat fee"}</small></td>
+          </tr>)}</tbody>
+        </table>
+      </div> : <div className="finance-empty-state"><span className="finance-empty-icon"><Icon name="billing" size={21}/></span><strong>No late fees to apply</strong><small>Enable a property policy or wait until an unpaid rent invoice passes its grace period.</small></div>}
+    </section>
 
-    {policies.map((policy) => <form action={updateBillingPolicyAction} key={`policy-${policy.id}`}><ModalForm id={`billing-policy-${policy.id}`} title={`Billing policy · ${policy.name}`} description="Changes affect future fee runs only; existing invoices are never recalculated." submitLabel="Save policy" pendingLabel="Saving…"><div className="modal-body"><input type="hidden" name="propertyId" value={policy.id}/><div className="summary-box"><span>Property currency</span><strong>{policy.currency}</strong><small>Flat fees and caps use this currency.</small></div><div className="field-grid two"><label><span>Grace period in days</span><input type="number" name="graceDays" min="0" max="60" defaultValue={policy.grace_days} required/><small>A fee becomes eligible the day after this period ends.</small></label><label><span>Late-fee type</span><select name="lateFeeType" defaultValue={policy.late_fee_type}><option value="none">Disabled</option><option value="flat">Flat amount</option><option value="percent">Percentage of outstanding rent</option></select></label></div><div className="field-grid two"><label><span>Fee value</span><input type="number" name="lateFeeValue" min="0" step="0.01" defaultValue={policy.late_fee_value}/><small>Enter the property-currency amount or percentage.</small></label><label><span>Optional cap</span><input type="number" name="lateFeeCap" min="0" step="0.01" defaultValue={policy.late_fee_cap || ""}/><small>Leave blank for no maximum.</small></label></div><div className="policy-warning">Use only rules permitted by the tenancy and consumer laws that apply to this property.</div></div></ModalForm></form>)}
-    <form action={createLateFeeRunAction}><ModalForm id="late-fee-run-modal" title="Apply eligible late fees" description="The preview above is recalculated at submission. Each source rent invoice can have only one active late-fee invoice." submitLabel="Generate late fees" pendingLabel="Generating…"><div className="modal-body"><div className="rent-run-notice"><span className="metric-icon">{summary.count}</span><div><strong>{summary.count} invoice{summary.count === 1 ? " is" : "s are"} currently eligible</strong><span>{feeDetail}</span></div></div><label><span>Property scope</span><select name="propertyId"><option value="">All permitted properties</option>{policies.map((property) => <option value={property.id} key={property.id}>{property.name}</option>)}</select></label><label><span>Fee issue and due date</span><input type="date" name="issueDate" defaultValue={today()} required/></label><div className="policy-warning">This creates separate receivable invoices. It does not alter the original rent amount or payment history.</div></div></ModalForm></form>
+    {policies.map((policy) => <StatefulForm action={updateBillingPolicyAction} key={`policy-${policy.id}`}>
+      <ModalForm id={`billing-policy-${policy.id}`} title={`Billing policy · ${policy.name}`} description="Changes affect future fee runs only; existing invoices are never recalculated." submitLabel="Save policy" pendingLabel="Saving…">
+        <div className="modal-body">
+          <input type="hidden" name="propertyId" value={policy.id}/>
+          <div className="summary-box"><span>Property currency</span><strong>{policy.currency}</strong><small>Flat fees and caps use this currency.</small></div>
+          <div className="field-grid two">
+            <label><span>Grace period in days</span><input type="number" name="graceDays" min="0" max="60" defaultValue={policy.grace_days} required/><small>A fee becomes eligible the day after this period ends.</small></label>
+            <label><span>Late-fee type</span><select name="lateFeeType" defaultValue={policy.late_fee_type}><option value="none">Disabled</option><option value="flat">Flat amount</option><option value="percent">Percentage of outstanding rent</option></select></label>
+          </div>
+          <div className="field-grid two">
+            <label><span>Fee value</span><input type="number" name="lateFeeValue" min="0" step="0.01" defaultValue={policy.late_fee_value}/><small>Enter the property-currency amount or percentage.</small></label>
+            <label><span>Optional cap</span><input type="number" name="lateFeeCap" min="0" step="0.01" defaultValue={policy.late_fee_cap || ""}/><small>Leave blank for no maximum.</small></label>
+          </div>
+          <div className="policy-warning">Use only rules permitted by the tenancy and consumer laws that apply to this property.</div>
+        </div>
+      </ModalForm>
+    </StatefulForm>)}
+
+    <StatefulForm action={createLateFeeRunAction}>
+      <ModalForm id="late-fee-run-modal" title="Apply eligible late fees" description="The preview above is recalculated at submission. Each source rent invoice can have only one active late-fee invoice." submitLabel="Generate late fees" pendingLabel="Generating…">
+        <div className="modal-body">
+          <div className="rent-run-notice"><span className="metric-icon">{summary.count}</span><div><strong>{summary.count} invoice{summary.count === 1 ? " is" : "s are"} currently eligible</strong><span>{feeDetail}</span></div></div>
+          <label><span>Property scope</span><select name="propertyId"><option value="">All permitted properties</option>{policies.map((property) => <option value={property.id} key={property.id}>{property.name}</option>)}</select></label>
+          <label><span>Fee issue and due date</span><input type="date" name="issueDate" defaultValue={today()} required/></label>
+          <div className="policy-warning">This creates separate receivable invoices. It does not alter the original rent amount or payment history.</div>
+        </div>
+      </ModalForm>
+    </StatefulForm>
   </>;
 }

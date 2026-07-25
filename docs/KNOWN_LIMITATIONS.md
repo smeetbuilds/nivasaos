@@ -114,13 +114,15 @@ These automated jobs are not physical-device or manual screen-reader certificati
 
 High-use property, unit, person, agreement, invoice, rent-run, late-fee, payment and maintenance modals now return structured server-action errors, preserve non-sensitive submitted values, keep the dialog open, mark invalid controls and focus the first actionable error.
 
-Browser security prevents file inputs from being repopulated. A rejected payment form therefore preserves its other values but requires the operator to reselect the proof file. Small status-transition, confirmation and lower-frequency administration forms still use the established redirect or shared-error-boundary behavior until migrated individually.
+Handover inspection creation, checklist items, inspection completion, lease-document uploads and key transactions now use the same structured recovery contract. Team account creation, account edits, permission matrices, billing-policy edits, late-fee runs and module-governance updates also preserve non-sensitive submitted values and announce rejected submissions. Browser security prevents file inputs from being repopulated, so rejected document uploads preserve their other values but require the operator to reselect the file.
+
+Small status transitions, confirmation actions and the remaining specialist extension or vertical-administration forms still use the established redirect or shared-error-boundary behaviour until migrated individually.
 
 ## Responsive data density
 
-People, agreements, invoices, units, payments, visitor movements, audit history and report arrears use purpose-built labeled record cards at mobile widths. The generic record-card contract keeps table headings available to assistive technology while presenting each cell with an explicit visual label.
+People, agreements, invoices, units, payments, visitor movements, audit history, report arrears, handover inspections, lease documents and key records use purpose-built labelled record cards at mobile widths. The generic record-card contract keeps table headings available to assistive technology while presenting each cell with an explicit visual label.
 
-Some remaining specialist administration and handover tables may still use horizontal scrolling on small screens. Those lowest-frequency registers should be converted incrementally with rendered mobile and accessibility certification rather than through a blanket CSS transformation.
+Some remaining specialist administration tables may still use horizontal scrolling on small screens. Those lowest-frequency registers should be converted incrementally with rendered mobile and accessibility certification rather than through a blanket CSS transformation.
 
 ## Transitional CSS architecture
 
