@@ -25,7 +25,7 @@
     "verify:action-state": "bun run scripts/verify-action-state.js",
     "verify:browser-contract": "bun run scripts/verify-browser-gate.js",
     "verify:certification": "bun run scripts/verify-certification-contract.js",
-    "verify:authorization": "bun run scripts/verify-authorization.js",
+    "verify:authorization": "bun run scripts/verify-authorization.js && bun run scripts/verify-team-access.js",
     "verify:portal": "bun run scripts/verify-portal.js",
     "verify:handover": "bun run scripts/verify-handover.js",
     "verify:modules": "bun run scripts/verify-modules.js",

@@ -7,6 +7,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const contains = (source, value, message) => assert(source.includes(value), message);
 const excludes = (source, value, message) => assert(!source.includes(value), message);
+const occurrenceCount = (source, value) => source.split(value).length - 1;
 
 function sourceFiles(directory) {
   const absolute = path.join(root, directory);
@@ -101,10 +102,18 @@ contains(teamPage, 'requirePortfolioPermission("team.manage")', "Team route must
 contains(teamPage, "<ConfirmAction", "Account disabling must use confirmation.");
 contains(teamActions, 'assertPortfolioPermission(actor, "team.manage")', "Team actions must enforce team.manage.");
 contains(teamActions, "assertTargetWithinManagerScope", "Delegated team managers must not cross their property boundary.");
+contains(teamPage, 'import { canManageTeamMember } from "@/lib/team-access"', "Team row actions must use the shared target-role boundary.");
+contains(teamActions, 'import { assertDelegatedTeamTarget } from "@/lib/team-access"', "Team mutations must use the shared target-role boundary.");
+contains(teamActions, "assertDelegatedTarget", "All team mutations must share the delegated target and property-scope boundary.");
+contains(teamActions, "has_assignments", "Unassigned accounts must not pass delegated manager scope checks.");
+contains(teamActions, "Assign at least one property inside your management scope", "Delegated managers must not create or leave unassigned accounts.");
 contains(teamActions, "You cannot change your own permissions", "Delegated managers must not self-escalate permissions.");
+contains(teamActions, "Only the owner can change administrator accounts", "Delegated managers must not toggle administrator accounts.");
 contains(teamActions, "grantable", "Delegated managers must not grant capabilities beyond their own authority.");
 contains(teamActions, "targetPropertyIds.every", "Global grants must remain valid across every target property.");
-contains(teamPage, "const manageable=", "Team row actions must hide accounts outside the manager contract.");
+assert(occurrenceCount(teamPage, "canManageTeamMember(user, member)") === 2, "Team manager contract must govern both row actions and generated account modals.");
+contains(teamPage, "EXISTS (SELECT 1 FROM user_properties assigned WHERE assigned.user_id=u.id)", "Delegated team directories must hide unassigned accounts outside the current actor.");
+assert(occurrenceCount(teamPage, '{user.role === "owner" && <option value="admin">Admin</option>}') === 2, "Administrator role choices must be owner-only in both create and edit forms.");
 contains(settingsPage, 'requirePortfolioPermission("settings.manage")', "Settings route must enforce settings.manage.");
 contains(settingsActions, 'assertPortfolioPermission(actor, "settings.manage")', "Settings writes must enforce settings.manage.");
 contains(modulesPage, 'requirePortfolioPermission("settings.manage")', "Modules route must enforce settings.manage.");
